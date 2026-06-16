@@ -14,22 +14,29 @@ function Login() {
         setLoading(true);
         setError('');
         try {
-            const response = await axios.post('http://localhost:8080/api/auth/login', {
+            const response = await axios.post(`${process.env.REACT_APP_API_URL || 'http://localhost:8080'}/api/auth/login`,  {
                 username,
                 password
             });
 
-            console.log('Login response:', response.data);
+            const data = response.data;
+            console.log('Login response:', data);
 
             // Save all data to localStorage
-            localStorage.setItem('token', response.data.token);
-            localStorage.setItem('username', response.data.username);
-            localStorage.setItem('role', response.data.role);
-            localStorage.setItem('linkedClassId', response.data.linkedClassId || '');
-            localStorage.setItem('linkedClassName', response.data.linkedClassName || '');
+            localStorage.setItem('token', data.token);
+            localStorage.setItem('username', data.username);
+            localStorage.setItem('role', data.role);
+            localStorage.setItem('linkedClassId', data.linkedClassId || '');
+            localStorage.setItem('linkedClassName', data.linkedClassName || '');
 
-            // Redirect to dashboard
-            window.location.href = '/dashboard';
+            // ✅ If teacher must change password, redirect to change-password page
+            if (data.mustChangePassword) {
+                localStorage.setItem('mustChangePassword', 'true');
+                window.location.href = '/change-password';
+            } else {
+                localStorage.removeItem('mustChangePassword');
+                window.location.href = '/dashboard';
+            }
 
         } catch (err) {
             console.log('Login error:', err);
@@ -81,7 +88,7 @@ function Login() {
                         type="submit"
                         style={styles.button}
                         disabled={loading}>
-                        {loading ? '⏳ Logging in...' : 'Login'}
+                        {loading ? '⏳ Logging in...' : 'Login →'}
                     </button>
                 </form>
 
