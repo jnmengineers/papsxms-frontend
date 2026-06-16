@@ -15,6 +15,14 @@ import AcademicYears from './pages/AcademicYears';
 import ExamSchedules from './pages/ExamSchedules';
 import Users from './pages/Users';
 import Unauthorized from './components/Unauthorized';
+import MarkEntry from './pages/MarkEntry';
+import ClassSubjects from './pages/ClassSubjects';
+import SectionReport from './pages/SectionReport';
+import StudentProfile from './pages/StudentProfile';
+import ChangePassword from './pages/ChangePassword';
+import Import from './pages/Import';
+
+
 
 function App() {
     return (
@@ -91,6 +99,53 @@ function App() {
                         <Users />
                     </PrivateRoute>
                 } />
+
+                    
+
+                    <Route path="/mark-entry" element={
+                        <PrivateRoute allowedRoles={['ADMIN', 'TEACHER', 'CLERK']}>
+                            <MarkEntry />
+                        </PrivateRoute>
+                    } />
+
+                    <Route path="/class-subjects" element={
+                    <PrivateRoute allowedRoles={['ADMIN']}>
+                        <ClassSubjects />
+                    </PrivateRoute>
+                } />
+
+
+                   
+
+                    <Route path="/section-report" element={
+                        <PrivateRoute allowedRoles={['ADMIN']}>
+                            <SectionReport />
+                        </PrivateRoute>
+                    } />
+
+                   
+                
+                    <Route path="/student/:studentId" element={
+                        <PrivateRoute allowedRoles={['ADMIN', 'TEACHER']}>
+                            <StudentProfile />
+                        </PrivateRoute>
+                    } />
+
+                    <Route path="/change-password" element={
+                        <PrivateRoute allowedRoles={['ADMIN', 'TEACHER', 'CLERK']}>
+                            <ChangePassword />
+                        </PrivateRoute>
+                    } />
+
+                    
+
+                    <Route path="/import" element={
+                        <PrivateRoute allowedRoles={['ADMIN']}>
+                            <Import />
+                        </PrivateRoute>
+                    } />
+                
+
             </Routes>
         </Router>
     );

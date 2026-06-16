@@ -4,26 +4,40 @@ import logo1 from '../assets/logo1.png';
 
 function GradingScales() {
     const [scales, setScales] = useState([]);
+    const [filtered, setFiltered] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [showForm, setShowForm] = useState(false);
+    const [editingScale, setEditingScale] = useState(null);
+    const [search, setSearch] = useState('');
     const [formData, setFormData] = useState({
         gradeLetter: '',
         minMark: '',
         maxMark: '',
         points: '',
-        remarks: '',
-        startTime: '2024-01-01'
+        remarks: ''
     });
 
     useEffect(() => {
         fetchScales();
     }, []);
 
+    useEffect(() => {
+        let data = scales;
+        if (search) {
+            data = data.filter(s =>
+                s.gradeLetter?.toLowerCase().includes(search.toLowerCase()) ||
+                s.remarks?.toLowerCase().includes(search.toLowerCase())
+            );
+        }
+        setFiltered(data);
+    }, [search, scales]);
+
     const fetchScales = async () => {
         try {
             const response = await api.get('/api/grading-scales');
             setScales(response.data);
+            setFiltered(response.data);
             setLoading(false);
         } catch (err) {
             setError('Failed to load grading scales');
@@ -31,20 +45,39 @@ function GradingScales() {
         }
     };
 
+    const handleEdit = (scale) => {
+        setEditingScale(scale);
+        setFormData({
+            gradeLetter: scale.gradeLetter,
+            minMark: scale.minMark,
+            maxMark: scale.maxMark,
+            points: scale.points,
+            remarks: scale.remarks || ''
+        });
+        setShowForm(true);
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
         try {
-            await api.post('/api/grading-scales', {
-                ...formData,
+            const payload = {
+                gradeLetter: formData.gradeLetter,
                 minMark: parseFloat(formData.minMark),
                 maxMark: parseFloat(formData.maxMark),
-                points: parseFloat(formData.points)
-            });
+                points: parseFloat(formData.points),
+                remarks: formData.remarks
+            };
+            if (editingScale) {
+                await api.put(`/api/grading-scales/${editingScale.scaleId}`, payload);
+            } else {
+                await api.post('/api/grading-scales', payload);
+            }
             setShowForm(false);
-            setFormData({ gradeLetter: '', minMark: '', maxMark: '', points: '', remarks: '', startTime: '2024-01-01' });
+            setEditingScale(null);
+            setFormData({ gradeLetter: '', minMark: '', maxMark: '', points: '', remarks: '' });
             fetchScales();
         } catch (err) {
-            setError('Failed to add grading scale');
+            setError('Failed to save grading scale');
         }
     };
 
@@ -59,11 +92,17 @@ function GradingScales() {
         }
     };
 
+    const handleCancel = () => {
+        setShowForm(false);
+        setEditingScale(null);
+        setFormData({ gradeLetter: '', minMark: '', maxMark: '', points: '', remarks: '' });
+    };
+
     return (
         <div style={styles.container}>
             {/* Navbar */}
             <div style={styles.navbar}>
-                 <div style={styles.navLeft}>
+                <div style={styles.navLeft}>
                     <img src={logo1} alt="Logo" style={styles.navLogo} />
                     <h2 style={styles.navTitle}>Pipeline Adventist School</h2>
                 </div>
@@ -75,18 +114,18 @@ function GradingScales() {
 
             <div style={styles.content}>
                 <div style={styles.header}>
-                    <h2 style={styles.title}>📊 Grading Scales</h2>
-                    <button onClick={() => setShowForm(!showForm)} style={styles.addBtn}>
+                    <h2 style={styles.title}>📊 Grading Scales ({filtered.length})</h2>
+                    <button onClick={() => { setShowForm(!showForm); setEditingScale(null); }} style={styles.addBtn}>
                         {showForm ? 'Cancel' : '+ Add Grade'}
                     </button>
                 </div>
 
                 {error && <p style={styles.error}>{error}</p>}
 
-                {/* Add Grading Scale Form */}
+                {/* Add/Edit Form */}
                 {showForm && (
                     <div style={styles.form}>
-                        <h3>Add New Grading Scale</h3>
+                        <h3>{editingScale ? 'Edit Grading Scale' : 'Add New Grading Scale'}</h3>
                         <form onSubmit={handleSubmit}>
                             <div style={styles.formGrid}>
                                 <div style={styles.formGroup}>
@@ -143,57 +182,81 @@ function GradingScales() {
                                     />
                                 </div>
                             </div>
-                            <button type="submit" style={styles.submitBtn}>Save Grade</button>
+                            <div style={styles.btnGroup}>
+                                <button type="submit" style={styles.submitBtn}>
+                                    {editingScale ? 'Update Grade' : 'Save Grade'}
+                                </button>
+                                <button type="button" onClick={handleCancel} style={styles.cancelBtn}>
+                                    Cancel
+                                </button>
+                            </div>
                         </form>
                     </div>
                 )}
 
-                {/* Grading Scales Table */}
+                {/* Search Bar */}
+                <div style={styles.searchBar}>
+                    <input
+                        style={styles.searchInput}
+                        placeholder="🔍 Search by grade or remarks..."
+                        value={search}
+                        onChange={e => setSearch(e.target.value)}
+                    />
+                    <button onClick={() => setSearch('')} style={styles.clearBtn}>Clear</button>
+                </div>
+
+                {/* Table */}
                 {loading ? (
                     <p>Loading grading scales...</p>
                 ) : (
-                    <table style={styles.table}>
-                        <thead>
-                            <tr style={styles.tableHeader}>
-                                <th style={styles.th}>#</th>
-                                <th style={styles.th}>Grade</th>
-                                <th style={styles.th}>Min Mark</th>
-                                <th style={styles.th}>Max Mark</th>
-                                <th style={styles.th}>Points</th>
-                                <th style={styles.th}>Remarks</th>
-                                <th style={styles.th}>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {scales.map((scale, index) => (
-                                <tr key={scale.id} style={index % 2 === 0 ? styles.trEven : styles.trOdd}>
-                                    <td style={styles.td}>{index + 1}</td>
-                                    <td style={styles.td}>
-                                        <span style={{
-                                            ...styles.gradeBadge,
-                                            backgroundColor:
-                                                scale.gradeLetter === 'A' ? '#28a745' :
-                                                scale.gradeLetter === 'B' ? '#2E75B6' :
-                                                scale.gradeLetter === 'C' ? '#ffc107' : '#dc3545'
-                                        }}>
-                                            {scale.gradeLetter}
-                                        </span>
-                                    </td>
-                                    <td style={styles.td}>{scale.minMark}</td>
-                                    <td style={styles.td}>{scale.maxMark}</td>
-                                    <td style={styles.td}>{scale.points}</td>
-                                    <td style={styles.td}>{scale.remarks}</td>
-                                    <td style={styles.td}>
-                                        <button
-                                            onClick={() => handleDelete(scale.id)}
-                                            style={styles.deleteBtn}>
-                                            Delete
-                                        </button>
-                                    </td>
+                    <div style={styles.tableWrapper}>
+                        <table style={styles.table}>
+                            <thead>
+                                <tr style={styles.tableHeader}>
+                                    <th style={styles.th}>#</th>
+                                    <th style={styles.th}>Grade</th>
+                                    <th style={styles.th}>Min Mark</th>
+                                    <th style={styles.th}>Max Mark</th>
+                                    <th style={styles.th}>Points</th>
+                                    <th style={styles.th}>Remarks</th>
+                                    <th style={styles.th}>Actions</th>
                                 </tr>
-                            ))}
-                        </tbody>
-                    </table>
+                            </thead>
+                            <tbody>
+                                {filtered.map((scale, index) => (
+                                    <tr key={scale.scaleId} style={index % 2 === 0 ? styles.trEven : styles.trOdd}>
+                                        <td style={styles.td}>{index + 1}</td>
+                                        <td style={styles.td}>
+                                            <span style={{
+                                                ...styles.gradeBadge,
+                                                backgroundColor:
+                                                    scale.gradeLetter === 'A' ? '#28a745' :
+                                                    scale.gradeLetter === 'B' ? '#2E75B6' :
+                                                    scale.gradeLetter === 'C' ? '#ffc107' : '#dc3545'
+                                            }}>
+                                                {scale.gradeLetter}
+                                            </span>
+                                        </td>
+                                        <td style={styles.td}>{scale.minMark}</td>
+                                        <td style={styles.td}>{scale.maxMark}</td>
+                                        <td style={styles.td}>{scale.points}</td>
+                                        <td style={styles.td}>{scale.remarks}</td>
+                                        <td style={styles.td}>
+                                            <button onClick={() => handleEdit(scale)} style={styles.editBtn}>Edit</button>
+                                            <button onClick={() => handleDelete(scale.scaleId)} style={styles.deleteBtn}>Delete</button>
+                                        </td>
+                                    </tr>
+                                ))}
+                                {filtered.length === 0 && (
+                                    <tr>
+                                        <td colSpan="7" style={{ textAlign: 'center', padding: '20px', color: '#666' }}>
+                                            No grading scales found
+                                        </td>
+                                    </tr>
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
                 )}
             </div>
         </div>
@@ -203,6 +266,8 @@ function GradingScales() {
 const styles = {
     container: { minHeight: '100vh', backgroundColor: '#f0f2f5' },
     navbar: { backgroundColor: '#1F3864', padding: '15px 30px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
+    navLeft: { display: 'flex', alignItems: 'center', gap: '10px' },
+    navLogo: { width: '45px', height: '45px', objectFit: 'contain' },
     navTitle: { color: 'white', margin: 0, fontSize: '18px' },
     navRight: { display: 'flex', gap: '10px' },
     navBtn: { backgroundColor: 'transparent', color: 'white', border: '1px solid white', padding: '8px 16px', borderRadius: '5px', cursor: 'pointer' },
@@ -216,17 +281,22 @@ const styles = {
     formGrid: { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '15px', marginBottom: '15px' },
     formGroup: { display: 'flex', flexDirection: 'column', gap: '5px' },
     input: { padding: '8px', borderRadius: '5px', border: '1px solid #ddd', fontSize: '14px' },
+    btnGroup: { display: 'flex', gap: '10px' },
     submitBtn: { backgroundColor: '#2E75B6', color: 'white', border: 'none', padding: '10px 20px', borderRadius: '5px', cursor: 'pointer' },
-    table: { width: '100%', borderCollapse: 'collapse', backgroundColor: 'white', borderRadius: '10px', overflow: 'hidden', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' },
+    cancelBtn: { backgroundColor: '#6c757d', color: 'white', border: 'none', padding: '10px 20px', borderRadius: '5px', cursor: 'pointer' },
+    searchBar: { display: 'flex', gap: '10px', marginBottom: '20px' },
+    searchInput: { flex: 1, padding: '10px', borderRadius: '5px', border: '1px solid #ddd', fontSize: '14px' },
+    clearBtn: { backgroundColor: '#6c757d', color: 'white', border: 'none', padding: '10px 15px', borderRadius: '5px', cursor: 'pointer' },
+    tableWrapper: { overflowX: 'auto', borderRadius: '10px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' },
+    table: { width: '100%', borderCollapse: 'collapse', backgroundColor: 'white', minWidth: '600px' },
     tableHeader: { backgroundColor: '#1F3864' },
     th: { color: 'white', padding: '12px 15px', textAlign: 'left' },
     td: { padding: '12px 15px', borderBottom: '1px solid #eee' },
     trEven: { backgroundColor: '#f9f9f9' },
     trOdd: { backgroundColor: 'white' },
+    editBtn: { backgroundColor: '#2E75B6', color: 'white', border: 'none', padding: '5px 10px', borderRadius: '3px', cursor: 'pointer', marginRight: '5px' },
     deleteBtn: { backgroundColor: '#dc3545', color: 'white', border: 'none', padding: '5px 10px', borderRadius: '3px', cursor: 'pointer' },
-    gradeBadge: { color: 'white', padding: '3px 8px', borderRadius: '3px', fontSize: '14px', fontWeight: 'bold' },
-    navLeft: { display: 'flex', alignItems: 'center', gap: '10px' },
-    navLogo: { width: '45px', height: '45px', objectFit: 'contain' },
+    gradeBadge: { color: 'white', padding: '3px 8px', borderRadius: '3px', fontSize: '14px', fontWeight: 'bold' }
 };
 
 export default GradingScales;

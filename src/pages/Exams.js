@@ -6,6 +6,7 @@ function Exams() {
     const [exams, setExams] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
+    const [successMsg, setSuccessMsg] = useState('');
     const [showForm, setShowForm] = useState(false);
     const [editingExam, setEditingExam] = useState(null);
     const [formData, setFormData] = useState({
@@ -16,6 +17,13 @@ function Exams() {
         endDate: '',
         classLevel: ''
     });
+
+    const sections = [
+        { value: 'PRE_SCHOOL', label: 'Pre-School', grades: ['PG', 'PP1', 'PP2'], color: '#6f42c1' },
+        { value: 'LOWER_PRIMARY', label: 'Lower Primary', grades: ['G1', 'G2', 'G3'], color: '#2E75B6' },
+        { value: 'UPPER_PRIMARY', label: 'Upper Primary', grades: ['G4', 'G5', 'G6'], color: '#fd7e14' },
+        { value: 'JUNIOR_SCHOOL', label: 'Junior School', grades: ['G7', 'G8', 'G9'], color: '#20c997' }
+    ];
 
     useEffect(() => {
         fetchExams();
@@ -48,28 +56,28 @@ function Exams() {
     const handleSubmit = async (e) => {
         e.preventDefault();
         try {
+            const payload = {
+                ...formData,
+                term: parseInt(formData.term)
+            };
             if (editingExam) {
-                await api.put(`/api/exams/${editingExam.examId}`, {
-                    ...formData,
-                    term: parseInt(formData.term)
-                });
+                await api.put(`/api/exams/${editingExam.examId}`, payload);
             } else {
-                await api.post('/api/exams', {
-                    ...formData,
-                    term: parseInt(formData.term)
-                });
+                await api.post('/api/exams', payload);
             }
             setShowForm(false);
             setEditingExam(null);
             setFormData({ examName: '', academicYear: '', term: '', startDate: '', endDate: '', classLevel: '' });
             fetchExams();
+            setSuccessMsg('Exam saved successfully!');
+            setTimeout(() => setSuccessMsg(''), 3000);
         } catch (err) {
             setError('Failed to save exam');
         }
     };
 
     const handleDelete = async (id) => {
-        if (window.confirm('Are you sure?')) {
+        if (window.confirm('Are you sure? This will delete all results and report cards for this exam.')) {
             try {
                 await api.delete(`/api/exams/${id}`);
                 fetchExams();
@@ -85,13 +93,28 @@ function Exams() {
         setFormData({ examName: '', academicYear: '', term: '', startDate: '', endDate: '', classLevel: '' });
     };
 
+    const getSectionColor = (classLevel) => {
+        for (const section of sections) {
+            if (section.grades.includes(classLevel)) return section.color;
+        }
+        return '#1F3864';
+    };
+
+    const getTermLabel = (term) => {
+        if (term === 1) return 'Term 1';
+        if (term === 2) return 'Term 2';
+        if (term === 3) return 'Term 3';
+        return `Term ${term}`;
+    };
+
     return (
         <div style={styles.container}>
+            {/* Navbar */}
             <div style={styles.navbar}>
-                 <div style={styles.navLeft}>
+                <div style={styles.navLeft}>
                     <img src={logo1} alt="Logo" style={styles.navLogo} />
                     <h2 style={styles.navTitle}>Pipeline Adventist School</h2>
-                </div>  
+                </div>
                 <div style={styles.navRight}>
                     <button onClick={() => window.location.href = '/dashboard'} style={styles.navBtn}>← Dashboard</button>
                     <button onClick={() => { localStorage.clear(); window.location.href = '/'; }} style={styles.logoutBtn}>Logout</button>
@@ -100,39 +123,40 @@ function Exams() {
 
             <div style={styles.content}>
                 <div style={styles.header}>
-                    <h2 style={styles.title}>Exam Management</h2>
+                    <div>
+                        <h2 style={styles.title}>📝 Exams</h2>
+                        <p style={styles.subtitle}>Create and manage school examinations</p>
+                    </div>
                     <button onClick={() => { setShowForm(!showForm); setEditingExam(null); }} style={styles.addBtn}>
                         {showForm ? 'Cancel' : '+ Add Exam'}
                     </button>
                 </div>
 
                 {error && <p style={styles.error}>{error}</p>}
+                {successMsg && <p style={styles.success}>{successMsg}</p>}
 
+                {/* Add/Edit Form */}
                 {showForm && (
                     <div style={styles.form}>
-                        <h3>{editingExam ? 'Edit Exam' : 'Add New Exam'}</h3>
+                        <h3 style={styles.formTitle}>
+                            {editingExam ? '✏️ Edit Exam' : '➕ Add New Exam'}
+                        </h3>
                         <form onSubmit={handleSubmit}>
                             <div style={styles.formGrid}>
                                 <div style={styles.formGroup}>
-                                    <label>Exam Name</label>
-                                    <select style={styles.input} value={formData.examName}
+                                    <label style={styles.label}>Exam Name</label>
+                                    <input style={styles.input} value={formData.examName}
                                         onChange={e => setFormData({...formData, examName: e.target.value})}
-                                        placeholder="e.g. End Term 1 2024" required >
-                                        <option value="">Select Exam Name</option>
-                                        <option value="OPENER   EXAM">OPENER   EXAM</option>
-                                        <option value="MID TERM EXAM">MID TERM EXAM</option>
-                                        <option value="END TERM EXAM">END TERM EXAM</option>
-                                    </select>
-                                        
+                                        placeholder="e.g. End Term 1 2025" required />
                                 </div>
                                 <div style={styles.formGroup}>
-                                    <label>Academic Year</label>
+                                    <label style={styles.label}>Academic Year</label>
                                     <input style={styles.input} value={formData.academicYear}
                                         onChange={e => setFormData({...formData, academicYear: e.target.value})}
-                                        placeholder="e.g. 2024" required />
+                                        placeholder="e.g. 2025" required />
                                 </div>
                                 <div style={styles.formGroup}>
-                                    <label>Term</label>
+                                    <label style={styles.label}>Term</label>
                                     <select style={styles.input} value={formData.term}
                                         onChange={e => setFormData({...formData, term: e.target.value})} required>
                                         <option value="">Select Term</option>
@@ -142,30 +166,47 @@ function Exams() {
                                     </select>
                                 </div>
                                 <div style={styles.formGroup}>
-                                    <label>Start Date</label>
+                                    <label style={styles.label}>Start Date</label>
                                     <input type="date" style={styles.input} value={formData.startDate}
                                         onChange={e => setFormData({...formData, startDate: e.target.value})} required />
                                 </div>
                                 <div style={styles.formGroup}>
-                                    <label>End Date</label>
+                                    <label style={styles.label}>End Date</label>
                                     <input type="date" style={styles.input} value={formData.endDate}
                                         onChange={e => setFormData({...formData, endDate: e.target.value})} required />
                                 </div>
                                 <div style={styles.formGroup}>
-                                    <label>Class Level</label>
+                                    <label style={styles.label}>Class Level</label>
                                     <select style={styles.input} value={formData.classLevel}
                                         onChange={e => setFormData({...formData, classLevel: e.target.value})} required>
                                         <option value="">Select Class Level</option>
-                                        <option value="PRE-SCHOOL">PRE-SCHOOL</option>
-                                        <option value="LOWER PRIMARY">LOWER PRIMARY</option>
-                                        <option value="UPPER PRIMARY">UPPER PRIMARY</option>
-                                        <option value="JUNIOR SCHOOL">JUNIOR SCHOOL</option>
-                                    </select>                                  
+                                        <option value="ALL">All Classes</option>
+                                        <optgroup label="Pre-School">
+                                            <option value="PG">PG</option>
+                                            <option value="PP1">PP1</option>
+                                            <option value="PP2">PP2</option>
+                                        </optgroup>
+                                        <optgroup label="Lower Primary">
+                                            <option value="G1">G1</option>
+                                            <option value="G2">G2</option>
+                                            <option value="G3">G3</option>
+                                        </optgroup>
+                                        <optgroup label="Upper Primary">
+                                            <option value="G4">G4</option>
+                                            <option value="G5">G5</option>
+                                            <option value="G6">G6</option>
+                                        </optgroup>
+                                        <optgroup label="Junior School">
+                                            <option value="G7">G7</option>
+                                            <option value="G8">G8</option>
+                                            <option value="G9">G9</option>
+                                        </optgroup>
+                                    </select>
                                 </div>
                             </div>
                             <div style={styles.btnGroup}>
                                 <button type="submit" style={styles.submitBtn}>
-                                    {editingExam ? 'Update Exam' : 'Save Exam'}
+                                    {editingExam ? '✅ Update Exam' : '💾 Save Exam'}
                                 </button>
                                 <button type="button" onClick={handleCancel} style={styles.cancelBtn}>Cancel</button>
                             </div>
@@ -173,38 +214,81 @@ function Exams() {
                     </div>
                 )}
 
-                {loading ? <p>Loading exams...</p> : (
-                    <table style={styles.table}>
-                        <thead>
-                            <tr style={styles.tableHeader}>
-                                <th style={styles.th}>#</th>
-                                <th style={styles.th}>Exam Name</th>
-                                <th style={styles.th}>Academic Year</th>
-                                <th style={styles.th}>Term</th>
-                                <th style={styles.th}>Start Date</th>
-                                <th style={styles.th}>End Date</th>
-                                <th style={styles.th}>Class Level</th>
-                                <th style={styles.th}>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {exams.map((exam, index) => (
-                                <tr key={exam.examId} style={index % 2 === 0 ? styles.trEven : styles.trOdd}>
-                                    <td style={styles.td}>{index + 1}</td>
-                                    <td style={styles.td}>{exam.examName}</td>
-                                    <td style={styles.td}>{exam.academicYear}</td>
-                                    <td style={styles.td}><span style={styles.termBadge}>Term {exam.term}</span></td>
-                                    <td style={styles.td}>{exam.startDate}</td>
-                                    <td style={styles.td}>{exam.endDate}</td>
-                                    <td style={styles.td}>{exam.classLevel}</td>
-                                    <td style={styles.td}>
-                                        <button onClick={() => handleEdit(exam)} style={styles.editBtn}>Edit</button>
-                                        <button onClick={() => handleDelete(exam.examId)} style={styles.deleteBtn}>Delete</button>
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
+                {/* Exams List */}
+                {loading ? (
+                    <p style={styles.centerMsg}>⏳ Loading exams...</p>
+                ) : exams.length === 0 ? (
+                    <div style={styles.emptyState}>
+                        <div style={styles.emptyIcon}>📝</div>
+                        <h3>No Exams Yet</h3>
+                        <p>Click + Add Exam to create your first exam</p>
+                    </div>
+                ) : (
+                    <div style={styles.examGrid}>
+                        {exams.map(exam => (
+                            <div key={exam.examId} style={styles.examCard}>
+                                {/* Card Header */}
+                                <div style={{
+                                    ...styles.examHeader,
+                                    backgroundColor: getSectionColor(exam.classLevel)
+                                }}>
+                                    <div>
+                                        <h3 style={styles.examName}>{exam.examName}</h3>
+                                        <p style={styles.examMeta}>
+                                            {exam.academicYear} • {getTermLabel(exam.term)}
+                                        </p>
+                                    </div>
+                                    <span style={styles.termBadge}>
+                                        {getTermLabel(exam.term)}
+                                    </span>
+                                </div>
+
+                                {/* Card Body */}
+                                <div style={styles.examBody}>
+                                    <div style={styles.examInfo}>
+                                        <div style={styles.infoItem}>
+                                            <span style={styles.infoIcon}>📅</span>
+                                            <div>
+                                                <div style={styles.infoLabel}>Start Date</div>
+                                                <div style={styles.infoValue}>{exam.startDate}</div>
+                                            </div>
+                                        </div>
+                                        <div style={styles.infoItem}>
+                                            <span style={styles.infoIcon}>📅</span>
+                                            <div>
+                                                <div style={styles.infoLabel}>End Date</div>
+                                                <div style={styles.infoValue}>{exam.endDate}</div>
+                                            </div>
+                                        </div>
+                                        <div style={styles.infoItem}>
+                                            <span style={styles.infoIcon}>🏫</span>
+                                            <div>
+                                                <div style={styles.infoLabel}>Class Level</div>
+                                                <div style={styles.infoValue}>
+                                                    <span style={{
+                                                        ...styles.levelBadge,
+                                                        backgroundColor: getSectionColor(exam.classLevel)
+                                                    }}>
+                                                        {exam.classLevel}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Card Actions */}
+                                <div style={styles.examActions}>
+                                    <button onClick={() => handleEdit(exam)} style={styles.editBtn}>
+                                        ✏️ Edit
+                                    </button>
+                                    <button onClick={() => handleDelete(exam.examId)} style={styles.deleteBtn}>
+                                        🗑️ Delete
+                                    </button>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
                 )}
             </div>
         </div>
@@ -214,33 +298,53 @@ function Exams() {
 const styles = {
     container: { minHeight: '100vh', backgroundColor: '#f0f2f5' },
     navbar: { backgroundColor: '#1F3864', padding: '15px 30px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
+    navLeft: { display: 'flex', alignItems: 'center', gap: '10px' },
+    navLogo: { width: '45px', height: '45px', objectFit: 'contain' },
     navTitle: { color: 'white', margin: 0, fontSize: '18px' },
     navRight: { display: 'flex', gap: '10px' },
     navBtn: { backgroundColor: 'transparent', color: 'white', border: '1px solid white', padding: '8px 16px', borderRadius: '5px', cursor: 'pointer' },
     logoutBtn: { backgroundColor: 'transparent', color: 'white', border: '1px solid white', padding: '8px 16px', borderRadius: '5px', cursor: 'pointer' },
     content: { padding: '30px' },
-    header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' },
-    title: { color: '#1F3864', margin: 0 },
-    addBtn: { backgroundColor: '#1F3864', color: 'white', border: 'none', padding: '10px 20px', borderRadius: '5px', cursor: 'pointer' },
-    error: { color: 'red', marginBottom: '15px' },
-    form: { backgroundColor: 'white', padding: '20px', borderRadius: '10px', marginBottom: '20px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' },
-    formGrid: { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '15px', marginBottom: '15px' },
-    formGroup: { display: 'flex', flexDirection: 'column', gap: '5px' },
-    input: { padding: '8px', borderRadius: '5px', border: '1px solid #ddd', fontSize: '14px' },
+    header: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px', flexWrap: 'wrap', gap: '10px' },
+    title: { color: '#1F3864', margin: '0 0 5px 0', fontSize: '24px' },
+    subtitle: { color: '#666', margin: 0, fontSize: '14px' },
+    addBtn: { backgroundColor: '#1F3864', color: 'white', border: 'none', padding: '10px 20px', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold' },
+    error: { color: 'red', padding: '10px', backgroundColor: '#fff3f3', borderRadius: '5px', marginBottom: '15px' },
+    success: { color: '#155724', padding: '10px', backgroundColor: '#d4edda', borderRadius: '5px', marginBottom: '15px' },
+    centerMsg: { textAlign: 'center', padding: '40px', color: '#666' },
+
+    // Form
+    form: { backgroundColor: 'white', padding: '25px', borderRadius: '10px', marginBottom: '25px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' },
+    formTitle: { color: '#1F3864', marginBottom: '20px' },
+    formGrid: { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '15px', marginBottom: '20px' },
+    formGroup: { display: 'flex', flexDirection: 'column', gap: '6px' },
+    label: { fontSize: '13px', fontWeight: 'bold', color: '#1F3864' },
+    input: { padding: '10px', borderRadius: '5px', border: '1px solid #ddd', fontSize: '14px' },
     btnGroup: { display: 'flex', gap: '10px' },
-    submitBtn: { backgroundColor: '#2E75B6', color: 'white', border: 'none', padding: '10px 20px', borderRadius: '5px', cursor: 'pointer' },
+    submitBtn: { backgroundColor: '#2E75B6', color: 'white', border: 'none', padding: '10px 25px', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold' },
     cancelBtn: { backgroundColor: '#6c757d', color: 'white', border: 'none', padding: '10px 20px', borderRadius: '5px', cursor: 'pointer' },
-    table: { width: '100%', borderCollapse: 'collapse', backgroundColor: 'white', borderRadius: '10px', overflow: 'hidden', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' },
-    tableHeader: { backgroundColor: '#1F3864' },
-    th: { color: 'white', padding: '12px 15px', textAlign: 'left' },
-    td: { padding: '12px 15px', borderBottom: '1px solid #eee' },
-    trEven: { backgroundColor: '#f9f9f9' },
-    trOdd: { backgroundColor: 'white' },
-    editBtn: { backgroundColor: '#2E75B6', color: 'white', border: 'none', padding: '5px 10px', borderRadius: '3px', cursor: 'pointer', marginRight: '5px' },
-    deleteBtn: { backgroundColor: '#dc3545', color: 'white', border: 'none', padding: '5px 10px', borderRadius: '3px', cursor: 'pointer' },
-    termBadge: { backgroundColor: '#1F3864', color: 'white', padding: '3px 8px', borderRadius: '3px', fontSize: '12px' },
-    navLeft: { display: 'flex', alignItems: 'center', gap: '10px' },
-navLogo: { width: '45px', height: '45px', objectFit: 'contain' },
+
+    // Exam Grid
+    examGrid: { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '20px' },
+    examCard: { backgroundColor: 'white', borderRadius: '10px', overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.1)', border: '1px solid #eee' },
+    examHeader: { padding: '15px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' },
+    examName: { color: 'white', margin: '0 0 4px 0', fontSize: '16px' },
+    examMeta: { color: 'rgba(255,255,255,0.8)', margin: 0, fontSize: '12px' },
+    termBadge: { backgroundColor: 'rgba(255,255,255,0.2)', color: 'white', padding: '4px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: 'bold', whiteSpace: 'nowrap' },
+    examBody: { padding: '15px 20px' },
+    examInfo: { display: 'flex', flexDirection: 'column', gap: '10px' },
+    infoItem: { display: 'flex', alignItems: 'center', gap: '10px' },
+    infoIcon: { fontSize: '16px' },
+    infoLabel: { fontSize: '11px', color: '#999' },
+    infoValue: { fontSize: '13px', color: '#333', fontWeight: 'bold' },
+    levelBadge: { color: 'white', padding: '2px 8px', borderRadius: '3px', fontSize: '12px', fontWeight: 'bold' },
+    examActions: { borderTop: '1px solid #eee', padding: '10px 15px', display: 'flex', gap: '8px', backgroundColor: '#f8f9fa' },
+    editBtn: { flex: 1, backgroundColor: '#2E75B6', color: 'white', border: 'none', padding: '8px', borderRadius: '5px', cursor: 'pointer', fontSize: '13px' },
+    deleteBtn: { flex: 1, backgroundColor: '#dc3545', color: 'white', border: 'none', padding: '8px', borderRadius: '5px', cursor: 'pointer', fontSize: '13px' },
+
+    // Empty state
+    emptyState: { backgroundColor: 'white', padding: '60px', borderRadius: '10px', textAlign: 'center', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' },
+    emptyIcon: { fontSize: '48px', marginBottom: '15px' }
 };
 
 export default Exams;
