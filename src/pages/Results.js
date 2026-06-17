@@ -11,12 +11,11 @@ function Results() {
     const [error, setError] = useState('');
     const [exams, setExams] = useState([]);
     const [classes, setClasses] = useState([]);
-    const [step, setStep] = useState(1); // 1=exam, 2=class, 3=results
+    const [step, setStep] = useState(1);
     const [filterExam, setFilterExam] = useState('');
     const [filterClassId, setFilterClassId] = useState('');
     const [search, setSearch] = useState('');
 
-    // Pivot data
     const [pivotStudents, setPivotStudents] = useState([]);
     const [pivotSubjects, setPivotSubjects] = useState([]);
     const [pivotData, setPivotData] = useState({});
@@ -28,16 +27,12 @@ function Results() {
         { value: 'JUNIOR_SCHOOL', label: 'Junior School', color: '#20c997', grades: ['G7', 'G8', 'G9'] }
     ];
 
-    useEffect(() => {
-        fetchExams();
-        fetchClasses();
-    }, []);
+    useEffect(() => { fetchExams(); fetchClasses(); }, []);
 
     useEffect(() => {
-        // Teacher — skip exam and class steps, go straight
         if (role === 'TEACHER' && linkedClassId) {
             setFilterClassId(linkedClassId);
-            setStep(1); // still need to select exam
+            setStep(1);
         }
     }, [linkedClassId]);
 
@@ -51,7 +46,6 @@ function Results() {
         setClasses(response.data);
     };
 
-    // Step 1 — Select Exam
     const handleSelectExam = (examId) => {
         setFilterExam(examId);
         setFilterClassId('');
@@ -61,34 +55,31 @@ function Results() {
         setResults([]);
         setError('');
         if (role === 'TEACHER' && linkedClassId) {
-            // Teacher — skip class step, load results immediately
             loadResults(examId, linkedClassId);
         } else {
             setStep(2);
         }
     };
 
-    // Step 2 — Select Class
     const handleSelectClass = (classId) => {
         setFilterClassId(classId);
         setError('');
         loadResults(filterExam, classId);
     };
 
-    // Load results
     const loadResults = async (examId, classId) => {
         setLoading(true);
         setStep(3);
         setError('');
         try {
-            const selectedClass = classes.find(c => String(c.classId) === String(classId));
             const response = await api.get('/api/results');
             let data = response.data;
 
+            // ✅ Filter by examId AND classId only — never by className
+            // This ensures results still show even after a class is renamed
             data = data.filter(r =>
                 String(r.exam?.examId) === String(examId) &&
-                (r.student?.className === selectedClass?.className ||
-                    String(r.student?.schoolClass?.classId) === String(classId))
+                String(r.student?.schoolClass?.classId) === String(classId)
             );
 
             setResults(data);
@@ -132,15 +123,8 @@ function Results() {
     };
 
     const handleReset = () => {
-        setStep(1);
-        setFilterExam('');
-        setFilterClassId('');
-        setSearch('');
-        setResults([]);
-        setPivotStudents([]);
-        setPivotSubjects([]);
-        setPivotData({});
-        setError('');
+        setStep(1); setFilterExam(''); setFilterClassId(''); setSearch('');
+        setResults([]); setPivotStudents([]); setPivotSubjects([]); setPivotData({}); setError('');
     };
 
     const getGradeColor = (grade) => {
@@ -159,9 +143,7 @@ function Results() {
     };
 
     const getStudentStats = (studentId) => {
-        const studentResults = pivotSubjects
-            .map(sub => pivotData[studentId]?.[sub.id])
-            .filter(Boolean);
+        const studentResults = pivotSubjects.map(sub => pivotData[studentId]?.[sub.id]).filter(Boolean);
         if (studentResults.length === 0) return { total: 0, average: 0, grade: '-' };
         const total = studentResults.reduce((sum, r) => sum + r.marksObtained, 0);
         const average = total / studentResults.length;
@@ -173,9 +155,7 @@ function Results() {
     };
 
     const getSubjectAverage = (subjectId) => {
-        const subjectResults = pivotStudents
-            .map(s => pivotData[s.studentId]?.[subjectId])
-            .filter(Boolean);
+        const subjectResults = pivotStudents.map(s => pivotData[s.studentId]?.[subjectId]).filter(Boolean);
         if (subjectResults.length === 0) return '-';
         const avg = subjectResults.reduce((sum, r) => sum + r.marksObtained, 0) / subjectResults.length;
         return avg.toFixed(1);
@@ -184,7 +164,6 @@ function Results() {
     const selectedExamObj = exams.find(e => String(e.examId) === String(filterExam));
     const selectedClassObj = classes.find(c => String(c.classId) === String(filterClassId));
 
-    // Group classes by section → grade → streams
     const getGroupedClasses = () => {
         const grouped = {};
         sections.forEach(s => { grouped[s.value] = {}; });
@@ -192,7 +171,6 @@ function Results() {
             const section = cls.section;
             const grade = cls.gradeLevel;
             if (section && grade) {
-                if (!grouped[section]) grouped[section] = {};
                 if (!grouped[section][grade]) grouped[section][grade] = [];
                 grouped[section][grade].push(cls);
             }
@@ -202,7 +180,6 @@ function Results() {
 
     const groupedClasses = getGroupedClasses();
 
-    // Filtered students for search
     const displayStudents = search
         ? pivotStudents.filter(s =>
             `${s.firstName} ${s.lastName}`.toLowerCase().includes(search.toLowerCase()) ||
@@ -224,27 +201,18 @@ function Results() {
             </div>
 
             <div style={styles.content}>
-                {/* Breadcrumb */}
                 <div style={styles.breadcrumb}>
-                    <span onClick={handleReset} style={{ ...styles.breadItem, cursor: 'pointer', color: step >= 1 ? '#1F3864' : '#999' }}>
-                        📊 Results
-                    </span>
-                    {filterExam && (
-                        <>
-                            <span style={styles.breadArrow}>›</span>
-                            <span onClick={() => { setStep(1); setFilterExam(''); setFilterClassId(''); }} style={{ ...styles.breadItem, cursor: 'pointer', color: '#2E75B6' }}>
-                                📝 {selectedExamObj?.examName}
-                            </span>
-                        </>
-                    )}
-                    {filterClassId && (
-                        <>
-                            <span style={styles.breadArrow}>›</span>
-                            <span style={{ ...styles.breadItem, color: '#28a745' }}>
-                                🏫 {selectedClassObj?.className}
-                            </span>
-                        </>
-                    )}
+                    <span onClick={handleReset} style={{ ...styles.breadItem, cursor: 'pointer', color: '#1F3864' }}>📊 Results</span>
+                    {filterExam && <>
+                        <span style={styles.breadArrow}>›</span>
+                        <span onClick={() => { setStep(1); setFilterExam(''); setFilterClassId(''); }} style={{ ...styles.breadItem, cursor: 'pointer', color: '#2E75B6' }}>
+                            📝 {selectedExamObj?.examName}
+                        </span>
+                    </>}
+                    {filterClassId && <>
+                        <span style={styles.breadArrow}>›</span>
+                        <span style={{ ...styles.breadItem, color: '#28a745' }}>🏫 {selectedClassObj?.className}</span>
+                    </>}
                 </div>
 
                 {error && <p style={styles.error}>{error}</p>}
@@ -254,32 +222,21 @@ function Results() {
                     <div>
                         <div style={styles.stepHeader}>
                             <h2 style={styles.stepTitle}>📝 Select Exam</h2>
-                            <p style={styles.stepSubtitle}>Choose which exam you want to view results for</p>
+                            <p style={styles.stepSubtitle}>Choose which exam to view results for</p>
                         </div>
                         {exams.length === 0 ? (
-                            <div style={styles.emptyCard}>
-                                <div style={styles.emptyIcon}>📝</div>
-                                <p>No exams found. Create exams first.</p>
-                            </div>
+                            <div style={styles.emptyCard}><div style={styles.emptyIcon}>📝</div><p>No exams found.</p></div>
                         ) : (
                             <div style={styles.examGrid}>
                                 {exams.map(exam => (
-                                    <div key={exam.examId}
-                                        onClick={() => handleSelectExam(exam.examId)}
-                                        style={styles.examTile}>
+                                    <div key={exam.examId} onClick={() => handleSelectExam(exam.examId)} style={styles.examTile}>
                                         <div style={styles.examTileTop}>
                                             <span style={styles.examIcon}>📝</span>
                                             <h3 style={styles.examName}>{exam.examName}</h3>
-                                            <p style={styles.examMeta}>
-                                                Term {exam.term} • {exam.academicYear}
-                                            </p>
-                                            {exam.classLevel && (
-                                                <span style={styles.examLevel}>{exam.classLevel}</span>
-                                            )}
+                                            <p style={styles.examMeta}>Term {exam.term} • {exam.academicYear}</p>
+                                            {exam.classLevel && <span style={styles.examLevel}>{exam.classLevel}</span>}
                                         </div>
-                                        <div style={styles.examTileBottom}>
-                                            <span style={styles.selectHint}>Click to select →</span>
-                                        </div>
+                                        <div style={styles.examTileBottom}><span style={styles.selectHint}>Click to select →</span></div>
                                     </div>
                                 ))}
                             </div>
@@ -295,60 +252,38 @@ function Results() {
                                 <button onClick={() => setStep(1)} style={styles.backBtn}>← Back</button>
                                 <div>
                                     <h2 style={styles.stepTitle}>🏫 Select Class</h2>
-                                    <p style={styles.stepSubtitle}>
-                                        Exam: <strong>{selectedExamObj?.examName}</strong> — Click a class to view results
-                                    </p>
+                                    <p style={styles.stepSubtitle}>Exam: <strong>{selectedExamObj?.examName}</strong> — Click a class to view results</p>
                                 </div>
                             </div>
                         </div>
-
                         <div style={styles.classTilesCard}>
                             {sections.map(section => {
                                 const sectionGrades = groupedClasses[section.value] || {};
-                                const hasClasses = Object.keys(sectionGrades).length > 0;
-                                if (!hasClasses) return null;
+                                if (!Object.keys(sectionGrades).length) return null;
                                 return (
                                     <div key={section.value} style={styles.sectionBlock}>
                                         <div style={{ ...styles.sectionHeader, backgroundColor: section.color }}>
                                             <span style={styles.sectionLabel}>{section.label}</span>
-                                            <span style={styles.sectionMeta}>
-                                                {Object.values(sectionGrades).flat().length} classes
-                                            </span>
+                                            <span style={styles.sectionMeta}>{Object.values(sectionGrades).flat().length} classes</span>
                                         </div>
                                         <div style={styles.gradesRow}>
-                                            {Object.entries(sectionGrades)
-                                                .sort(([a], [b]) => a.localeCompare(b))
-                                                .map(([grade, gradeClasses]) => (
-                                                    <div key={grade} style={styles.gradeGroup}>
-                                                        <div style={{ ...styles.gradeLabel, color: section.color }}>
-                                                            {grade}
-                                                        </div>
-                                                        <div style={styles.streamTiles}>
-                                                            {gradeClasses.map(cls => (
-                                                                <div key={cls.classId}
-                                                                    onClick={() => handleSelectClass(cls.classId)}
-                                                                    style={{
-                                                                        ...styles.streamTile,
-                                                                        borderColor: section.color,
-                                                                        ':hover': { backgroundColor: section.color }
-                                                                    }}
-                                                                    onMouseEnter={e => {
-                                                                        e.currentTarget.style.backgroundColor = section.color;
-                                                                        e.currentTarget.style.color = 'white';
-                                                                    }}
-                                                                    onMouseLeave={e => {
-                                                                        e.currentTarget.style.backgroundColor = 'white';
-                                                                        e.currentTarget.style.color = '#333';
-                                                                    }}>
-                                                                    <div style={styles.streamTileName}>{cls.className}</div>
-                                                                    {cls.stream && (
-                                                                        <div style={styles.streamBadgeInner}>{cls.stream}</div>
-                                                                    )}
-                                                                </div>
-                                                            ))}
-                                                        </div>
+                                            {Object.entries(sectionGrades).sort(([a], [b]) => a.localeCompare(b)).map(([grade, gradeClasses]) => (
+                                                <div key={grade} style={styles.gradeGroup}>
+                                                    <div style={{ ...styles.gradeLabel, color: section.color }}>{grade}</div>
+                                                    <div style={styles.streamTiles}>
+                                                        {gradeClasses.map(cls => (
+                                                            <div key={cls.classId}
+                                                                onClick={() => handleSelectClass(cls.classId)}
+                                                                style={styles.streamTile}
+                                                                onMouseEnter={e => { e.currentTarget.style.backgroundColor = section.color; e.currentTarget.style.color = 'white'; }}
+                                                                onMouseLeave={e => { e.currentTarget.style.backgroundColor = 'white'; e.currentTarget.style.color = '#333'; }}>
+                                                                <div style={styles.streamTileName}>{cls.className}</div>
+                                                                {cls.stream && <div style={styles.streamBadgeInner}>{cls.stream}</div>}
+                                                            </div>
+                                                        ))}
                                                     </div>
-                                                ))}
+                                                </div>
+                                            ))}
                                         </div>
                                     </div>
                                 );
@@ -357,56 +292,36 @@ function Results() {
                     </div>
                 )}
 
-                {/* ── STEP 3: Results Table ── */}
+                {/* ── STEP 3: Results Pivot Table ── */}
                 {step === 3 && (
                     <div>
                         <div style={styles.stepHeader}>
                             <div style={styles.stepHeaderLeft}>
-                                {role !== 'TEACHER' && (
-                                    <button onClick={() => setStep(2)} style={styles.backBtn}>← Back</button>
-                                )}
+                                {role !== 'TEACHER' && <button onClick={() => setStep(2)} style={styles.backBtn}>← Back</button>}
                                 <div>
-                                    <h2 style={styles.stepTitle}>
-                                        📊 {selectedClassObj?.className} — {selectedExamObj?.examName}
-                                    </h2>
-                                    <p style={styles.stepSubtitle}>
-                                        Term {selectedExamObj?.term} • {selectedExamObj?.academicYear}
-                                    </p>
+                                    <h2 style={styles.stepTitle}>📊 {selectedClassObj?.className} — {selectedExamObj?.examName}</h2>
+                                    <p style={styles.stepSubtitle}>Term {selectedExamObj?.term} • {selectedExamObj?.academicYear}</p>
                                 </div>
                             </div>
-                            <input
-                                style={styles.searchInput}
-                                placeholder="🔍 Search student..."
-                                value={search}
-                                onChange={e => setSearch(e.target.value)}
-                            />
+                            <input style={styles.searchInput} placeholder="🔍 Search student..."
+                                value={search} onChange={e => setSearch(e.target.value)} />
                         </div>
 
                         {loading ? (
-                            <div style={styles.emptyCard}>
-                                <p>⏳ Loading results...</p>
-                            </div>
+                            <div style={styles.emptyCard}><p>⏳ Loading results...</p></div>
                         ) : pivotStudents.length === 0 ? (
                             <div style={styles.emptyCard}>
                                 <div style={styles.emptyIcon}>📭</div>
                                 <p>No results found for <strong>{selectedClassObj?.className}</strong></p>
-                                <p style={{ color: '#666', fontSize: '13px' }}>
-                                    Use Mark Entry to add marks for this class and exam.
-                                </p>
-                                <button onClick={() => window.location.href = '/mark-entry'} style={styles.goBtn}>
-                                    ✏️ Go to Mark Entry
-                                </button>
+                                <p style={{ color: '#666', fontSize: '13px' }}>Use Mark Entry to add marks for this class and exam.</p>
+                                <button onClick={() => window.location.href = '/mark-entry'} style={styles.goBtn}>✏️ Go to Mark Entry</button>
                             </div>
                         ) : (
                             <div style={styles.tableCard}>
                                 <div style={styles.tableTopBar}>
                                     <div>
-                                        <h3 style={styles.tableTitle}>
-                                            {selectedClassObj?.className} — {selectedExamObj?.examName}
-                                        </h3>
-                                        <p style={styles.tableSubtitle}>
-                                            {pivotStudents.length} students | {pivotSubjects.length} subjects
-                                        </p>
+                                        <h3 style={styles.tableTitle}>{selectedClassObj?.className} — {selectedExamObj?.examName}</h3>
+                                        <p style={styles.tableSubtitle}>{pivotStudents.length} students | {pivotSubjects.length} subjects</p>
                                     </div>
                                     <div style={styles.tableBadges}>
                                         <span style={styles.badge}>👥 {pivotStudents.length} Students</span>
@@ -414,7 +329,6 @@ function Results() {
                                         <span style={styles.badge}>📊 {results.length} Records</span>
                                     </div>
                                 </div>
-
                                 <div style={styles.tableWrapper}>
                                     <table style={styles.table}>
                                         <thead>
@@ -423,9 +337,7 @@ function Results() {
                                                 <th style={{ ...styles.th, ...styles.stickyCol2 }}>Adm No</th>
                                                 <th style={{ ...styles.th, ...styles.stickyCol3 }}>Student Name</th>
                                                 {pivotSubjects.map(sub => (
-                                                    <th key={sub.id} style={{ ...styles.th, ...styles.subjectTh }}>
-                                                        {sub.name}
-                                                    </th>
+                                                    <th key={sub.id} style={{ ...styles.th, ...styles.subjectTh }}>{sub.name}</th>
                                                 ))}
                                                 <th style={{ ...styles.th, ...styles.totalTh }}>Total</th>
                                                 <th style={{ ...styles.th, ...styles.totalTh }}>Avg %</th>
@@ -437,66 +349,35 @@ function Results() {
                                             {displayStudents.map((student, index) => {
                                                 const stats = getStudentStats(student.studentId);
                                                 return (
-                                                    <tr key={student.studentId}
-                                                        style={index % 2 === 0 ? styles.trEven : styles.trOdd}>
-                                                        <td style={{ ...styles.td, ...styles.stickyCol, textAlign: 'center' }}>
-                                                            {index + 1}
-                                                        </td>
-                                                        <td style={{ ...styles.td, ...styles.stickyCol2 }}>
-                                                            <span style={styles.admNo}>{student.admissionNumber}</span>
-                                                        </td>
-                                                        <td style={{ ...styles.td, ...styles.stickyCol3 }}>
-                                                            <strong>{student.firstName} {student.lastName}</strong>
-                                                        </td>
+                                                    <tr key={student.studentId} style={index % 2 === 0 ? styles.trEven : styles.trOdd}>
+                                                        <td style={{ ...styles.td, ...styles.stickyCol, textAlign: 'center' }}>{index + 1}</td>
+                                                        <td style={{ ...styles.td, ...styles.stickyCol2 }}><span style={styles.admNo}>{student.admissionNumber}</span></td>
+                                                        <td style={{ ...styles.td, ...styles.stickyCol3 }}><strong>{student.firstName} {student.lastName}</strong></td>
                                                         {pivotSubjects.map(sub => {
                                                             const result = pivotData[student.studentId]?.[sub.id];
                                                             return (
                                                                 <td key={sub.id} style={{ ...styles.td, textAlign: 'center' }}>
                                                                     {result ? (
                                                                         <div style={styles.markCell}>
-                                                                            <span style={{ ...styles.markValue, color: getMarkColor(result.marksObtained) }}>
-                                                                                {result.marksObtained}
-                                                                            </span>
-                                                                            {result.grade && (
-                                                                                <span style={{ ...styles.gradeSmall, backgroundColor: getGradeColor(result.grade) }}>
-                                                                                    {result.grade}
-                                                                                </span>
-                                                                            )}
+                                                                            <span style={{ ...styles.markValue, color: getMarkColor(result.marksObtained) }}>{result.marksObtained}</span>
+                                                                            {result.grade && <span style={{ ...styles.gradeSmall, backgroundColor: getGradeColor(result.grade) }}>{result.grade}</span>}
                                                                         </div>
-                                                                    ) : (
-                                                                        <span style={styles.noMark}>—</span>
-                                                                    )}
+                                                                    ) : <span style={styles.noMark}>—</span>}
                                                                 </td>
                                                             );
                                                         })}
-                                                        <td style={{ ...styles.td, ...styles.totalCell }}>
-                                                            <strong>{stats.total}</strong>
-                                                        </td>
-                                                        <td style={{ ...styles.td, ...styles.totalCell }}>
-                                                            <span style={{ color: getMarkColor(parseFloat(stats.average)), fontWeight: 'bold' }}>
-                                                                {stats.average}%
-                                                            </span>
-                                                        </td>
-                                                        <td style={{ ...styles.td, ...styles.totalCell, textAlign: 'center' }}>
-                                                            <span style={{ ...styles.gradeBadge, backgroundColor: getGradeColor(stats.grade) }}>
-                                                                {stats.grade}
-                                                            </span>
-                                                        </td>
-                                                        <td style={{ ...styles.td, ...styles.totalCell, textAlign: 'center' }}>
-                                                            <span style={styles.rankBadge}>{index + 1}</span>
-                                                        </td>
+                                                        <td style={{ ...styles.td, ...styles.totalCell }}><strong>{stats.total}</strong></td>
+                                                        <td style={{ ...styles.td, ...styles.totalCell }}><span style={{ color: getMarkColor(parseFloat(stats.average)), fontWeight: 'bold' }}>{stats.average}%</span></td>
+                                                        <td style={{ ...styles.td, ...styles.totalCell, textAlign: 'center' }}><span style={{ ...styles.gradeBadge, backgroundColor: getGradeColor(stats.grade) }}>{stats.grade}</span></td>
+                                                        <td style={{ ...styles.td, ...styles.totalCell, textAlign: 'center' }}><span style={styles.rankBadge}>{index + 1}</span></td>
                                                     </tr>
                                                 );
                                             })}
                                             <tr style={styles.averageRow}>
-                                                <td colSpan="3" style={{ ...styles.td, ...styles.avgLabel }}>
-                                                    📊 Subject Average
-                                                </td>
+                                                <td colSpan="3" style={{ ...styles.td, ...styles.avgLabel }}>📊 Subject Average</td>
                                                 {pivotSubjects.map(sub => (
                                                     <td key={sub.id} style={{ ...styles.td, textAlign: 'center' }}>
-                                                        <strong style={{ color: '#1F3864' }}>
-                                                            {getSubjectAverage(sub.id)}
-                                                        </strong>
+                                                        <strong style={{ color: '#1F3864' }}>{getSubjectAverage(sub.id)}</strong>
                                                     </td>
                                                 ))}
                                                 <td colSpan="4" style={styles.td}></td>
@@ -504,7 +385,6 @@ function Results() {
                                         </tbody>
                                     </table>
                                 </div>
-
                                 <div style={styles.legend}>
                                     <span style={styles.legendTitle}>Grade Legend:</span>
                                     <span style={{ ...styles.legendItem, color: '#28a745' }}>● A (80-100) Excellent</span>
@@ -532,23 +412,17 @@ const styles = {
     logoutBtn: { backgroundColor: 'transparent', color: 'white', border: '1px solid white', padding: '8px 16px', borderRadius: '5px', cursor: 'pointer' },
     content: { padding: '30px' },
     error: { color: 'red', padding: '10px', backgroundColor: '#fff3f3', borderRadius: '5px', marginBottom: '15px' },
-
-    // Breadcrumb
     breadcrumb: { display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '25px', flexWrap: 'wrap' },
     breadItem: { fontSize: '14px', fontWeight: 'bold' },
     breadArrow: { color: '#999', fontSize: '16px' },
-
-    // Step Header
     stepHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '10px' },
     stepHeaderLeft: { display: 'flex', alignItems: 'center', gap: '15px' },
     stepTitle: { color: '#1F3864', margin: '0 0 4px 0', fontSize: '22px' },
     stepSubtitle: { color: '#666', margin: 0, fontSize: '14px' },
     backBtn: { backgroundColor: '#6c757d', color: 'white', border: 'none', padding: '8px 16px', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold', fontSize: '14px' },
     searchInput: { padding: '10px 15px', borderRadius: '5px', border: '2px solid #ddd', fontSize: '14px', minWidth: '250px' },
-
-    // Exam Tiles
     examGrid: { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '15px' },
-    examTile: { backgroundColor: 'white', borderRadius: '10px', boxShadow: '0 2px 8px rgba(0,0,0,0.1)', cursor: 'pointer', overflow: 'hidden', transition: 'transform 0.2s, box-shadow 0.2s', border: '2px solid transparent' },
+    examTile: { backgroundColor: 'white', borderRadius: '10px', boxShadow: '0 2px 8px rgba(0,0,0,0.1)', cursor: 'pointer', overflow: 'hidden', border: '2px solid transparent' },
     examTileTop: { padding: '20px', textAlign: 'center' },
     examIcon: { fontSize: '36px', display: 'block', marginBottom: '10px' },
     examName: { color: '#1F3864', margin: '0 0 6px 0', fontSize: '16px' },
@@ -556,8 +430,6 @@ const styles = {
     examLevel: { backgroundColor: '#e3f2fd', color: '#1F3864', padding: '3px 10px', borderRadius: '20px', fontSize: '12px', fontWeight: 'bold' },
     examTileBottom: { backgroundColor: '#1F3864', padding: '8px', textAlign: 'center' },
     selectHint: { color: 'white', fontSize: '12px' },
-
-    // Class Tiles
     classTilesCard: { backgroundColor: 'white', padding: '20px', borderRadius: '10px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' },
     sectionBlock: { marginBottom: '15px', borderRadius: '8px', overflow: 'hidden', border: '1px solid #eee' },
     sectionHeader: { padding: '10px 15px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
@@ -567,11 +439,9 @@ const styles = {
     gradeGroup: { display: 'flex', flexDirection: 'column', gap: '6px' },
     gradeLabel: { fontSize: '12px', fontWeight: 'bold', textAlign: 'center' },
     streamTiles: { display: 'flex', gap: '8px', flexWrap: 'wrap' },
-    streamTile: { padding: '10px 14px', borderRadius: '8px', cursor: 'pointer', textAlign: 'center', transition: 'all 0.2s', minWidth: '60px', border: '2px solid #ddd', backgroundColor: 'white', color: '#333' },
+    streamTile: { padding: '10px 14px', borderRadius: '8px', cursor: 'pointer', textAlign: 'center', minWidth: '60px', border: '2px solid #ddd', backgroundColor: 'white', color: '#333', transition: 'all 0.2s' },
     streamTileName: { fontSize: '14px', fontWeight: 'bold' },
     streamBadgeInner: { fontSize: '10px', color: '#999', marginTop: '2px' },
-
-    // Table Card
     tableCard: { backgroundColor: 'white', borderRadius: '10px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)', overflow: 'hidden' },
     tableTopBar: { backgroundColor: '#1F3864', padding: '15px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' },
     tableTitle: { color: 'white', margin: '0 0 3px 0', fontSize: '16px' },
