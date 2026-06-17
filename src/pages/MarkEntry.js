@@ -13,175 +13,196 @@ function MarkEntry() {
     const [students, setStudents] = useState([]);
     const [selectedClass, setSelectedClass] = useState('');
     const [selectedExam, setSelectedExam] = useState('');
+    const [mode, setMode] = useState('single'); // 'single' | 'multi'
+
+    // Single subject mode
     const [selectedSubject, setSelectedSubject] = useState('');
-    const [marks, setMarks] = useState({});
+    const [marks, setMarks] = useState({}); // { studentId: { marks, resultId, exists } }
+
+    // Multi subject mode
+    const [selectedSubjectIds, setSelectedSubjectIds] = useState([]);
+    const [multiMarks, setMultiMarks] = useState({}); // { studentId: { subjectId: { marks, resultId, exists } } }
+
     const [loading, setLoading] = useState(false);
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState('');
     const [successMsg, setSuccessMsg] = useState('');
+    const [step, setStep] = useState(1); // 1=setup, 2=subject select (multi), 3=mark sheet
 
-   useEffect(() => {
-    fetchClasses();
-    fetchExams();
-}, []);
+    useEffect(() => { fetchClasses(); fetchExams(); }, []);
 
-useEffect(() => {
-    // Auto select and lock class for teacher
-    if (role === 'TEACHER' && linkedClassId) {
-        setSelectedClass(linkedClassId);
-        fetchStudentsByClass(linkedClassId);
-        fetchSubjectsByClass(linkedClassId);
-    }
-}, [linkedClassId]);
+    useEffect(() => {
+        if (role === 'TEACHER' && linkedClassId) {
+            setSelectedClass(linkedClassId);
+        }
+    }, [linkedClassId]);
 
     useEffect(() => {
         if (selectedClass) {
-            fetchStudentsByClass(selectedClass);
             fetchSubjectsByClass(selectedClass);
+            fetchStudentsByClass(selectedClass);
         } else {
-            setStudents([]);
-            setSubjects([]);
+            setSubjects([]); setStudents([]);
         }
     }, [selectedClass]);
 
     useEffect(() => {
-        if (selectedClass && selectedExam && selectedSubject) {
-            fetchExistingMarks();
+        if (selectedClass && selectedExam && selectedSubject && mode === 'single') {
+            fetchExistingMarksSingle();
         }
-    }, [selectedSubject, selectedExam]);
+    }, [selectedSubject, selectedExam, mode]);
 
     const fetchClasses = async () => {
-        try {
-            const response = await api.get('/api/classes');
-            setClasses(response.data);
-        } catch (err) {
-            setError('Failed to load classes');
-        }
+        try { const r = await api.get('/api/classes'); setClasses(r.data); } catch (e) { setError('Failed to load classes'); }
     };
 
     const fetchExams = async () => {
-        try {
-            const response = await api.get('/api/exams');
-            setExams(response.data);
-        } catch (err) {
-            setError('Failed to load exams');
-        }
+        try { const r = await api.get('/api/exams'); setExams(r.data); } catch (e) { setError('Failed to load exams'); }
     };
 
-    // ✅ Fixed — load subjects from class-subjects assignment
     const fetchSubjectsByClass = async (classId) => {
         try {
-            const response = await api.get(`/api/class-subjects/by-class/${classId}`);
-            if (response.data && response.data.length > 0) {
-                const classSubjects = response.data.map(cs => cs.subject).filter(Boolean);
-                setSubjects(classSubjects);
+            const r = await api.get(`/api/class-subjects/by-class/${classId}`);
+            if (r.data?.length > 0) {
+                setSubjects(r.data.map(cs => cs.subject).filter(Boolean));
             } else {
-                // Fallback to all subjects if no class-subject assignment
                 const fallback = await api.get('/api/subjects');
                 setSubjects(fallback.data);
             }
-        } catch (err) {
-            // Fallback to all subjects on error
-            try {
-                const fallback = await api.get('/api/subjects');
-                setSubjects(fallback.data);
-            } catch (e) {
-                setError('Failed to load subjects');
-            }
+        } catch (e) {
+            try { const f = await api.get('/api/subjects'); setSubjects(f.data); } catch (_) { setError('Failed to load subjects'); }
         }
     };
 
     const fetchStudentsByClass = async (classId) => {
         try {
             setLoading(true);
-            setMarks({});
-            setSuccessMsg('');
-            const response = await api.get('/api/students');
-            const classStudents = response.data.filter(s =>
-                String(s.schoolClass?.classId) === String(classId)
-            );
-            setStudents(classStudents);
+            const r = await api.get('/api/students');
+            setStudents(r.data.filter(s => String(s.schoolClass?.classId) === String(classId)));
             setLoading(false);
-        } catch (err) {
-            setError('Failed to load students');
-            setLoading(false);
-        }
+        } catch (e) { setError('Failed to load students'); setLoading(false); }
     };
 
-    const fetchExistingMarks = async () => {
+    // ── Single Subject: fetch existing marks ──────────────────────────────────
+    const fetchExistingMarksSingle = async () => {
         try {
-            const response = await api.get(`/api/results/by-exam/${selectedExam}`);
-            const subjectResults = response.data.filter(r =>
-                String(r.subject?.subjectId) === String(selectedSubject)
-            );
-            const existingMarks = {};
-            subjectResults.forEach(result => {
-                if (result.student?.studentId) {
-                    existingMarks[result.student.studentId] = {
-                        marks: result.marksObtained,
-                        resultId: result.resultId,
-                        exists: true
+            const r = await api.get(`/api/results/by-exam/${selectedExam}`);
+            const existing = {};
+            r.data.filter(res => String(res.subject?.subjectId) === String(selectedSubject))
+                .forEach(res => {
+                    if (res.student?.studentId) {
+                        existing[res.student.studentId] = {
+                            marks: res.marksObtained, resultId: res.resultId, exists: true
+                        };
+                    }
+                });
+            setMarks(existing);
+        } catch (e) { console.error('Failed to load existing marks'); }
+    };
+
+    // ── Multi Subject: fetch existing marks for all selected subjects ──────────
+    const fetchExistingMarksMulti = async (subjectIds) => {
+        try {
+            const r = await api.get(`/api/results/by-exam/${selectedExam}`);
+            const existing = {};
+            r.data.forEach(res => {
+                const sid = res.student?.studentId;
+                const subId = res.subject?.subjectId;
+                if (sid && subId && subjectIds.includes(subId)) {
+                    if (!existing[sid]) existing[sid] = {};
+                    existing[sid][subId] = {
+                        marks: res.marksObtained, resultId: res.resultId, exists: true
                     };
                 }
             });
-            setMarks(existingMarks);
-        } catch (err) {
-            console.error('Failed to load existing marks');
-        }
+            setMultiMarks(existing);
+        } catch (e) { console.error('Failed to load existing marks'); }
     };
 
+    // ── Single mode mark change ───────────────────────────────────────────────
     const handleMarkChange = useCallback((studentId, value) => {
         setMarks(prev => ({
             ...prev,
+            [studentId]: { ...prev[studentId], marks: value }
+        }));
+    }, []);
+
+    // ── Multi mode mark change ────────────────────────────────────────────────
+    const handleMultiMarkChange = useCallback((studentId, subjectId, value) => {
+        setMultiMarks(prev => ({
+            ...prev,
             [studentId]: {
                 ...prev[studentId],
-                marks: value
+                [subjectId]: { ...prev[studentId]?.[subjectId], marks: value }
             }
         }));
     }, []);
 
-    const handleSaveAll = async () => {
-                setSaving(true);
-                setError('');
-                setSuccessMsg('');
-                let saved = 0;
-                let updated = 0;
-                let failed = 0;
+    // ── Toggle subject selection (multi mode) ─────────────────────────────────
+    const toggleSubject = (subjectId) => {
+        setSelectedSubjectIds(prev =>
+            prev.includes(subjectId) ? prev.filter(id => id !== subjectId) : [...prev, subjectId]
+        );
+    };
 
-                for (const student of students) {
-                    const markData = marks[student.studentId];
-                    if (!markData || markData.marks === '' || markData.marks === undefined) continue;
-
-                    try {
-                        if (markData.exists && markData.resultId) {
-                            await api.put(`/api/results/${markData.resultId}`, {
-                                marksObtained: parseFloat(markData.marks),
-                                maxMarks: 100
-                            });
-                            updated++;
-                        } else {
-                            await api.post('/api/results', {
-                                marksObtained: parseFloat(markData.marks),
-                                maxMarks: 100,
-                                student: { studentId: student.studentId },
-                                subject: { subjectId: parseInt(selectedSubject) },
-                                exam: { examId: parseInt(selectedExam) }
-                            });
-                            saved++;
-                        }
-                    } catch (err) {
-                        failed++;
-                    }
-                }
-
-                setSaving(false);
-                if (failed > 0) {
-                    setError(`${failed} marks failed. ${saved} saved, ${updated} updated.`);
+    // ── Save single subject ───────────────────────────────────────────────────
+    const handleSaveSingle = async () => {
+        setSaving(true); setError(''); setSuccessMsg('');
+        let saved = 0, updated = 0, failed = 0;
+        for (const student of students) {
+            const markData = marks[student.studentId];
+            if (!markData || markData.marks === '' || markData.marks === undefined) continue;
+            try {
+                if (markData.exists && markData.resultId) {
+                    await api.put(`/api/results/${markData.resultId}`, { marksObtained: parseFloat(markData.marks), maxMarks: 100 });
+                    updated++;
                 } else {
-                    setSuccessMsg(`✅ ${saved} new marks saved and ${updated} marks updated successfully!`);
+                    await api.post('/api/results', {
+                        marksObtained: parseFloat(markData.marks), maxMarks: 100,
+                        student: { studentId: student.studentId },
+                        subject: { subjectId: parseInt(selectedSubject) },
+                        exam: { examId: parseInt(selectedExam) }
+                    });
+                    saved++;
                 }
-                fetchExistingMarks();
-            };
+            } catch (e) { failed++; }
+        }
+        setSaving(false);
+        if (failed > 0) setError(`${failed} marks failed. ${saved} saved, ${updated} updated.`);
+        else setSuccessMsg(`✅ ${saved} new + ${updated} updated successfully!`);
+        fetchExistingMarksSingle();
+    };
+
+    // ── Save multi subject ────────────────────────────────────────────────────
+    const handleSaveMulti = async () => {
+        setSaving(true); setError(''); setSuccessMsg('');
+        let saved = 0, updated = 0, failed = 0;
+        const selectedSubjects = subjects.filter(s => selectedSubjectIds.includes(s.subjectId));
+        for (const student of students) {
+            for (const subject of selectedSubjects) {
+                const markData = multiMarks[student.studentId]?.[subject.subjectId];
+                if (!markData || markData.marks === '' || markData.marks === undefined) continue;
+                try {
+                    if (markData.exists && markData.resultId) {
+                        await api.put(`/api/results/${markData.resultId}`, { marksObtained: parseFloat(markData.marks), maxMarks: 100 });
+                        updated++;
+                    } else {
+                        await api.post('/api/results', {
+                            marksObtained: parseFloat(markData.marks), maxMarks: 100,
+                            student: { studentId: student.studentId },
+                            subject: { subjectId: subject.subjectId },
+                            exam: { examId: parseInt(selectedExam) }
+                        });
+                        saved++;
+                    }
+                } catch (e) { failed++; }
+            }
+        }
+        setSaving(false);
+        if (failed > 0) setError(`${failed} marks failed. ${saved} saved, ${updated} updated.`);
+        else setSuccessMsg(`✅ ${saved} new + ${updated} updated successfully!`);
+        fetchExistingMarksMulti(selectedSubjectIds);
+    };
 
     const getGrade = (mark) => {
         if (!mark && mark !== 0) return null;
@@ -193,16 +214,42 @@ useEffect(() => {
         return { color: '#dc3545', label: 'D' };
     };
 
-    const selectedClassName = role === 'TEACHER' && linkedClassName
-        ? linkedClassName
-        : classes.find(c => String(c.classId) === String(selectedClass))?.className || '';
-
+    const selectedClassName = role === 'TEACHER' ? linkedClassName : classes.find(c => String(c.classId) === String(selectedClass))?.className || '';
     const selectedExamName = exams.find(e => String(e.examId) === String(selectedExam))?.examName || '';
     const selectedSubjectName = subjects.find(s => String(s.subjectId) === String(selectedSubject))?.subjectName || '';
+    const selectedSubjectsForMulti = subjects.filter(s => selectedSubjectIds.includes(s.subjectId));
+
+    const canProceed = selectedClass && selectedExam;
+
+    const handleProceedToSubjectSelect = async () => {
+        if (!canProceed) { setError('Select class and exam first'); return; }
+        setSelectedSubjectIds([]);
+        setMultiMarks({});
+        setStep(2);
+    };
+
+    const handleProceedToMarkSheet = async () => {
+        if (selectedSubjectIds.length === 0) { setError('Select at least one subject'); return; }
+        setError('');
+        setLoading(true);
+        await fetchExistingMarksMulti(selectedSubjectIds);
+        setLoading(false);
+        setStep(3);
+    };
+
+    const handleReset = () => {
+        setStep(1); setSelectedSubject(''); setSelectedSubjectIds([]);
+        setMarks({}); setMultiMarks({}); setError(''); setSuccessMsg('');
+    };
+
+    const countMultiEntered = () => {
+        let count = 0;
+        Object.values(multiMarks).forEach(s => Object.values(s).forEach(m => { if (m?.marks !== '' && m?.marks !== undefined) count++; }));
+        return count;
+    };
 
     return (
         <div style={styles.container}>
-            {/* Navbar */}
             <div style={styles.navbar}>
                 <div style={styles.navLeft}>
                     <img src={logo1} alt="Logo" style={styles.navLogo} />
@@ -215,110 +262,116 @@ useEffect(() => {
             </div>
 
             <div style={styles.content}>
-                <h2 style={styles.title}>✏️ Mark Entry</h2>
-                <p style={styles.subtitle}>
-                    {role === 'TEACHER' && linkedClassName
-                        ? `Class Teacher — ${linkedClassName}`
-                        : 'Select class, exam and subject to enter marks'}
-                </p>
+                <div style={styles.pageHeader}>
+                    <div>
+                        <h2 style={styles.title}>✏️ Mark Entry</h2>
+                        <p style={styles.subtitle}>{role === 'TEACHER' && linkedClassName ? `Class Teacher — ${linkedClassName}` : 'Enter marks per subject or for multiple subjects at once'}</p>
+                    </div>
+                    {(step > 1 || selectedSubject) && (
+                        <button onClick={handleReset} style={styles.resetBtn}>↺ Reset</button>
+                    )}
+                </div>
 
                 {error && <p style={styles.error}>{error}</p>}
                 {successMsg && <p style={styles.success}>{successMsg}</p>}
 
-                {/* Selection */}
+                {/* ── MODE TABS ── */}
+                <div style={styles.modeTabs}>
+                    <button onClick={() => { setMode('single'); handleReset(); }} style={{
+                        ...styles.modeTab,
+                        backgroundColor: mode === 'single' ? '#1F3864' : 'white',
+                        color: mode === 'single' ? 'white' : '#1F3864'
+                    }}>
+                        📖 Single Subject
+                        <span style={styles.modeTabDesc}>One subject at a time</span>
+                    </button>
+                    <button onClick={() => { setMode('multi'); handleReset(); }} style={{
+                        ...styles.modeTab,
+                        backgroundColor: mode === 'multi' ? '#1F3864' : 'white',
+                        color: mode === 'multi' ? 'white' : '#1F3864'
+                    }}>
+                        📚 Multiple Subjects
+                        <span style={styles.modeTabDesc}>All subjects in one pivot table</span>
+                    </button>
+                </div>
+
+                {/* ── SETUP: Class + Exam (shared by both modes) ── */}
                 <div style={styles.card}>
                     <div style={styles.grid3}>
-                        {/* Class — hidden for teacher, shown for admin */}
-                       <div style={styles.formGroup}>
-                            <label style={styles.label}>📚 Class</label>
+                        <div style={styles.formGroup}>
+                            <label style={styles.label}>🏫 Class</label>
                             {role === 'TEACHER' ? (
-                                // TEACHER — pre-selected and locked
                                 <div style={styles.classDisplay}>
-                                    🏫 {linkedClassName || 'No class assigned'}
-                                    <span style={styles.lockedBadge}>🔒 Locked</span>
+                                    {linkedClassName || 'No class assigned'}
+                                    <span style={styles.lockedBadge}>🔒</span>
                                 </div>
                             ) : (
-                                // ADMIN — can select any class
                                 <select style={styles.select} value={selectedClass}
-                                    onChange={e => {
-                                        setSelectedClass(e.target.value);
-                                        setSelectedSubject('');
-                                        setSelectedExam('');
-                                        setMarks({});
-                                        setSuccessMsg('');
-                                    }}>
+                                    onChange={e => { setSelectedClass(e.target.value); handleReset(); }}>
                                     <option value="">-- Select Class --</option>
                                     {classes.map(cls => (
-                                        <option key={cls.classId} value={cls.classId}>
-                                            {cls.className} — {cls.stream}
-                                        </option>
+                                        <option key={cls.classId} value={cls.classId}>{cls.className}</option>
                                     ))}
                                 </select>
                             )}
                         </div>
-
                         <div style={styles.formGroup}>
-                            <label style={styles.label}>📝 Select Exam</label>
+                            <label style={styles.label}>📝 Exam</label>
                             <select style={styles.select} value={selectedExam}
-                                onChange={e => {
-                                    setSelectedExam(e.target.value);
-                                    setMarks({});
-                                    setSuccessMsg('');
-                                }}>
+                                onChange={e => { setSelectedExam(e.target.value); setMarks({}); setMultiMarks({}); setSuccessMsg(''); }}>
                                 <option value="">-- Select Exam --</option>
                                 {exams.map(exam => (
                                     <option key={exam.examId} value={exam.examId}>
-                                        {exam.examName} (Term {exam.term})
+                                        {exam.examName} — {exam.academicYear} Term {exam.term}
                                     </option>
                                 ))}
                             </select>
                         </div>
 
-                        <div style={styles.formGroup}>
-                            <label style={styles.label}>📖 Select Subject</label>
-                            <select style={styles.select} value={selectedSubject}
-                                onChange={e => {
-                                    setSelectedSubject(e.target.value);
-                                    setMarks({});
-                                    setSuccessMsg('');
-                                }}
-                                disabled={!selectedClass}>
-                                <option value="">-- Select Subject --</option>
-                                {subjects.map(sub => (
-                                    <option key={sub.subjectId} value={sub.subjectId}>
-                                        {sub.subjectName}
-                                    </option>
-                                ))}
-                            </select>
-                        </div>
+                        {/* SINGLE MODE: Subject dropdown */}
+                        {mode === 'single' && (
+                            <div style={styles.formGroup}>
+                                <label style={styles.label}>📖 Subject</label>
+                                <select style={styles.select} value={selectedSubject}
+                                    onChange={e => { setSelectedSubject(e.target.value); setMarks({}); setSuccessMsg(''); }}
+                                    disabled={!selectedClass}>
+                                    <option value="">-- Select Subject --</option>
+                                    {subjects.map(sub => (
+                                        <option key={sub.subjectId} value={sub.subjectId}>{sub.subjectName}</option>
+                                    ))}
+                                </select>
+                            </div>
+                        )}
+
+                        {/* MULTI MODE: Proceed button */}
+                        {mode === 'multi' && step === 1 && (
+                            <div style={styles.formGroup}>
+                                <label style={styles.label}>&nbsp;</label>
+                                <button onClick={handleProceedToSubjectSelect}
+                                    style={styles.proceedBtn}
+                                    disabled={!canProceed}>
+                                    Continue → Select Subjects
+                                </button>
+                            </div>
+                        )}
                     </div>
                 </div>
 
-                {/* Mark Sheet */}
-                {selectedClass && selectedExam && selectedSubject && (
+                {/* ── SINGLE MODE: Mark Sheet ── */}
+                {mode === 'single' && selectedClass && selectedExam && selectedSubject && (
                     <div style={styles.tableCard}>
                         <div style={styles.tableTopBar}>
                             <div>
-                                <h3 style={styles.tableTitle}>Mark Sheet</h3>
-                                <p style={styles.tableSubtitle}>
-                                    {selectedClassName} | {selectedExamName} | {selectedSubjectName}
-                                </p>
+                                <h3 style={styles.tableTitle}>📋 {selectedSubjectName} — Mark Sheet</h3>
+                                <p style={styles.tableSubtitle}>{selectedClassName} | {selectedExamName}</p>
                             </div>
                             <div style={styles.tableBadges}>
-                                <span style={styles.badge}>👥 {students.length} Students</span>
-                                <span style={styles.badge}>
-                                    ✅ {Object.values(marks).filter(m => m?.marks !== '' && m?.marks !== undefined).length} Entered
-                                </span>
+                                <span style={styles.badge}>👥 {students.length}</span>
+                                <span style={styles.badge}>✅ {Object.values(marks).filter(m => m?.marks !== '' && m?.marks !== undefined).length} entered</span>
                             </div>
                         </div>
-
-                        {loading ? (
-                            <p style={styles.centerMsg}>⏳ Loading students...</p>
-                        ) : students.length === 0 ? (
-                            <p style={styles.centerMsg}>
-                                ⚠️ No students found in this class.
-                                Please add students first.
-                            </p>
+                        {loading ? <p style={styles.centerMsg}>⏳ Loading...</p> : students.length === 0 ? (
+                            <p style={styles.centerMsg}>⚠️ No students in this class</p>
                         ) : (
                             <>
                                 <div style={styles.tableWrapper}>
@@ -339,58 +392,29 @@ useEffect(() => {
                                                 const markData = marks[student.studentId];
                                                 const grade = getGrade(markData?.marks);
                                                 return (
-                                                    <tr key={student.studentId}
-                                                        style={index % 2 === 0 ? styles.trEven : styles.trOdd}>
+                                                    <tr key={student.studentId} style={index % 2 === 0 ? styles.trEven : styles.trOdd}>
                                                         <td style={styles.td}>{index + 1}</td>
-                                                        <td style={styles.td}>{student.admissionNumber}</td>
+                                                        <td style={styles.td}><span style={styles.admNo}>{student.admissionNumber}</span></td>
+                                                        <td style={styles.td}><strong>{student.firstName} {student.lastName}</strong></td>
                                                         <td style={styles.td}>
-                                                            <strong>{student.firstName} {student.lastName}</strong>
-                                                        </td>
-                                                        <td style={styles.td}>
-                                                            <span style={{
-                                                                backgroundColor: student.gender === 'Male' ? '#2E75B6' : '#e83e8c',
-                                                                color: 'white', padding: '2px 8px',
-                                                                borderRadius: '3px', fontSize: '12px'
-                                                            }}>
+                                                            <span style={{ backgroundColor: student.gender === 'Male' ? '#2E75B6' : '#e83e8c', color: 'white', padding: '2px 8px', borderRadius: '3px', fontSize: '11px' }}>
                                                                 {student.gender}
                                                             </span>
                                                         </td>
                                                         <td style={styles.td}>
-                                                            <input
-                                                                type="number"
-                                                                min="0"
-                                                                max="100"
-                                                                style={{
-                                                                    ...styles.markInput,
-                                                                    borderColor: grade ? grade.color : '#ddd'
-                                                                }}
+                                                            <input type="number" min="0" max="100"
+                                                                style={{ ...styles.markInput, borderColor: grade ? grade.color : '#ddd' }}
                                                                 value={markData?.marks || ''}
                                                                 onChange={e => handleMarkChange(student.studentId, e.target.value)}
-                                                                placeholder="0 - 100"
-                                                            />
+                                                                placeholder="—" />
                                                         </td>
                                                         <td style={styles.td}>
-                                                            {grade && (
-                                                                <span style={{
-                                                                    backgroundColor: grade.color,
-                                                                    color: 'white',
-                                                                    padding: '4px 12px',
-                                                                    borderRadius: '3px',
-                                                                    fontWeight: 'bold',
-                                                                    fontSize: '14px'
-                                                                }}>
-                                                                    {grade.label}
-                                                                </span>
-                                                            )}
+                                                            {grade && <span style={{ backgroundColor: grade.color, color: 'white', padding: '3px 10px', borderRadius: '3px', fontWeight: 'bold', fontSize: '13px' }}>{grade.label}</span>}
                                                         </td>
                                                         <td style={styles.td}>
-                                                            {markData?.exists ? (
-                                                                <span style={styles.updateBadge}>✏️ Will Update</span>
-                                                            ) : markData?.marks ? (
-                                                                <span style={styles.newBadge}>🆕 New</span>
-                                                            ) : (
-                                                                <span style={styles.emptyBadge}>— Not entered</span>
-                                                            )}
+                                                            {markData?.exists ? <span style={styles.updateBadge}>✏️ Update</span>
+                                                                : markData?.marks ? <span style={styles.newBadge}>🆕 New</span>
+                                                                : <span style={styles.emptyBadge}>—</span>}
                                                         </td>
                                                     </tr>
                                                 );
@@ -398,18 +422,122 @@ useEffect(() => {
                                         </tbody>
                                     </table>
                                 </div>
-
-                                {/* Save Button */}
                                 <div style={styles.saveSection}>
-                                    <button
-                                        onClick={handleSaveAll}
-                                        style={styles.saveBtn}
-                                        disabled={saving}>
-                                        {saving ? '⏳ Saving marks...' : '💾 Save All Marks'}
+                                    <button onClick={handleSaveSingle} style={styles.saveBtn} disabled={saving}>
+                                        {saving ? '⏳ Saving...' : '💾 Save All Marks'}
                                     </button>
-                                    <p style={styles.hint}>
-                                        * Only rows with marks entered will be saved
-                                    </p>
+                                    <p style={styles.hint}>Only rows with marks entered will be saved</p>
+                                </div>
+                            </>
+                        )}
+                    </div>
+                )}
+
+                {/* ── MULTI MODE STEP 2: Subject Selection ── */}
+                {mode === 'multi' && step === 2 && (
+                    <div style={styles.card}>
+                        <div style={styles.subjectToolbar}>
+                            <h3 style={styles.sectionTitle}>📚 Select Subjects to Enter</h3>
+                            <div style={styles.toolbarBtns}>
+                                <button onClick={() => setSelectedSubjectIds(subjects.map(s => s.subjectId))} style={styles.selectAllBtn}>Select All</button>
+                                <button onClick={() => setSelectedSubjectIds([])} style={styles.clearAllBtn}>Clear</button>
+                            </div>
+                        </div>
+                        <p style={styles.subjectHint}>✅ {selectedSubjectIds.length}/{subjects.length} selected — tick the subjects that were tested</p>
+                        <div style={styles.subjectGrid}>
+                            {subjects.map(sub => {
+                                const isSelected = selectedSubjectIds.includes(sub.subjectId);
+                                return (
+                                    <div key={sub.subjectId} onClick={() => toggleSubject(sub.subjectId)}
+                                        style={{ ...styles.subjectTile, backgroundColor: isSelected ? '#e8f5e9' : 'white', border: isSelected ? '2px solid #28a745' : '2px solid #ddd', color: isSelected ? '#28a745' : '#333' }}>
+                                        <span style={styles.subjectCheck}>{isSelected ? '✅' : '⬜'}</span>
+                                        <span style={styles.subjectName}>{sub.subjectName}</span>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                        <button onClick={handleProceedToMarkSheet} style={styles.proceedBtnLarge}
+                            disabled={selectedSubjectIds.length === 0 || loading}>
+                            {loading ? '⏳ Loading...' : `Continue → Enter Marks for ${selectedSubjectIds.length} Subject(s)`}
+                        </button>
+                    </div>
+                )}
+
+                {/* ── MULTI MODE STEP 3: Pivot Mark Sheet ── */}
+                {mode === 'multi' && step === 3 && (
+                    <div style={styles.tableCard}>
+                        <div style={styles.tableTopBar}>
+                            <div>
+                                <h3 style={styles.tableTitle}>📋 Mark Sheet — {selectedSubjectsForMulti.length} Subjects</h3>
+                                <p style={styles.tableSubtitle}>{selectedClassName} | {selectedExamName}</p>
+                            </div>
+                            <div style={styles.tableBadges}>
+                                <span style={styles.badge}>👥 {students.length}</span>
+                                <span style={styles.badge}>📚 {selectedSubjectsForMulti.length} subjects</span>
+                                <span style={{ ...styles.badge, backgroundColor: '#28a745' }}>✅ {countMultiEntered()} entered</span>
+                            </div>
+                        </div>
+                        {loading ? <p style={styles.centerMsg}>⏳ Loading...</p> : students.length === 0 ? (
+                            <p style={styles.centerMsg}>⚠️ No students in this class</p>
+                        ) : (
+                            <>
+                                <div style={styles.tableWrapper}>
+                                    <table style={styles.table}>
+                                        <thead>
+                                            <tr style={styles.thead}>
+                                                <th style={{ ...styles.th, position: 'sticky', left: 0, backgroundColor: '#f8f9fa', zIndex: 2 }}>#</th>
+                                                <th style={{ ...styles.th, position: 'sticky', left: '50px', backgroundColor: '#f8f9fa', zIndex: 2, minWidth: '160px' }}>Student Name</th>
+                                                {selectedSubjectsForMulti.map(sub => (
+                                                    <th key={sub.subjectId} style={{ ...styles.th, textAlign: 'center', minWidth: '100px', backgroundColor: '#2E75B6', color: 'white', fontSize: '11px' }}>
+                                                        {sub.subjectName}
+                                                    </th>
+                                                ))}
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {students.map((student, index) => (
+                                                <tr key={student.studentId} style={index % 2 === 0 ? styles.trEven : styles.trOdd}>
+                                                    <td style={{ ...styles.td, position: 'sticky', left: 0, backgroundColor: index % 2 === 0 ? '#f9f9f9' : 'white', zIndex: 1 }}>{index + 1}</td>
+                                                    <td style={{ ...styles.td, position: 'sticky', left: '50px', backgroundColor: index % 2 === 0 ? '#f9f9f9' : 'white', zIndex: 1, borderRight: '2px solid #ddd' }}>
+                                                        <div>
+                                                            <strong style={{ fontSize: '13px' }}>{student.firstName} {student.lastName}</strong>
+                                                            <div style={{ fontSize: '11px', color: '#999', fontFamily: 'monospace' }}>{student.admissionNumber}</div>
+                                                        </div>
+                                                    </td>
+                                                    {selectedSubjectsForMulti.map(subject => {
+                                                        const markData = multiMarks[student.studentId]?.[subject.subjectId];
+                                                        const grade = getGrade(markData?.marks);
+                                                        return (
+                                                            <td key={subject.subjectId} style={{ ...styles.td, textAlign: 'center', padding: '5px' }}>
+                                                                <div style={styles.multiMarkCell}>
+                                                                    <input type="number" min="0" max="100"
+                                                                        style={{
+                                                                            ...styles.multiMarkInput,
+                                                                            borderColor: grade ? grade.color : '#ddd',
+                                                                            backgroundColor: grade ? `${grade.color}15` : 'white'
+                                                                        }}
+                                                                        value={markData?.marks || ''}
+                                                                        onChange={e => handleMultiMarkChange(student.studentId, subject.subjectId, e.target.value)}
+                                                                        placeholder="—" />
+                                                                    {grade && (
+                                                                        <span style={{ fontSize: '10px', fontWeight: 'bold', color: grade.color }}>{grade.label}</span>
+                                                                    )}
+                                                                    {markData?.exists && <span style={styles.savedDot} title="Already saved">●</span>}
+                                                                </div>
+                                                            </td>
+                                                        );
+                                                    })}
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <div style={styles.saveSection}>
+                                    <button onClick={handleSaveMulti} style={styles.saveBtn} disabled={saving}>
+                                        {saving ? '⏳ Saving...' : '💾 Save All Marks'}
+                                    </button>
+                                    <button onClick={() => setStep(2)} style={styles.backBtn}>← Change Subjects</button>
+                                    <p style={styles.hint}>● Blue dot = already saved. Empty cells are skipped.</p>
                                 </div>
                             </>
                         )}
@@ -417,21 +545,30 @@ useEffect(() => {
                 )}
 
                 {/* Instructions */}
-                {(!selectedClass || !selectedExam || !selectedSubject) && (
+                {mode === 'single' && (!selectedClass || !selectedExam || !selectedSubject) && (
                     <div style={styles.instructionCard}>
-                        <h3 style={{ color: '#1F3864', marginBottom: '15px' }}>
-                            📋 How to Enter Marks
-                        </h3>
+                        <h3 style={{ color: '#1F3864', marginBottom: '15px' }}>📖 Single Subject Mode</h3>
                         <ol style={{ paddingLeft: '20px', lineHeight: '2.2', color: '#555' }}>
                             {role !== 'TEACHER' && <li>Select the <strong>Class</strong></li>}
                             <li>Select the <strong>Exam</strong></li>
                             <li>Select the <strong>Subject</strong></li>
-                            <li>All students in the class will appear</li>
-                            <li>Enter marks for each student (0 - 100)</li>
-                            <li>Grade is calculated automatically</li>
+                            <li>Enter marks for each student (0–100)</li>
                             <li>Click <strong>💾 Save All Marks</strong></li>
                             <li>Repeat for each subject</li>
-                            <li>Go to <strong>Report Cards</strong> to generate report cards</li>
+                        </ol>
+                    </div>
+                )}
+                {mode === 'multi' && step === 1 && (
+                    <div style={styles.instructionCard}>
+                        <h3 style={{ color: '#1F3864', marginBottom: '15px' }}>📚 Multiple Subjects Mode</h3>
+                        <ol style={{ paddingLeft: '20px', lineHeight: '2.2', color: '#555' }}>
+                            {role !== 'TEACHER' && <li>Select the <strong>Class</strong></li>}
+                            <li>Select the <strong>Exam</strong></li>
+                            <li>Click <strong>Continue → Select Subjects</strong></li>
+                            <li>Tick all subjects that were tested</li>
+                            <li>A pivot table appears — students as rows, subjects as columns</li>
+                            <li>Enter marks in each cell</li>
+                            <li>Click <strong>💾 Save All Marks</strong></li>
                         </ol>
                     </div>
                 )}
@@ -450,59 +587,69 @@ const styles = {
     navBtn: { backgroundColor: 'transparent', color: 'white', border: '1px solid white', padding: '8px 16px', borderRadius: '5px', cursor: 'pointer' },
     logoutBtn: { backgroundColor: 'transparent', color: 'white', border: '1px solid white', padding: '8px 16px', borderRadius: '5px', cursor: 'pointer' },
     content: { padding: '30px' },
+    pageHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px', flexWrap: 'wrap', gap: '10px' },
     title: { color: '#1F3864', margin: '0 0 5px 0', fontSize: '24px' },
-    subtitle: { color: '#666', marginBottom: '25px' },
-    error: { color: 'red', padding: '10px', backgroundColor: '#fff3f3', borderRadius: '5px', border: '1px solid #ffcdd2', marginBottom: '15px' },
-    success: { color: '#155724', padding: '10px', backgroundColor: '#d4edda', borderRadius: '5px', border: '1px solid #c3e6cb', marginBottom: '15px' },
+    subtitle: { color: '#666', margin: 0, fontSize: '14px' },
+    resetBtn: { backgroundColor: '#6c757d', color: 'white', border: 'none', padding: '8px 16px', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold' },
+    error: { color: 'red', padding: '10px', backgroundColor: '#fff3f3', borderRadius: '5px', marginBottom: '15px' },
+    success: { color: '#155724', padding: '10px', backgroundColor: '#d4edda', borderRadius: '5px', marginBottom: '15px' },
+
+    // Mode tabs
+    modeTabs: { display: 'flex', gap: '10px', marginBottom: '20px' },
+    modeTab: { flex: 1, padding: '12px 15px', borderRadius: '8px', border: '2px solid #1F3864', cursor: 'pointer', fontWeight: 'bold', fontSize: '14px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' },
+    modeTabDesc: { fontSize: '11px', fontWeight: 'normal', opacity: 0.8 },
+
+    // Setup card
     card: { backgroundColor: 'white', padding: '20px', borderRadius: '10px', marginBottom: '20px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' },
     grid3: { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '15px' },
     formGroup: { display: 'flex', flexDirection: 'column', gap: '6px' },
     label: { fontWeight: 'bold', color: '#1F3864', fontSize: '13px' },
-    select: { padding: '10px', borderRadius: '5px', border: '2px solid #ddd', fontSize: '14px', backgroundColor: 'white', cursor: 'pointer' },
-    classDisplay: { padding: '10px', borderRadius: '5px', border: '2px solid #1F3864', fontSize: '14px', backgroundColor: '#e3f2fd', color: '#1F3864', fontWeight: 'bold' },
+    select: { padding: '10px', borderRadius: '5px', border: '2px solid #ddd', fontSize: '14px', backgroundColor: 'white' },
+    classDisplay: { padding: '10px 15px', borderRadius: '5px', border: '2px solid #1F3864', fontSize: '14px', backgroundColor: '#e3f2fd', color: '#1F3864', fontWeight: 'bold', display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
+    lockedBadge: { backgroundColor: '#1F3864', color: 'white', padding: '2px 6px', borderRadius: '3px', fontSize: '11px' },
+    proceedBtn: { backgroundColor: '#1F3864', color: 'white', border: 'none', padding: '10px', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold', fontSize: '13px' },
+    proceedBtnLarge: { backgroundColor: '#1F3864', color: 'white', border: 'none', padding: '12px 25px', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold', fontSize: '14px', width: '100%', marginTop: '15px' },
+
+    // Subject selection (multi mode)
+    subjectToolbar: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' },
+    sectionTitle: { color: '#1F3864', margin: 0, fontSize: '16px' },
+    toolbarBtns: { display: 'flex', gap: '8px' },
+    selectAllBtn: { backgroundColor: '#28a745', color: 'white', border: 'none', padding: '6px 14px', borderRadius: '5px', cursor: 'pointer', fontSize: '12px', fontWeight: 'bold' },
+    clearAllBtn: { backgroundColor: '#6c757d', color: 'white', border: 'none', padding: '6px 14px', borderRadius: '5px', cursor: 'pointer', fontSize: '12px' },
+    subjectHint: { color: '#666', fontSize: '13px', marginBottom: '12px' },
+    subjectGrid: { display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px', marginBottom: '15px' },
+    subjectTile: { padding: '12px 10px', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', transition: 'all 0.15s' },
+    subjectCheck: { fontSize: '18px', flexShrink: 0 },
+    subjectName: { fontSize: '13px', fontWeight: 'bold' },
+
+    // Table
     tableCard: { backgroundColor: 'white', borderRadius: '10px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)', overflow: 'hidden', marginBottom: '20px' },
     tableTopBar: { backgroundColor: '#1F3864', padding: '15px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' },
     tableTitle: { color: 'white', margin: '0 0 3px 0', fontSize: '16px' },
     tableSubtitle: { color: '#BDD7EE', margin: 0, fontSize: '13px' },
-    tableBadges: { display: 'flex', gap: '10px' },
-    badge: { backgroundColor: 'rgba(255,255,255,0.2)', color: 'white', padding: '4px 12px', borderRadius: '20px', fontSize: '12px' },
-    centerMsg: { padding: '40px', textAlign: 'center', color: '#666', fontSize: '15px' },
+    tableBadges: { display: 'flex', gap: '8px', flexWrap: 'wrap' },
+    badge: { backgroundColor: 'rgba(255,255,255,0.2)', color: 'white', padding: '4px 10px', borderRadius: '20px', fontSize: '12px' },
+    centerMsg: { padding: '40px', textAlign: 'center', color: '#666' },
     tableWrapper: { overflowX: 'auto' },
-    table: { width: '100%', borderCollapse: 'collapse', minWidth: '600px' },
+    table: { width: '100%', borderCollapse: 'collapse', minWidth: '500px' },
     thead: { backgroundColor: '#f8f9fa' },
-    th: { padding: '12px 15px', textAlign: 'left', fontWeight: 'bold', color: '#1F3864', borderBottom: '2px solid #ddd', whiteSpace: 'nowrap', fontSize: '13px' },
-    td: { padding: '10px 15px', borderBottom: '1px solid #eee' },
+    th: { padding: '10px 12px', textAlign: 'left', fontWeight: 'bold', color: '#1F3864', borderBottom: '2px solid #ddd', whiteSpace: 'nowrap', fontSize: '12px' },
+    td: { padding: '8px 12px', borderBottom: '1px solid #eee', fontSize: '13px' },
     trEven: { backgroundColor: '#f9f9f9' },
     trOdd: { backgroundColor: 'white' },
-    markInput: { width: '110px', padding: '8px', borderRadius: '5px', border: '2px solid #ddd', fontSize: '14px', textAlign: 'center', outline: 'none' },
-    updateBadge: { backgroundColor: '#fff3cd', color: '#856404', padding: '3px 8px', borderRadius: '3px', fontSize: '12px' },
-    newBadge: { backgroundColor: '#d4edda', color: '#155724', padding: '3px 8px', borderRadius: '3px', fontSize: '12px' },
+    admNo: { fontFamily: 'monospace', fontSize: '11px', color: '#888' },
+    markInput: { width: '90px', padding: '7px', borderRadius: '5px', border: '2px solid #ddd', fontSize: '14px', textAlign: 'center', outline: 'none' },
+    multiMarkCell: { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px', position: 'relative' },
+    multiMarkInput: { width: '65px', padding: '5px 3px', borderRadius: '4px', border: '2px solid #ddd', fontSize: '13px', textAlign: 'center', outline: 'none' },
+    savedDot: { position: 'absolute', top: 0, right: 0, color: '#2E75B6', fontSize: '10px' },
+    updateBadge: { backgroundColor: '#fff3cd', color: '#856404', padding: '2px 6px', borderRadius: '3px', fontSize: '11px' },
+    newBadge: { backgroundColor: '#d4edda', color: '#155724', padding: '2px 6px', borderRadius: '3px', fontSize: '11px' },
     emptyBadge: { color: '#aaa', fontSize: '12px' },
-    saveSection: { padding: '20px', borderTop: '2px solid #f0f2f5', display: 'flex', alignItems: 'center', gap: '15px', flexWrap: 'wrap', backgroundColor: '#f8f9fa' },
-    saveBtn: { backgroundColor: '#28a745', color: 'white', border: 'none', padding: '12px 35px', borderRadius: '5px', cursor: 'pointer', fontSize: '16px', fontWeight: 'bold' },
-    hint: { color: '#666', fontSize: '13px', fontStyle: 'italic', margin: 0 },
+    saveSection: { padding: '15px 20px', borderTop: '2px solid #f0f2f5', display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap', backgroundColor: '#f8f9fa' },
+    saveBtn: { backgroundColor: '#28a745', color: 'white', border: 'none', padding: '10px 30px', borderRadius: '5px', cursor: 'pointer', fontSize: '15px', fontWeight: 'bold' },
+    backBtn: { backgroundColor: '#6c757d', color: 'white', border: 'none', padding: '10px 20px', borderRadius: '5px', cursor: 'pointer', fontSize: '14px' },
+    hint: { color: '#666', fontSize: '12px', fontStyle: 'italic', margin: 0 },
     instructionCard: { backgroundColor: 'white', padding: '25px', borderRadius: '10px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' },
-
-    classDisplay: {
-    padding: '10px 15px',
-    borderRadius: '5px',
-    border: '2px solid #1F3864',
-    fontSize: '14px',
-    backgroundColor: '#e3f2fd',
-    color: '#1F3864',
-    fontWeight: 'bold',
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center'
-},
-lockedBadge: {
-    backgroundColor: '#1F3864',
-    color: 'white',
-    padding: '2px 8px',
-    borderRadius: '3px',
-    fontSize: '11px',
-    fontWeight: 'bold'
-},
 };
 
 export default MarkEntry;
