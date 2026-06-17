@@ -2,87 +2,100 @@ import React, { useState, useEffect } from 'react';
 import api from '../services/api';
 import logo1 from '../assets/logo1.png';
 
-// ✅ Defined OUTSIDE parent to prevent keyboard dismiss on mobile
-const ExamForm = ({ formData, setFormData, academicYears, onSubmit, onCancel, submitLabel }) => (
-    <form onSubmit={onSubmit} style={styles.inlineForm}>
-        <div style={styles.formGrid}>
-            <div style={styles.formGroup}>
-                <label style={styles.label}>Exam Name</label>
-                <input style={styles.input} value={formData.examName}
-                    onChange={e => setFormData(prev => ({...prev, examName: e.target.value}))}
-                    placeholder="e.g. End Term 1 2025" required />
-            </div>
-            <div style={styles.formGroup}>
-                <label style={styles.label}>Academic Year</label>
-                {academicYears.length > 0 ? (
-                    <select style={styles.input} value={formData.academicYear}
-                        onChange={e => setFormData(prev => ({...prev, academicYear: e.target.value}))} required>
-                        <option value="">Select Year</option>
+// ✅ Outside parent — prevents mobile keyboard dismiss on re-render
+const ExamForm = ({ formData, setFormData, academicYears, onSubmit, onCancel, submitLabel }) => {
+
+    // When academic year is selected, auto-fill term, startDate, endDate
+    const handleAcademicYearChange = (yearId) => {
+        const selected = academicYears.find(ay => Number(ay.yearId) === Number(yearId));
+        if (selected) {
+            setFormData(prev => ({
+                ...prev,
+                academicYearId: Number(yearId),
+                academicYear: selected.yearLabel,
+                term: String(selected.term),
+                startDate: selected.startDate,
+                endDate: selected.endDate
+            }));
+        } else {
+            setFormData(prev => ({ ...prev, academicYearId: '', academicYear: '', term: '', startDate: '', endDate: '' }));
+        }
+    };
+
+    return (
+        <form onSubmit={onSubmit} style={styles.inlineForm}>
+            <div style={styles.formGrid}>
+                {/* Academic Year — drives everything else */}
+                <div style={styles.formGroup}>
+                    <label style={styles.label}>
+                        📅 Academic Year / Term
+                        <span style={styles.autoTag}>Fills dates automatically</span>
+                    </label>
+                    <select style={styles.input} value={formData.academicYearId || ''}
+                        onChange={e => handleAcademicYearChange(e.target.value)} required>
+                        <option value="">-- Select Year & Term --</option>
                         {academicYears.map(ay => (
-                            <option key={ay.id} value={ay.year}>{ay.year}</option>
+                            <option key={ay.yearId} value={ay.yearId}>
+                                {ay.yearLabel} — Term {ay.term} {ay.isActive ? '✅ Active' : ''}
+                            </option>
                         ))}
                     </select>
-                ) : (
-                    <input style={styles.input} value={formData.academicYear}
-                        onChange={e => setFormData(prev => ({...prev, academicYear: e.target.value}))}
-                        placeholder="e.g. 2025" required />
-                )}
+                </div>
+
+                <div style={styles.formGroup}>
+                    <label style={styles.label}>Exam Name</label>
+                    <input style={styles.input} value={formData.examName}
+                        onChange={e => setFormData(prev => ({...prev, examName: e.target.value}))}
+                        placeholder="e.g. End Term 1 2025" required />
+                </div>
+
+                <div style={styles.formGroup}>
+                    <label style={styles.label}>Class Level</label>
+                    <select style={styles.input} value={formData.classLevel}
+                        onChange={e => setFormData(prev => ({...prev, classLevel: e.target.value}))} required>
+                        <option value="">Select Class Level</option>
+                        <option value="ALL">All Classes</option>
+                        <optgroup label="Pre-School">
+                            <option value="PG">PG</option>
+                            <option value="PP1">PP1</option>
+                            <option value="PP2">PP2</option>
+                        </optgroup>
+                        <optgroup label="Lower Primary">
+                            <option value="G1">G1</option>
+                            <option value="G2">G2</option>
+                            <option value="G3">G3</option>
+                        </optgroup>
+                        <optgroup label="Upper Primary">
+                            <option value="G4">G4</option>
+                            <option value="G5">G5</option>
+                            <option value="G6">G6</option>
+                        </optgroup>
+                        <optgroup label="Junior School">
+                            <option value="G7">G7</option>
+                            <option value="G8">G8</option>
+                            <option value="G9">G9</option>
+                        </optgroup>
+                    </select>
+                </div>
             </div>
-            <div style={styles.formGroup}>
-                <label style={styles.label}>Term</label>
-                <select style={styles.input} value={formData.term}
-                    onChange={e => setFormData(prev => ({...prev, term: e.target.value}))} required>
-                    <option value="">Select Term</option>
-                    <option value="1">Term 1</option>
-                    <option value="2">Term 2</option>
-                    <option value="3">Term 3</option>
-                </select>
+
+            {/* Auto-filled preview */}
+            {formData.academicYearId && formData.term && (
+                <div style={styles.autoFillPreview}>
+                    <span style={styles.autoFillItem}>📅 Year: <strong>{formData.academicYear}</strong></span>
+                    <span style={styles.autoFillItem}>📋 Term: <strong>{formData.term}</strong></span>
+                    <span style={styles.autoFillItem}>🗓️ Start: <strong>{formData.startDate}</strong></span>
+                    <span style={styles.autoFillItem}>🗓️ End: <strong>{formData.endDate}</strong></span>
+                </div>
+            )}
+
+            <div style={styles.btnGroup}>
+                <button type="submit" style={styles.submitBtn}>{submitLabel}</button>
+                <button type="button" onClick={onCancel} style={styles.cancelBtn}>✕ Cancel</button>
             </div>
-            <div style={styles.formGroup}>
-                <label style={styles.label}>Start Date</label>
-                <input type="date" style={styles.input} value={formData.startDate}
-                    onChange={e => setFormData(prev => ({...prev, startDate: e.target.value}))} required />
-            </div>
-            <div style={styles.formGroup}>
-                <label style={styles.label}>End Date</label>
-                <input type="date" style={styles.input} value={formData.endDate}
-                    onChange={e => setFormData(prev => ({...prev, endDate: e.target.value}))} required />
-            </div>
-            <div style={styles.formGroup}>
-                <label style={styles.label}>Class Level</label>
-                <select style={styles.input} value={formData.classLevel}
-                    onChange={e => setFormData(prev => ({...prev, classLevel: e.target.value}))} required>
-                    <option value="">Select Class Level</option>
-                    <option value="ALL">All Classes</option>
-                    <optgroup label="Pre-School">
-                        <option value="PG">PG</option>
-                        <option value="PP1">PP1</option>
-                        <option value="PP2">PP2</option>
-                    </optgroup>
-                    <optgroup label="Lower Primary">
-                        <option value="G1">G1</option>
-                        <option value="G2">G2</option>
-                        <option value="G3">G3</option>
-                    </optgroup>
-                    <optgroup label="Upper Primary">
-                        <option value="G4">G4</option>
-                        <option value="G5">G5</option>
-                        <option value="G6">G6</option>
-                    </optgroup>
-                    <optgroup label="Junior School">
-                        <option value="G7">G7</option>
-                        <option value="G8">G8</option>
-                        <option value="G9">G9</option>
-                    </optgroup>
-                </select>
-            </div>
-        </div>
-        <div style={styles.btnGroup}>
-            <button type="submit" style={styles.submitBtn}>{submitLabel}</button>
-            <button type="button" onClick={onCancel} style={styles.cancelBtn}>✕ Cancel</button>
-        </div>
-    </form>
-);
+        </form>
+    );
+};
 
 function Exams() {
     const [exams, setExams] = useState([]);
@@ -93,8 +106,8 @@ function Exams() {
     const [showAddForm, setShowAddForm] = useState(false);
     const [editingExam, setEditingExam] = useState(null);
     const [formData, setFormData] = useState({
-        examName: '', academicYear: '', term: '',
-        startDate: '', endDate: '', classLevel: ''
+        examName: '', academicYear: '', academicYearId: '',
+        term: '', startDate: '', endDate: '', classLevel: ''
     });
 
     const sections = [
@@ -121,27 +134,45 @@ function Exams() {
         } catch (err) {}
     };
 
+    const emptyForm = { examName: '', academicYear: '', academicYearId: '', term: '', startDate: '', endDate: '', classLevel: '' };
+
     const handleEdit = (exam) => {
         setEditingExam(exam);
+        // Find matching academic year
+        const ay = academicYears.find(a =>
+            a.yearLabel === exam.academicYear && String(a.term) === String(exam.term)
+        );
         setFormData({
-            examName: exam.examName, academicYear: exam.academicYear,
-            term: exam.term, startDate: exam.startDate,
-            endDate: exam.endDate, classLevel: exam.classLevel
+            examName: exam.examName,
+            academicYear: exam.academicYear,
+            academicYearId: ay?.yearId || '',
+            term: String(exam.term),
+            startDate: exam.startDate,
+            endDate: exam.endDate,
+            classLevel: exam.classLevel
         });
         setShowAddForm(false);
     };
 
-    const handleCancelEdit = () => {
-        setEditingExam(null);
-        setFormData({ examName: '', academicYear: '', term: '', startDate: '', endDate: '', classLevel: '' });
-    };
+    const handleCancelEdit = () => { setEditingExam(null); setFormData(emptyForm); };
+
+    const buildPayload = () => ({
+        examName: formData.examName,
+        academicYear: formData.academicYear,
+        term: parseInt(formData.term),
+        startDate: formData.startDate,
+        endDate: formData.endDate,
+        classLevel: formData.classLevel,
+        // Link to academic year record
+        ...(formData.academicYearId && { academicYearRef: { yearId: formData.academicYearId } })
+    });
 
     const handleSubmitAdd = async (e) => {
         e.preventDefault();
         try {
-            await api.post('/api/exams', { ...formData, term: parseInt(formData.term) });
+            await api.post('/api/exams', buildPayload());
             setShowAddForm(false);
-            setFormData({ examName: '', academicYear: '', term: '', startDate: '', endDate: '', classLevel: '' });
+            setFormData(emptyForm);
             fetchExams();
             setSuccessMsg('✅ Exam added successfully!');
             setTimeout(() => setSuccessMsg(''), 3000);
@@ -151,9 +182,9 @@ function Exams() {
     const handleSubmitEdit = async (e) => {
         e.preventDefault();
         try {
-            await api.put(`/api/exams/${editingExam.examId}`, { ...formData, term: parseInt(formData.term) });
+            await api.put(`/api/exams/${editingExam.examId}`, buildPayload());
             setEditingExam(null);
-            setFormData({ examName: '', academicYear: '', term: '', startDate: '', endDate: '', classLevel: '' });
+            setFormData(emptyForm);
             fetchExams();
             setSuccessMsg('✅ Exam updated successfully!');
             setTimeout(() => setSuccessMsg(''), 3000);
@@ -178,6 +209,14 @@ function Exams() {
         return '#1F3864';
     };
 
+    // Group exams by academic year + term
+    const groupedExams = exams.reduce((groups, exam) => {
+        const key = `${exam.academicYear} — Term ${exam.term}`;
+        if (!groups[key]) groups[key] = [];
+        groups[key].push(exam);
+        return groups;
+    }, {});
+
     return (
         <div style={styles.container}>
             <div style={styles.navbar}>
@@ -195,12 +234,18 @@ function Exams() {
                 <div style={styles.header}>
                     <div>
                         <h2 style={styles.title}>📝 Exams</h2>
-                        <p style={styles.subtitle}>Create and manage school examinations</p>
+                        <p style={styles.subtitle}>{exams.length} exam(s) — grouped by academic year</p>
                     </div>
                     <button onClick={() => { setShowAddForm(!showAddForm); setEditingExam(null); }} style={styles.addBtn}>
                         {showAddForm ? '✕ Cancel' : '+ Add Exam'}
                     </button>
                 </div>
+
+                {academicYears.length === 0 && (
+                    <div style={styles.warningBanner}>
+                        ⚠️ No Academic Years found. <a href="/academic-years" style={{ color: '#856404', fontWeight: 'bold' }}>Set up Academic Years first</a> to link exams properly.
+                    </div>
+                )}
 
                 {error && <p style={styles.error}>{error}</p>}
                 {successMsg && <p style={styles.success}>{successMsg}</p>}
@@ -209,11 +254,10 @@ function Exams() {
                     <div style={styles.addFormCard}>
                         <h3 style={styles.formTitle}>➕ Add New Exam</h3>
                         <ExamForm
-                            formData={formData}
-                            setFormData={setFormData}
+                            formData={formData} setFormData={setFormData}
                             academicYears={academicYears}
                             onSubmit={handleSubmitAdd}
-                            onCancel={() => setShowAddForm(false)}
+                            onCancel={() => { setShowAddForm(false); setFormData(emptyForm); }}
                             submitLabel="💾 Save Exam"
                         />
                     </div>
@@ -226,67 +270,80 @@ function Exams() {
                         <p>Click + Add Exam to create your first exam</p>
                     </div>
                 ) : (
-                    <div style={styles.examGrid}>
-                        {exams.map(exam => (
-                            <div key={exam.examId}>
-                                <div style={{ ...styles.examCard, outline: editingExam?.examId === exam.examId ? '2px solid #2E75B6' : 'none' }}>
-                                    <div style={{ ...styles.examHeader, backgroundColor: getSectionColor(exam.classLevel) }}>
-                                        <div>
-                                            <h3 style={styles.examName}>{exam.examName}</h3>
-                                            <p style={styles.examMeta}>{exam.academicYear} • Term {exam.term}</p>
-                                        </div>
-                                        <span style={styles.termBadge}>Term {exam.term}</span>
-                                    </div>
-                                    <div style={styles.examBody}>
-                                        <div style={styles.examInfo}>
-                                            <div style={styles.infoItem}>
-                                                <span style={styles.infoIcon}>📅</span>
-                                                <div><div style={styles.infoLabel}>Start Date</div><div style={styles.infoValue}>{exam.startDate}</div></div>
-                                            </div>
-                                            <div style={styles.infoItem}>
-                                                <span style={styles.infoIcon}>📅</span>
-                                                <div><div style={styles.infoLabel}>End Date</div><div style={styles.infoValue}>{exam.endDate}</div></div>
-                                            </div>
-                                            <div style={styles.infoItem}>
-                                                <span style={styles.infoIcon}>🏫</span>
+                    // Grouped by Academic Year → Term
+                    Object.entries(groupedExams).map(([groupKey, groupExams]) => (
+                        <div key={groupKey} style={styles.groupBlock}>
+                            <div style={styles.groupHeader}>
+                                <span style={styles.groupTitle}>📅 {groupKey}</span>
+                                <span style={styles.groupCount}>{groupExams.length} exam(s)</span>
+                            </div>
+                            <div style={styles.examGrid}>
+                                {groupExams.map(exam => (
+                                    <div key={exam.examId}>
+                                        <div style={{
+                                            ...styles.examCard,
+                                            outline: editingExam?.examId === exam.examId ? '2px solid #2E75B6' : 'none'
+                                        }}>
+                                            <div style={{ ...styles.examHeader, backgroundColor: getSectionColor(exam.classLevel) }}>
                                                 <div>
-                                                    <div style={styles.infoLabel}>Class Level</div>
-                                                    <div style={styles.infoValue}>
-                                                        <span style={{ ...styles.levelBadge, backgroundColor: getSectionColor(exam.classLevel) }}>{exam.classLevel}</span>
+                                                    <h3 style={styles.examName}>{exam.examName}</h3>
+                                                    <p style={styles.examMeta}>{exam.academicYear} • Term {exam.term}</p>
+                                                </div>
+                                                <span style={styles.termBadge}>Term {exam.term}</span>
+                                            </div>
+                                            <div style={styles.examBody}>
+                                                <div style={styles.examInfo}>
+                                                    <div style={styles.infoItem}>
+                                                        <span style={styles.infoIcon}>📅</span>
+                                                        <div><div style={styles.infoLabel}>Start</div><div style={styles.infoValue}>{exam.startDate}</div></div>
+                                                    </div>
+                                                    <div style={styles.infoItem}>
+                                                        <span style={styles.infoIcon}>📅</span>
+                                                        <div><div style={styles.infoLabel}>End</div><div style={styles.infoValue}>{exam.endDate}</div></div>
+                                                    </div>
+                                                    <div style={styles.infoItem}>
+                                                        <span style={styles.infoIcon}>🏫</span>
+                                                        <div>
+                                                            <div style={styles.infoLabel}>Class Level</div>
+                                                            <div style={styles.infoValue}>
+                                                                <span style={{ ...styles.levelBadge, backgroundColor: getSectionColor(exam.classLevel) }}>
+                                                                    {exam.classLevel}
+                                                                </span>
+                                                            </div>
+                                                        </div>
                                                     </div>
                                                 </div>
                                             </div>
+                                            <div style={styles.examActions}>
+                                                <button
+                                                    onClick={() => editingExam?.examId === exam.examId ? handleCancelEdit() : handleEdit(exam)}
+                                                    style={editingExam?.examId === exam.examId ? styles.cancelEditBtn : styles.editBtn}>
+                                                    {editingExam?.examId === exam.examId ? '✕ Cancel' : '✏️ Edit'}
+                                                </button>
+                                                <button onClick={() => handleDelete(exam.examId)} style={styles.deleteBtn}>🗑️ Delete</button>
+                                            </div>
                                         </div>
-                                    </div>
-                                    <div style={styles.examActions}>
-                                        <button
-                                            onClick={() => editingExam?.examId === exam.examId ? handleCancelEdit() : handleEdit(exam)}
-                                            style={editingExam?.examId === exam.examId ? styles.cancelEditBtn : styles.editBtn}>
-                                            {editingExam?.examId === exam.examId ? '✕ Cancel Edit' : '✏️ Edit'}
-                                        </button>
-                                        <button onClick={() => handleDelete(exam.examId)} style={styles.deleteBtn}>🗑️ Delete</button>
-                                    </div>
-                                </div>
 
-                                {editingExam?.examId === exam.examId && (
-                                    <div style={styles.inlineEditCard}>
-                                        <div style={styles.inlineEditHeader}>
-                                            <h3 style={styles.inlineEditTitle}>✏️ Editing: {exam.examName}</h3>
-                                            <button onClick={handleCancelEdit} style={styles.closeBtn}>✕</button>
-                                        </div>
-                                        <ExamForm
-                                            formData={formData}
-                                            setFormData={setFormData}
-                                            academicYears={academicYears}
-                                            onSubmit={handleSubmitEdit}
-                                            onCancel={handleCancelEdit}
-                                            submitLabel="✅ Update Exam"
-                                        />
+                                        {editingExam?.examId === exam.examId && (
+                                            <div style={styles.inlineEditCard}>
+                                                <div style={styles.inlineEditHeader}>
+                                                    <h3 style={styles.inlineEditTitle}>✏️ Editing: {exam.examName}</h3>
+                                                    <button onClick={handleCancelEdit} style={styles.closeBtn}>✕</button>
+                                                </div>
+                                                <ExamForm
+                                                    formData={formData} setFormData={setFormData}
+                                                    academicYears={academicYears}
+                                                    onSubmit={handleSubmitEdit}
+                                                    onCancel={handleCancelEdit}
+                                                    submitLabel="✅ Update Exam"
+                                                />
+                                            </div>
+                                        )}
                                     </div>
-                                )}
+                                ))}
                             </div>
-                        ))}
-                    </div>
+                        </div>
+                    ))
                 )}
             </div>
         </div>
@@ -307,6 +364,7 @@ const styles = {
     title: { color: '#1F3864', margin: '0 0 5px 0', fontSize: '24px' },
     subtitle: { color: '#666', margin: 0, fontSize: '14px' },
     addBtn: { backgroundColor: '#1F3864', color: 'white', border: 'none', padding: '10px 20px', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold' },
+    warningBanner: { backgroundColor: '#fff3cd', border: '1px solid #ffc107', padding: '12px 15px', borderRadius: '8px', marginBottom: '15px', color: '#856404', fontSize: '14px' },
     error: { color: 'red', padding: '10px', backgroundColor: '#fff3f3', borderRadius: '5px', marginBottom: '15px' },
     success: { color: '#155724', padding: '10px', backgroundColor: '#d4edda', borderRadius: '5px', marginBottom: '15px' },
     centerMsg: { textAlign: 'center', padding: '40px', color: '#666' },
@@ -317,14 +375,23 @@ const styles = {
     inlineEditTitle: { color: '#2E75B6', margin: 0, fontSize: '15px' },
     closeBtn: { background: 'none', border: 'none', fontSize: '18px', cursor: 'pointer', color: '#999' },
     inlineForm: {},
-    formGrid: { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', marginBottom: '15px' },
+    formGrid: { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', marginBottom: '12px' },
     formGroup: { display: 'flex', flexDirection: 'column', gap: '5px' },
-    label: { fontSize: '12px', fontWeight: 'bold', color: '#1F3864' },
+    label: { fontSize: '12px', fontWeight: 'bold', color: '#1F3864', display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' },
+    autoTag: { backgroundColor: '#2E75B6', color: 'white', padding: '1px 6px', borderRadius: '3px', fontSize: '9px', fontWeight: 'normal' },
     input: { padding: '9px', borderRadius: '5px', border: '1px solid #ddd', fontSize: '13px' },
+    autoFillPreview: { display: 'flex', gap: '15px', flexWrap: 'wrap', backgroundColor: '#e3f2fd', padding: '10px 15px', borderRadius: '6px', marginBottom: '12px', border: '1px solid #2E75B6' },
+    autoFillItem: { fontSize: '13px', color: '#1F3864' },
     btnGroup: { display: 'flex', gap: '10px' },
     submitBtn: { backgroundColor: '#2E75B6', color: 'white', border: 'none', padding: '9px 22px', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold' },
     cancelBtn: { backgroundColor: '#6c757d', color: 'white', border: 'none', padding: '9px 18px', borderRadius: '5px', cursor: 'pointer' },
-    examGrid: { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '20px' },
+
+    // Grouped exams
+    groupBlock: { marginBottom: '25px' },
+    groupHeader: { backgroundColor: '#1F3864', padding: '10px 20px', borderRadius: '8px 8px 0 0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
+    groupTitle: { color: 'white', fontWeight: 'bold', fontSize: '15px' },
+    groupCount: { backgroundColor: 'rgba(255,255,255,0.2)', color: 'white', padding: '3px 10px', borderRadius: '12px', fontSize: '12px' },
+    examGrid: { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0', backgroundColor: 'white', padding: '15px', borderRadius: '0 0 8px 8px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)', gap: '15px' },
     examCard: { backgroundColor: 'white', borderRadius: '10px', overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.1)', border: '1px solid #eee' },
     examHeader: { padding: '15px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' },
     examName: { color: 'white', margin: '0 0 4px 0', fontSize: '16px' },
