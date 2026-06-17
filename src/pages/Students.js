@@ -12,22 +12,18 @@ function Students() {
     const [filtered, setFiltered] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
-    const [showForm, setShowForm] = useState(false);
-    const [editingStudent, setEditingStudent] = useState(null);
+    const [showAddForm, setShowAddForm] = useState(false);
+    const [editingStudent, setEditingStudent] = useState(null); // student being edited inline
     const [search, setSearch] = useState('');
     const [filterGender, setFilterGender] = useState('');
     const [selectedClassFilter, setSelectedClassFilter] = useState('');
     const [formData, setFormData] = useState({
-        firstName: '',
-        lastName: '',
-        dateOfBirth: '',
-        gender: '',
-        admissionNumber: ''
+        firstName: '', lastName: '', dateOfBirth: '', gender: '', admissionNumber: ''
     });
     const [classId, setClassId] = useState('');
     const [classes, setClasses] = useState([]);
     const [selectedGrade, setSelectedGrade] = useState(null);
-    const [view, setView] = useState('grades'); // grades | streams | students
+    const [view, setView] = useState('grades');
     const [selectedClass, setSelectedClass] = useState(null);
     const navigate = useNavigate();
     const { toast, showToast, hideToast } = useToast();
@@ -129,39 +125,57 @@ function Students() {
     const handleGradeClick = (grade) => { setSelectedGrade(grade); setSelectedClass(null); setView('streams'); };
     const handleClassClick = (cls) => { setSelectedClass(cls); setSelectedClassFilter(cls.className); setView('students'); };
     const handleBack = () => {
-        if (view === 'students') { setView('streams'); setSelectedClass(null); setSelectedClassFilter(''); }
+        if (view === 'students') { setView('streams'); setSelectedClass(null); setSelectedClassFilter(''); setEditingStudent(null); }
         else if (view === 'streams') { setView('grades'); setSelectedGrade(null); }
     };
 
+    // ── Open inline edit for a student ──────────────────────────────────────
     const handleEdit = (student) => {
+        // toggle off if clicking same student
+        if (editingStudent?.studentId === student.studentId) {
+            setEditingStudent(null);
+            return;
+        }
         setEditingStudent(student);
         setFormData({
             firstName: student.firstName, lastName: student.lastName,
             dateOfBirth: student.dateOfBirth, gender: student.gender,
             admissionNumber: student.admissionNumber
         });
-        setClassId('');
-        setShowForm(true);
+        setShowAddForm(false);
     };
 
-    const handleSubmit = async (e) => {
+    const handleCancelEdit = () => {
+        setEditingStudent(null);
+        setFormData({ firstName: '', lastName: '', dateOfBirth: '', gender: '', admissionNumber: '' });
+    };
+
+    const handleSubmitEdit = async (e) => {
         e.preventDefault();
         try {
-            if (editingStudent) {
-                await api.put(`/api/students/${editingStudent.studentId}`, {
-                    ...formData, className: editingStudent.className, stream: editingStudent.stream
-                });
-                showToast('Student updated successfully!', 'success');
-            } else {
-                await api.post(`/api/students?classId=${classId}`, formData);
-                showToast('Student added successfully!', 'success');
-            }
-            setShowForm(false);
+            await api.put(`/api/students/${editingStudent.studentId}`, {
+                ...formData, className: editingStudent.className, stream: editingStudent.stream
+            });
+            showToast('✅ Student updated successfully!', 'success');
             setEditingStudent(null);
             setFormData({ firstName: '', lastName: '', dateOfBirth: '', gender: '', admissionNumber: '' });
             fetchStudents();
         } catch (err) {
-            showToast('Failed to save student. Please check all fields.', 'error');
+            showToast('Failed to update student.', 'error');
+        }
+    };
+
+    const handleSubmitAdd = async (e) => {
+        e.preventDefault();
+        try {
+            await api.post(`/api/students?classId=${classId}`, formData);
+            showToast('✅ Student added successfully!', 'success');
+            setShowAddForm(false);
+            setFormData({ firstName: '', lastName: '', dateOfBirth: '', gender: '', admissionNumber: '' });
+            setClassId('');
+            fetchStudents();
+        } catch (err) {
+            showToast('Failed to add student. Please check all fields.', 'error');
         }
     };
 
@@ -170,6 +184,7 @@ function Students() {
             try {
                 await api.delete(`/api/students/${id}`);
                 showToast('Student deleted!', 'success');
+                if (editingStudent?.studentId === id) setEditingStudent(null);
                 fetchStudents();
             } catch (err) {
                 showToast('Failed to delete student', 'error');
@@ -177,11 +192,62 @@ function Students() {
         }
     };
 
-    const handleCancel = () => {
-        setShowForm(false);
-        setEditingStudent(null);
-        setFormData({ firstName: '', lastName: '', dateOfBirth: '', gender: '', admissionNumber: '' });
-    };
+    // Shared student form fields
+    const StudentFormFields = ({ onSubmit, onCancel, submitLabel, showClassField = false }) => (
+        <form onSubmit={onSubmit} style={styles.inlineForm}>
+            <div style={styles.formGrid}>
+                <div style={styles.formGroup}>
+                    <label style={styles.label}>First Name</label>
+                    <input style={styles.input} value={formData.firstName}
+                        onChange={e => setFormData({...formData, firstName: e.target.value})} required />
+                </div>
+                <div style={styles.formGroup}>
+                    <label style={styles.label}>Last Name</label>
+                    <input style={styles.input} value={formData.lastName}
+                        onChange={e => setFormData({...formData, lastName: e.target.value})} required />
+                </div>
+                <div style={styles.formGroup}>
+                    <label style={styles.label}>Date of Birth</label>
+                    <input type="date" style={styles.input} value={formData.dateOfBirth}
+                        onChange={e => setFormData({...formData, dateOfBirth: e.target.value})} required />
+                </div>
+                <div style={styles.formGroup}>
+                    <label style={styles.label}>Gender</label>
+                    <select style={styles.input} value={formData.gender}
+                        onChange={e => setFormData({...formData, gender: e.target.value})} required>
+                        <option value="">Select Gender</option>
+                        <option value="Male">Male</option>
+                        <option value="Female">Female</option>
+                    </select>
+                </div>
+                <div style={styles.formGroup}>
+                    <label style={styles.label}>Admission Number</label>
+                    <input style={styles.input} value={formData.admissionNumber}
+                        onChange={e => setFormData({...formData, admissionNumber: e.target.value})} required />
+                </div>
+                {showClassField && (
+                    <div style={styles.formGroup}>
+                        <label style={styles.label}>Class</label>
+                        <select style={styles.input} value={classId}
+                            onChange={e => setClassId(e.target.value)} required>
+                            <option value="">Select Class</option>
+                            {sections.map(section => (
+                                <optgroup key={section.value} label={section.label}>
+                                    {classes.filter(c => c.section === section.value).map(cls => (
+                                        <option key={cls.classId} value={cls.classId}>{cls.className}</option>
+                                    ))}
+                                </optgroup>
+                            ))}
+                        </select>
+                    </div>
+                )}
+            </div>
+            <div style={styles.btnGroup}>
+                <button type="submit" style={styles.submitBtn}>{submitLabel}</button>
+                <button type="button" onClick={onCancel} style={styles.cancelBtn}>✕ Cancel</button>
+            </div>
+        </form>
+    );
 
     const grouped = gradesBySection();
 
@@ -220,72 +286,23 @@ function Students() {
                             </p>
                         </div>
                     </div>
-                    <button onClick={() => { setShowForm(!showForm); setEditingStudent(null); }} style={styles.addBtn}>
-                        {showForm ? '✕ Cancel' : '+ Add Student'}
+                    <button onClick={() => { setShowAddForm(!showAddForm); setEditingStudent(null); }} style={styles.addBtn}>
+                        {showAddForm ? '✕ Cancel' : '+ Add Student'}
                     </button>
                 </div>
 
                 {error && <p style={styles.error}>{error}</p>}
 
-                {/* Add/Edit Form */}
-                {showForm && (
-                    <div style={styles.form}>
-                        <h3 style={styles.formTitle}>{editingStudent ? '✏️ Edit Student' : '➕ Add New Student'}</h3>
-                        <form onSubmit={handleSubmit}>
-                            <div style={styles.formGrid}>
-                                <div style={styles.formGroup}>
-                                    <label style={styles.label}>First Name</label>
-                                    <input style={styles.input} value={formData.firstName}
-                                        onChange={e => setFormData({...formData, firstName: e.target.value})} required />
-                                </div>
-                                <div style={styles.formGroup}>
-                                    <label style={styles.label}>Last Name</label>
-                                    <input style={styles.input} value={formData.lastName}
-                                        onChange={e => setFormData({...formData, lastName: e.target.value})} required />
-                                </div>
-                                <div style={styles.formGroup}>
-                                    <label style={styles.label}>Date of Birth</label>
-                                    <input type="date" style={styles.input} value={formData.dateOfBirth}
-                                        onChange={e => setFormData({...formData, dateOfBirth: e.target.value})} required />
-                                </div>
-                                <div style={styles.formGroup}>
-                                    <label style={styles.label}>Gender</label>
-                                    <select style={styles.input} value={formData.gender}
-                                        onChange={e => setFormData({...formData, gender: e.target.value})} required>
-                                        <option value="">Select Gender</option>
-                                        <option value="Male">Male</option>
-                                        <option value="Female">Female</option>
-                                    </select>
-                                </div>
-                                <div style={styles.formGroup}>
-                                    <label style={styles.label}>Admission Number</label>
-                                    <input style={styles.input} value={formData.admissionNumber}
-                                        onChange={e => setFormData({...formData, admissionNumber: e.target.value})} required />
-                                </div>
-                                {!editingStudent && (
-                                    <div style={styles.formGroup}>
-                                        <label style={styles.label}>Class</label>
-                                        <select style={styles.input} value={classId}
-                                            onChange={e => setClassId(e.target.value)} required>
-                                            <option value="">Select Class</option>
-                                            {sections.map(section => (
-                                                <optgroup key={section.value} label={section.label}>
-                                                    {classes.filter(c => c.section === section.value).map(cls => (
-                                                        <option key={cls.classId} value={cls.classId}>{cls.className}</option>
-                                                    ))}
-                                                </optgroup>
-                                            ))}
-                                        </select>
-                                    </div>
-                                )}
-                            </div>
-                            <div style={styles.btnGroup}>
-                                <button type="submit" style={styles.submitBtn}>
-                                    {editingStudent ? '✅ Update Student' : '💾 Save Student'}
-                                </button>
-                                <button type="button" onClick={handleCancel} style={styles.cancelBtn}>Cancel</button>
-                            </div>
-                        </form>
+                {/* Add Form — top only, for new students */}
+                {showAddForm && (
+                    <div style={styles.addFormCard}>
+                        <h3 style={styles.formTitle}>➕ Add New Student</h3>
+                        <StudentFormFields
+                            onSubmit={handleSubmitAdd}
+                            onCancel={() => { setShowAddForm(false); setFormData({ firstName: '', lastName: '', dateOfBirth: '', gender: '', admissionNumber: '' }); }}
+                            submitLabel="💾 Save Student"
+                            showClassField={true}
+                        />
                     </div>
                 )}
 
@@ -294,7 +311,6 @@ function Students() {
                         {/* ── VIEW 1: Grade Tiles ── */}
                         {view === 'grades' && (
                             <div>
-                                {/* Summary Stats */}
                                 <div style={styles.statsRow}>
                                     {sections.map(section => {
                                         const sectionStudents = students.filter(s => {
@@ -317,7 +333,6 @@ function Students() {
                                     })}
                                 </div>
 
-                                {/* Search & Filter Bar */}
                                 <div style={styles.searchCard}>
                                     <input style={styles.searchInput}
                                         placeholder="🔍 Search by name or admission number..."
@@ -332,7 +347,6 @@ function Students() {
                                         style={styles.clearBtn}>Clear</button>
                                 </div>
 
-                                {/* Grade Tiles by Section */}
                                 {sections.map(section => {
                                     const sectionGrades = grouped[section.value] || [];
                                     if (sectionGrades.length === 0) return null;
@@ -341,9 +355,7 @@ function Students() {
                                             <div style={{ ...styles.sectionTitle, backgroundColor: section.color }}>
                                                 <div>
                                                     <span style={styles.sectionLabel}>{section.label}</span>
-                                                    <span style={styles.sectionMeta}>
-                                                        Target: {section.target}% | {sectionGrades.length} grade(s)
-                                                    </span>
+                                                    <span style={styles.sectionMeta}>Target: {section.target}% | {sectionGrades.length} grade(s)</span>
                                                 </div>
                                                 <span style={styles.sectionCount}>
                                                     {students.filter(s => {
@@ -358,25 +370,17 @@ function Students() {
                                                         const cls = classes.find(c => c.className === s.className);
                                                         return (cls?.gradeLevel || extractGrade(cls?.className)) === grade.gradeLevel;
                                                     });
-                                                    const maleCount = gradeStudents.filter(s => s.gender === 'Male').length;
-                                                    const femaleCount = gradeStudents.filter(s => s.gender === 'Female').length;
                                                     return (
                                                         <div key={grade.gradeLevel}
                                                             style={{ ...styles.gradeTile, borderTop: `4px solid ${section.color}` }}
                                                             onClick={() => handleGradeClick(grade)}>
-                                                            <div style={{ ...styles.gradeLabel, color: section.color }}>
-                                                                {grade.gradeLevel}
-                                                            </div>
-                                                            <div style={styles.gradeStudentCount}>
-                                                                {gradeStudents.length} students
-                                                            </div>
+                                                            <div style={{ ...styles.gradeLabel, color: section.color }}>{grade.gradeLevel}</div>
+                                                            <div style={styles.gradeStudentCount}>{gradeStudents.length} students</div>
                                                             <div style={styles.genderRow}>
-                                                                <span style={styles.maleCount}>👦 {maleCount}</span>
-                                                                <span style={styles.femaleCount}>👧 {femaleCount}</span>
+                                                                <span style={styles.maleCount}>👦 {gradeStudents.filter(s => s.gender === 'Male').length}</span>
+                                                                <span style={styles.femaleCount}>👧 {gradeStudents.filter(s => s.gender === 'Female').length}</span>
                                                             </div>
-                                                            <div style={styles.gradeClasses}>
-                                                                {grade.count} class{grade.count !== 1 ? 'es' : ''}
-                                                            </div>
+                                                            <div style={styles.gradeClasses}>{grade.count} class{grade.count !== 1 ? 'es' : ''}</div>
                                                             <div style={{ ...styles.viewArrow, color: section.color }}>View →</div>
                                                         </div>
                                                     );
@@ -386,7 +390,6 @@ function Students() {
                                     );
                                 })}
 
-                                {/* All Students Table when searching */}
                                 {(search || filterGender || selectedClassFilter) && (
                                     <div style={styles.tableCard}>
                                         <div style={styles.tableTopBar}>
@@ -401,7 +404,6 @@ function Students() {
                                                         <th style={styles.th}>Name</th>
                                                         <th style={styles.th}>Gender</th>
                                                         <th style={styles.th}>Class</th>
-                                                        <th style={styles.th}>Stream</th>
                                                         <th style={styles.th}>Actions</th>
                                                     </tr>
                                                 </thead>
@@ -412,12 +414,9 @@ function Students() {
                                                             <td style={styles.td}><span style={styles.admNo}>{s.admissionNumber}</span></td>
                                                             <td style={styles.td}><strong>{s.firstName} {s.lastName}</strong></td>
                                                             <td style={styles.td}>
-                                                                <span style={{ ...styles.genderBadge, backgroundColor: s.gender === 'Male' ? '#2E75B6' : '#e83e8c' }}>
-                                                                    {s.gender}
-                                                                </span>
+                                                                <span style={{ ...styles.genderBadge, backgroundColor: s.gender === 'Male' ? '#2E75B6' : '#e83e8c' }}>{s.gender}</span>
                                                             </td>
                                                             <td style={styles.td}>{s.className}</td>
-                                                            <td style={styles.td}>{s.stream || '-'}</td>
                                                             <td style={styles.td}>
                                                                 <button onClick={() => navigate(`/student/${s.studentId}`)} style={styles.viewBtn}>👤</button>
                                                                 <button onClick={() => handleEdit(s)} style={styles.editBtn}>Edit</button>
@@ -428,14 +427,6 @@ function Students() {
                                                 </tbody>
                                             </table>
                                         </div>
-                                    </div>
-                                )}
-
-                                {classes.length === 0 && (
-                                    <div style={styles.emptyState}>
-                                        <div style={styles.emptyIcon}>🏫</div>
-                                        <h3>No Classes Yet</h3>
-                                        <p>Add classes first from the Classes page</p>
                                     </div>
                                 )}
                             </div>
@@ -453,23 +444,18 @@ function Students() {
                                             <span style={styles.sectionMeta}>{gradeClasses.length} class(es)</span>
                                         </div>
                                         <span style={styles.sectionCount}>
-                                            {getStudentsForClass(gradeClasses.map(c => c.className).join(','))?.length || 
-                                             gradeClasses.reduce((sum, c) => sum + getStudentsForClass(c.className).length, 0)} students
+                                            {gradeClasses.reduce((sum, c) => sum + getStudentsForClass(c.className).length, 0)} students
                                         </span>
                                     </div>
                                     <div style={styles.streamTiles}>
                                         {gradeClasses.map(cls => {
                                             const clsStudents = getStudentsForClass(cls.className);
-                                            const maleCount = clsStudents.filter(s => s.gender === 'Male').length;
-                                            const femaleCount = clsStudents.filter(s => s.gender === 'Female').length;
                                             const streamColor = getStreamColor(cls.stream);
                                             return (
                                                 <div key={cls.classId}
                                                     style={{ ...styles.streamTile, borderTop: `5px solid ${streamColor}` }}
                                                     onClick={() => handleClassClick(cls)}>
-                                                    <div style={{ ...styles.streamBadge, backgroundColor: streamColor }}>
-                                                        {cls.stream || 'SINGLE'}
-                                                    </div>
+                                                    <div style={{ ...styles.streamBadge, backgroundColor: streamColor }}>{cls.stream || 'SINGLE'}</div>
                                                     <div style={styles.streamName}>{cls.className}</div>
                                                     <div style={styles.streamStats}>
                                                         <div style={styles.streamStatItem}>
@@ -477,20 +463,18 @@ function Students() {
                                                             <span style={styles.streamStatLabel}>Total</span>
                                                         </div>
                                                         <div style={styles.streamStatItem}>
-                                                            <span style={{ ...styles.streamStatNum, color: '#2E75B6' }}>{maleCount}</span>
+                                                            <span style={{ ...styles.streamStatNum, color: '#2E75B6' }}>{clsStudents.filter(s => s.gender === 'Male').length}</span>
                                                             <span style={styles.streamStatLabel}>Boys</span>
                                                         </div>
                                                         <div style={styles.streamStatItem}>
-                                                            <span style={{ ...styles.streamStatNum, color: '#e83e8c' }}>{femaleCount}</span>
+                                                            <span style={{ ...styles.streamStatNum, color: '#e83e8c' }}>{clsStudents.filter(s => s.gender === 'Female').length}</span>
                                                             <span style={styles.streamStatLabel}>Girls</span>
                                                         </div>
                                                     </div>
                                                     <div style={styles.streamTeacher}>
                                                         👨‍🏫 {cls.classTeacher ? `${cls.classTeacher.firstName} ${cls.classTeacher.lastName}` : 'No Teacher'}
                                                     </div>
-                                                    <div style={{ ...styles.viewStudentsBtn, color: streamColor }}>
-                                                        👥 View Students →
-                                                    </div>
+                                                    <div style={{ ...styles.viewStudentsBtn, color: streamColor }}>👥 View Students →</div>
                                                 </div>
                                             );
                                         })}
@@ -503,15 +487,12 @@ function Students() {
                         {view === 'students' && selectedClass && (() => {
                             const sectionInfo = getSectionInfo(selectedClass.section || extractSection(selectedClass.gradeLevel || extractGrade(selectedClass.className)));
                             const clsStudents = getStudentsForClass(selectedClass.className).filter(s => {
-                                if (search) return `${s.firstName} ${s.lastName}`.toLowerCase().includes(search.toLowerCase()) || s.admissionNumber?.toLowerCase().includes(search.toLowerCase());
-                                if (filterGender) return s.gender === filterGender;
+                                if (search && !`${s.firstName} ${s.lastName}`.toLowerCase().includes(search.toLowerCase()) && !s.admissionNumber?.toLowerCase().includes(search.toLowerCase())) return false;
+                                if (filterGender && s.gender !== filterGender) return false;
                                 return true;
                             });
-                            const maleCount = clsStudents.filter(s => s.gender === 'Male').length;
-                            const femaleCount = clsStudents.filter(s => s.gender === 'Female').length;
                             return (
                                 <div>
-                                    {/* Class Header */}
                                     <div style={{ ...styles.classHeader, backgroundColor: sectionInfo?.color || '#1F3864' }}>
                                         <div>
                                             <h3 style={styles.classHeaderTitle}>{selectedClass.className} Students</h3>
@@ -520,28 +501,19 @@ function Students() {
                                             </p>
                                         </div>
                                         <div style={styles.classHeaderStats}>
-                                            <div style={styles.classStatBox}>
-                                                <span style={styles.classStatNum}>{clsStudents.length}</span>
-                                                <span style={styles.classStatLabel}>Total</span>
-                                            </div>
-                                            <div style={styles.classStatBox}>
-                                                <span style={{ ...styles.classStatNum, color: '#BDD7EE' }}>{maleCount}</span>
-                                                <span style={styles.classStatLabel}>Boys</span>
-                                            </div>
-                                            <div style={styles.classStatBox}>
-                                                <span style={{ ...styles.classStatNum, color: '#FFCCE5' }}>{femaleCount}</span>
-                                                <span style={styles.classStatLabel}>Girls</span>
-                                            </div>
+                                            {[['Total', clsStudents.length, 'white'], ['Boys', clsStudents.filter(s => s.gender === 'Male').length, '#BDD7EE'], ['Girls', clsStudents.filter(s => s.gender === 'Female').length, '#FFCCE5']].map(([label, num, color]) => (
+                                                <div key={label} style={styles.classStatBox}>
+                                                    <span style={{ ...styles.classStatNum, color }}>{num}</span>
+                                                    <span style={styles.classStatLabel}>{label}</span>
+                                                </div>
+                                            ))}
                                         </div>
                                     </div>
 
-                                    {/* Search Bar for students */}
                                     <div style={styles.classSearchBar}>
-                                        <input style={styles.searchInput}
-                                            placeholder="🔍 Search students..."
+                                        <input style={styles.searchInput} placeholder="🔍 Search students..."
                                             value={search} onChange={e => setSearch(e.target.value)} />
-                                        <select style={styles.filterSelect} value={filterGender}
-                                            onChange={e => setFilterGender(e.target.value)}>
+                                        <select style={styles.filterSelect} value={filterGender} onChange={e => setFilterGender(e.target.value)}>
                                             <option value="">All</option>
                                             <option value="Male">👦 Boys</option>
                                             <option value="Female">👧 Girls</option>
@@ -558,35 +530,53 @@ function Students() {
                                     ) : (
                                         <div style={styles.studentGrid}>
                                             {clsStudents.map((student, index) => (
-                                                <div key={student.studentId} style={styles.studentCard}>
-                                                    <div style={styles.studentCardTop}>
-                                                        <div style={styles.studentRankBadge}>#{index + 1}</div>
-                                                        <div style={{
-                                                            ...styles.studentAvatar,
-                                                            backgroundColor: student.gender === 'Male' ? '#2E75B6' : '#e83e8c'
-                                                        }}>
-                                                            {student.firstName?.charAt(0)}{student.lastName?.charAt(0)}
+                                                <div key={student.studentId}>
+                                                    {/* ── Student Card ── */}
+                                                    <div style={{
+                                                        ...styles.studentCard,
+                                                        outline: editingStudent?.studentId === student.studentId ? '2px solid #2E75B6' : 'none'
+                                                    }}>
+                                                        <div style={styles.studentCardTop}>
+                                                            <div style={styles.studentRankBadge}>#{index + 1}</div>
+                                                            <div style={{ ...styles.studentAvatar, backgroundColor: student.gender === 'Male' ? '#2E75B6' : '#e83e8c' }}>
+                                                                {student.firstName?.charAt(0)}{student.lastName?.charAt(0)}
+                                                            </div>
+                                                        </div>
+                                                        <div style={styles.studentCardBody}>
+                                                            <strong style={styles.studentName}>{student.firstName} {student.lastName}</strong>
+                                                            <span style={styles.studentAdm}>{student.admissionNumber}</span>
+                                                            <span style={{ ...styles.genderBadge, backgroundColor: student.gender === 'Male' ? '#2E75B6' : '#e83e8c' }}>
+                                                                {student.gender === 'Male' ? '👦' : '👧'} {student.gender}
+                                                            </span>
+                                                        </div>
+                                                        <div style={styles.studentCardActions}>
+                                                            <button onClick={() => navigate(`/student/${student.studentId}`)} style={styles.profileBtn}>👤 Profile</button>
+                                                            <button
+                                                                onClick={() => handleEdit(student)}
+                                                                style={editingStudent?.studentId === student.studentId ? styles.cancelEditBtnSm : styles.editBtnSm}>
+                                                                {editingStudent?.studentId === student.studentId ? '✕' : '✏️'}
+                                                            </button>
+                                                            <button onClick={() => handleDelete(student.studentId)} style={styles.deleteBtnSm}>🗑️</button>
                                                         </div>
                                                     </div>
-                                                    <div style={styles.studentCardBody}>
-                                                        <strong style={styles.studentName}>
-                                                            {student.firstName} {student.lastName}
-                                                        </strong>
-                                                        <span style={styles.studentAdm}>{student.admissionNumber}</span>
-                                                        <span style={{
-                                                            ...styles.genderBadge,
-                                                            backgroundColor: student.gender === 'Male' ? '#2E75B6' : '#e83e8c'
-                                                        }}>
-                                                            {student.gender === 'Male' ? '👦' : '👧'} {student.gender}
-                                                        </span>
-                                                    </div>
-                                                    <div style={styles.studentCardActions}>
-                                                        <button onClick={() => navigate(`/student/${student.studentId}`)} style={styles.profileBtn}>
-                                                            👤 Profile
-                                                        </button>
-                                                        <button onClick={() => handleEdit(student)} style={styles.editBtnSm}>✏️</button>
-                                                        <button onClick={() => handleDelete(student.studentId)} style={styles.deleteBtnSm}>🗑️</button>
-                                                    </div>
+
+                                                    {/* ── Inline Edit Form — opens below this student card ── */}
+                                                    {editingStudent?.studentId === student.studentId && (
+                                                        <div style={styles.inlineEditCard}>
+                                                            <div style={styles.inlineEditHeader}>
+                                                                <h4 style={styles.inlineEditTitle}>
+                                                                    ✏️ Editing: {student.firstName} {student.lastName}
+                                                                </h4>
+                                                                <button onClick={handleCancelEdit} style={styles.closeBtn}>✕</button>
+                                                            </div>
+                                                            <StudentFormFields
+                                                                onSubmit={handleSubmitEdit}
+                                                                onCancel={handleCancelEdit}
+                                                                submitLabel="✅ Update Student"
+                                                                showClassField={false}
+                                                            />
+                                                        </div>
+                                                    )}
                                                 </div>
                                             ))}
                                         </div>
@@ -619,16 +609,25 @@ const styles = {
     addBtn: { backgroundColor: '#1F3864', color: 'white', border: 'none', padding: '10px 20px', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold' },
     error: { color: 'red', marginBottom: '15px' },
 
-    // Form
-    form: { backgroundColor: 'white', padding: '25px', borderRadius: '10px', marginBottom: '20px', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' },
-    formTitle: { color: '#1F3864', marginBottom: '15px' },
-    formGrid: { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '15px', marginBottom: '15px' },
-    formGroup: { display: 'flex', flexDirection: 'column', gap: '5px' },
-    label: { fontSize: '13px', fontWeight: 'bold', color: '#1F3864' },
-    input: { padding: '10px', borderRadius: '5px', border: '1px solid #ddd', fontSize: '14px' },
-    btnGroup: { display: 'flex', gap: '10px' },
-    submitBtn: { backgroundColor: '#2E75B6', color: 'white', border: 'none', padding: '10px 25px', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold' },
-    cancelBtn: { backgroundColor: '#6c757d', color: 'white', border: 'none', padding: '10px 20px', borderRadius: '5px', cursor: 'pointer' },
+    // Add form
+    addFormCard: { backgroundColor: 'white', padding: '20px', borderRadius: '10px', marginBottom: '20px', boxShadow: '0 2px 8px rgba(0,0,0,0.12)', border: '2px solid #1F3864' },
+    formTitle: { color: '#1F3864', margin: '0 0 15px 0' },
+
+    // Inline edit
+    inlineEditCard: { backgroundColor: 'white', borderRadius: '0 0 8px 8px', padding: '15px', border: '2px solid #2E75B6', borderTop: 'none', marginTop: '-2px' },
+    inlineEditHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' },
+    inlineEditTitle: { color: '#2E75B6', margin: 0, fontSize: '13px' },
+    closeBtn: { background: 'none', border: 'none', fontSize: '16px', cursor: 'pointer', color: '#999' },
+
+    // Form shared
+    inlineForm: {},
+    formGrid: { display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px', marginBottom: '12px' },
+    formGroup: { display: 'flex', flexDirection: 'column', gap: '4px' },
+    label: { fontSize: '11px', fontWeight: 'bold', color: '#1F3864' },
+    input: { padding: '8px', borderRadius: '5px', border: '1px solid #ddd', fontSize: '12px' },
+    btnGroup: { display: 'flex', gap: '8px' },
+    submitBtn: { backgroundColor: '#2E75B6', color: 'white', border: 'none', padding: '8px 16px', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold', fontSize: '12px' },
+    cancelBtn: { backgroundColor: '#6c757d', color: 'white', border: 'none', padding: '8px 14px', borderRadius: '5px', cursor: 'pointer', fontSize: '12px' },
 
     // Stats Row
     statsRow: { display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px', marginBottom: '20px' },
@@ -639,22 +638,19 @@ const styles = {
     statLabel: { fontSize: '12px', color: '#333', fontWeight: 'bold' },
     statMeta: { fontSize: '11px', color: '#999' },
 
-    // Search Card
     searchCard: { backgroundColor: 'white', padding: '15px', borderRadius: '10px', marginBottom: '20px', boxShadow: '0 2px 4px rgba(0,0,0,0.08)', display: 'flex', gap: '10px', flexWrap: 'wrap' },
     searchInput: { flex: 1, padding: '10px', borderRadius: '5px', border: '1px solid #ddd', fontSize: '14px', minWidth: '200px' },
     filterSelect: { padding: '10px', borderRadius: '5px', border: '1px solid #ddd', fontSize: '14px' },
     clearBtn: { backgroundColor: '#6c757d', color: 'white', border: 'none', padding: '10px 15px', borderRadius: '5px', cursor: 'pointer' },
 
-    // Section Block
     sectionBlock: { marginBottom: '25px', borderRadius: '10px', overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' },
     sectionTitle: { padding: '12px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
     sectionLabel: { color: 'white', fontWeight: 'bold', fontSize: '15px', marginRight: '10px' },
     sectionMeta: { color: 'rgba(255,255,255,0.8)', fontSize: '12px' },
     sectionCount: { backgroundColor: 'rgba(255,255,255,0.2)', color: 'white', padding: '4px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: 'bold' },
 
-    // Grade Tiles
     gradeTiles: { display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '12px', padding: '15px', backgroundColor: 'white' },
-    gradeTile: { backgroundColor: 'white', padding: '15px 10px', borderRadius: '10px', textAlign: 'center', cursor: 'pointer', boxShadow: '0 2px 6px rgba(0,0,0,0.08)', border: '1px solid #eee', transition: 'transform 0.2s, box-shadow 0.2s' },
+    gradeTile: { backgroundColor: 'white', padding: '15px 10px', borderRadius: '10px', textAlign: 'center', cursor: 'pointer', boxShadow: '0 2px 6px rgba(0,0,0,0.08)', border: '1px solid #eee' },
     gradeLabel: { fontSize: '22px', fontWeight: 'bold', marginBottom: '4px' },
     gradeStudentCount: { fontSize: '13px', color: '#333', fontWeight: 'bold', marginBottom: '4px' },
     genderRow: { display: 'flex', justifyContent: 'center', gap: '8px', marginBottom: '4px' },
@@ -663,9 +659,8 @@ const styles = {
     gradeClasses: { fontSize: '11px', color: '#999', marginBottom: '6px' },
     viewArrow: { fontSize: '12px', fontWeight: 'bold' },
 
-    // Stream Tiles
     streamTiles: { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '15px', padding: '15px', backgroundColor: 'white', borderRadius: '0 0 10px 10px' },
-    streamTile: { backgroundColor: 'white', borderRadius: '10px', padding: '20px', cursor: 'pointer', boxShadow: '0 2px 8px rgba(0,0,0,0.1)', border: '1px solid #eee', textAlign: 'center', transition: 'transform 0.2s' },
+    streamTile: { backgroundColor: 'white', borderRadius: '10px', padding: '20px', cursor: 'pointer', boxShadow: '0 2px 8px rgba(0,0,0,0.1)', border: '1px solid #eee', textAlign: 'center' },
     streamBadge: { color: 'white', padding: '4px 14px', borderRadius: '20px', fontSize: '12px', fontWeight: 'bold', display: 'inline-block', marginBottom: '10px' },
     streamName: { fontSize: '20px', fontWeight: 'bold', color: '#1F3864', marginBottom: '12px' },
     streamStats: { display: 'flex', justifyContent: 'center', gap: '20px', marginBottom: '10px' },
@@ -675,7 +670,6 @@ const styles = {
     streamTeacher: { fontSize: '12px', color: '#666', marginBottom: '10px' },
     viewStudentsBtn: { fontSize: '13px', fontWeight: 'bold' },
 
-    // Class Header
     classHeader: { padding: '20px', borderRadius: '10px 10px 0 0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '15px' },
     classHeaderTitle: { color: 'white', margin: '0 0 5px 0', fontSize: '20px' },
     classHeaderMeta: { color: 'rgba(255,255,255,0.8)', margin: 0, fontSize: '13px' },
@@ -684,12 +678,11 @@ const styles = {
     classStatNum: { color: 'white', fontSize: '24px', fontWeight: 'bold', display: 'block' },
     classStatLabel: { color: 'rgba(255,255,255,0.8)', fontSize: '11px' },
 
-    // Class Search Bar
     classSearchBar: { display: 'flex', gap: '10px', padding: '12px 15px', backgroundColor: 'white', marginBottom: '2px', flexWrap: 'wrap' },
 
-    // Student Grid Cards
+    // Student grid — 4 cols, each item is card + optional inline edit below
     studentGrid: { display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px', padding: '15px', backgroundColor: 'white', borderRadius: '0 0 10px 10px', boxShadow: '0 2px 4px rgba(0,0,0,0.08)' },
-    studentCard: { backgroundColor: '#f8f9fa', borderRadius: '10px', overflow: 'hidden', border: '1px solid #eee', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' },
+    studentCard: { backgroundColor: '#f8f9fa', borderRadius: '10px', overflow: 'visible', border: '1px solid #eee', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' },
     studentCardTop: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 12px 0 12px' },
     studentRankBadge: { fontSize: '11px', color: '#999', fontWeight: 'bold' },
     studentAvatar: { width: '44px', height: '44px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 'bold', fontSize: '15px' },
@@ -697,12 +690,12 @@ const styles = {
     studentName: { fontSize: '13px', color: '#1F3864' },
     studentAdm: { fontSize: '11px', color: '#999', fontFamily: 'monospace' },
     genderBadge: { color: 'white', padding: '2px 8px', borderRadius: '3px', fontSize: '11px', display: 'inline-block', width: 'fit-content' },
-    studentCardActions: { display: 'flex', gap: '4px', padding: '8px 12px', borderTop: '1px solid #eee', backgroundColor: 'white' },
+    studentCardActions: { display: 'flex', gap: '4px', padding: '8px 12px', borderTop: '1px solid #eee', backgroundColor: 'white', borderRadius: '0 0 10px 10px' },
     profileBtn: { flex: 1, backgroundColor: '#6f42c1', color: 'white', border: 'none', padding: '5px', borderRadius: '4px', cursor: 'pointer', fontSize: '11px', fontWeight: 'bold' },
     editBtnSm: { backgroundColor: '#2E75B6', color: 'white', border: 'none', padding: '5px 8px', borderRadius: '4px', cursor: 'pointer', fontSize: '12px' },
+    cancelEditBtnSm: { backgroundColor: '#6c757d', color: 'white', border: 'none', padding: '5px 8px', borderRadius: '4px', cursor: 'pointer', fontSize: '12px' },
     deleteBtnSm: { backgroundColor: '#dc3545', color: 'white', border: 'none', padding: '5px 8px', borderRadius: '4px', cursor: 'pointer', fontSize: '12px' },
 
-    // Table
     tableCard: { backgroundColor: 'white', borderRadius: '10px', overflow: 'hidden', boxShadow: '0 2px 4px rgba(0,0,0,0.1)', marginTop: '20px' },
     tableTopBar: { backgroundColor: '#1F3864', padding: '12px 20px' },
     tableTitle: { color: 'white', margin: 0, fontSize: '15px' },
@@ -717,7 +710,6 @@ const styles = {
     editBtn: { backgroundColor: '#2E75B6', color: 'white', border: 'none', padding: '4px 8px', borderRadius: '3px', cursor: 'pointer', marginRight: '4px', fontSize: '12px' },
     deleteBtn: { backgroundColor: '#dc3545', color: 'white', border: 'none', padding: '4px 8px', borderRadius: '3px', cursor: 'pointer', fontSize: '12px' },
 
-    // Empty
     emptyState: { backgroundColor: 'white', padding: '60px', borderRadius: '0 0 10px 10px', textAlign: 'center', boxShadow: '0 2px 4px rgba(0,0,0,0.08)' },
     emptyIcon: { fontSize: '48px', marginBottom: '15px' },
 };
