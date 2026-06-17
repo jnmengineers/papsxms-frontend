@@ -28,15 +28,15 @@ const ExamForm = ({ formData, setFormData, academicYears, onSubmit, onCancel, su
                 {/* Academic Year — drives everything else */}
                 <div style={styles.formGroup}>
                     <label style={styles.label}>
-                        📅 Academic Year / Term
-                        <span style={styles.autoTag}>Fills dates automatically</span>
+                        📅 Academic Year
+                        <span style={styles.autoTag}>Auto-fills term & dates</span>
                     </label>
                     <select style={styles.input} value={formData.academicYearId || ''}
                         onChange={e => handleAcademicYearChange(e.target.value)} required>
                         <option value="">-- Select Year & Term --</option>
                         {academicYears.map(ay => (
                             <option key={ay.yearId} value={ay.yearId}>
-                                {ay.yearLabel} — Term {ay.term} {ay.isActive ? '✅ Active' : ''}
+                                {ay.yearLabel} | Term {ay.term} {ay.isActive ? '✅ Active' : ''}
                             </option>
                         ))}
                     </select>
@@ -82,10 +82,9 @@ const ExamForm = ({ formData, setFormData, academicYears, onSubmit, onCancel, su
             {/* Auto-filled preview */}
             {formData.academicYearId && formData.term && (
                 <div style={styles.autoFillPreview}>
-                    <span style={styles.autoFillItem}>📅 Year: <strong>{formData.academicYear}</strong></span>
-                    <span style={styles.autoFillItem}>📋 Term: <strong>{formData.term}</strong></span>
-                    <span style={styles.autoFillItem}>🗓️ Start: <strong>{formData.startDate}</strong></span>
-                    <span style={styles.autoFillItem}>🗓️ End: <strong>{formData.endDate}</strong></span>
+                    <span style={styles.autoFillItem}>🏫 Academic Year: <strong>{formData.academicYear}</strong></span>
+                    <span style={styles.autoFillItem}>📋 Term: <strong>Term {formData.term}</strong></span>
+                    <span style={styles.autoFillItem}>🗓️ {formData.startDate} → {formData.endDate}</span>
                 </div>
             )}
 
