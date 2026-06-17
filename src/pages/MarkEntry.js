@@ -130,7 +130,7 @@ useEffect(() => {
         }
     };
 
-    const handleMarkChange = (studentId, value) => {
+    const handleMarkChange = useCallback((studentId, value) => {
         setMarks(prev => ({
             ...prev,
             [studentId]: {
@@ -140,7 +140,7 @@ useEffect(() => {
         }));
     }, []);
 
-            const handleSaveAll = async () => {
+    const handleSaveAll = async () => {
                 setSaving(true);
                 setError('');
                 setSuccessMsg('');
