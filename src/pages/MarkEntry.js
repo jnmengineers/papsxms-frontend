@@ -401,14 +401,15 @@ function MarkEntry() {
         }
 
         setStudentSaveStatus(prev => ({ ...prev, [student.studentId]: 'saving' }));
-        console.log('Per-student save:', student.firstName, 'results:', JSON.stringify(results));
+        const examId = parseInt(selectedExam);
+        console.log('Per-student save:', student.firstName, 'examId:', examId, 'selectedExam raw:', selectedExam);
+        console.log('results:', JSON.stringify(results));
         console.log('marks state:', JSON.stringify(marks[student.studentId]));
 
         try {
-            const response = await api.post('/api/results/bulk-save', {
-                examId: parseInt(selectedExam),
-                results
-            });
+            const payload = { examId, results };
+            console.log('Full payload being sent:', JSON.stringify(payload));
+            const response = await api.post('/api/results/bulk-save', payload);
             const data = response.data;
             if (data.failed > 0) {
                 setStudentSaveStatus(prev => ({ ...prev, [student.studentId]: 'error' }));
