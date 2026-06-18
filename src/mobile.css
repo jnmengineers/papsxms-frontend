@@ -1,0 +1,201 @@
+/* ── Mobile Responsive Overrides ─────────────────────────────────────────── */
+
+/* Base */
+* { box-sizing: border-box; }
+body { overflow-x: hidden; }
+
+/* Navbar */
+@media (max-width: 768px) {
+  .navbar { padding: 10px 15px !important; flex-wrap: wrap; gap: 8px; }
+  .nav-title { font-size: 14px !important; }
+  .nav-logo { width: 35px !important; height: 35px !important; }
+  .nav-right { gap: 6px !important; }
+  .nav-right button { padding: 6px 10px !important; font-size: 12px !important; }
+}
+
+/* Content padding */
+@media (max-width: 768px) {
+  .content { padding: 12px !important; }
+  .page-content { padding: 12px !important; }
+}
+
+/* Grids → single column on mobile */
+@media (max-width: 768px) {
+  .grid-3, .grid-4, .stats-row {
+    grid-template-columns: 1fr 1fr !important;
+    gap: 8px !important;
+  }
+  .grid-2 {
+    grid-template-columns: 1fr !important;
+  }
+  .exam-grid {
+    grid-template-columns: 1fr 1fr !important;
+  }
+  .student-grid {
+    grid-template-columns: 1fr 1fr !important;
+  }
+  .subject-grid {
+    grid-template-columns: 1fr 1fr !important;
+  }
+  .stream-tiles {
+    grid-template-columns: 1fr 1fr !important;
+  }
+  .grade-tiles {
+    grid-template-columns: repeat(3, 1fr) !important;
+  }
+  .user-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .grid-3, .grid-4, .stats-row {
+    grid-template-columns: 1fr !important;
+  }
+  .exam-grid, .student-grid, .subject-grid,
+  .stream-tiles, .grade-tiles {
+    grid-template-columns: 1fr 1fr !important;
+  }
+}
+
+/* Tables — horizontal scroll */
+@media (max-width: 768px) {
+  .table-wrapper, .tableWrapper {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
+  table { min-width: 500px; }
+
+  /* Mark entry multi-subject table */
+  .mark-table-wrapper {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+/* Buttons — bigger tap targets */
+@media (max-width: 768px) {
+  button { min-height: 36px; }
+  .save-btn { width: 100% !important; padding: 12px !important; font-size: 15px !important; }
+  .mode-tabs { flex-direction: row !important; }
+  .mode-tab { padding: 10px 8px !important; font-size: 12px !important; }
+}
+
+/* Forms */
+@media (max-width: 768px) {
+  .form-grid, .grid3 {
+    grid-template-columns: 1fr !important;
+  }
+  select, input { font-size: 16px !important; } /* Prevents zoom on iOS */
+}
+
+/* Mark entry specific */
+@media (max-width: 768px) {
+  .mark-input { width: 70px !important; }
+  .multi-mark-input { width: 55px !important; }
+  .table-top-bar { flex-direction: column !important; align-items: flex-start !important; }
+  .table-badges { flex-wrap: wrap !important; gap: 4px !important; }
+}
+
+/* Step header */
+@media (max-width: 768px) {
+  .step-header { flex-direction: column !important; align-items: flex-start !important; }
+  .search-input { width: 100% !important; min-width: unset !important; }
+}
+
+/* Results page pivot table */
+@media (max-width: 768px) {
+  .results-table th, .results-table td {
+    padding: 6px 8px !important;
+    font-size: 11px !important;
+  }
+  .mark-cell { min-height: 36px !important; }
+}
+
+/* Invigilator card */
+@media (max-width: 768px) {
+  .invigilator-row { flex-direction: column !important; }
+  .invigilator-btn { width: 100% !important; text-align: center; }
+}
+
+/* Breadcrumb */
+@media (max-width: 768px) {
+  .breadcrumb { flex-wrap: wrap !important; font-size: 12px !important; }
+}
+
+/* Pending banner */
+@media (max-width: 768px) {
+  .pending-banner { flex-direction: column !important; }
+  .pending-btns { width: 100% !important; }
+  .pending-btns button { flex: 1; }
+}
+
+/* Save section */
+@media (max-width: 768px) {
+  .save-section { flex-direction: column !important; }
+  .save-section button { width: 100% !important; }
+}
+
+/* Class tiles on students page */
+@media (max-width: 768px) {
+  .class-header { flex-direction: column !important; }
+  .class-header-stats { flex-wrap: wrap !important; gap: 8px !important; }
+}
+
+/* Summary bar on users page */
+@media (max-width: 768px) {
+  .summary-bar { flex-wrap: wrap !important; gap: 10px !important; }
+}
+
+/* Print sheet — don't break on mobile */
+@media print {
+  .navbar, .no-print { display: none !important; }
+  .content { padding: 0 !important; }
+}
+
+/* ── Global mobile fixes ───────────────────────────────────────────────────── */
+
+/* Prevent iOS input zoom */
+@media (max-width: 768px) {
+  input[type="text"],
+  input[type="number"],
+  input[type="email"],
+  input[type="password"],
+  input[type="date"],
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+}
+
+/* Smooth horizontal scroll for tables */
+.tableWrapper, [style*="overflowX"] {
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Larger tap targets */
+@media (max-width: 768px) {
+  button {
+    min-height: 40px;
+    min-width: 40px;
+  }
+  
+  /* Save buttons full width */
+  .saveBtn, [style*="saveBtn"] {
+    width: 100%;
+  }
+}
+
+/* Navbar mobile */
+@media (max-width: 600px) {
+  nav, [style*="navbar"] {
+    padding: 10px 12px !important;
+  }
+}
+
+/* Hide non-essential columns on very small screens */
+@media (max-width: 480px) {
+  .hide-mobile {
+    display: none !important;
+  }
+}

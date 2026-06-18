@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import useWindowWidth from '../hooks/useWindowWidth';
 import api from '../services/api';
 import logo1 from '../assets/logo1.png';
 import { classDisplayName, gradeLabel, streamLabel } from '../utils/classUtils';
@@ -13,7 +14,7 @@ const MarkCell = ({ result, marks, markColor, isPending, getGradeColor, getGrade
             style={{
                 display: 'flex', flexDirection: 'column', alignItems: 'center',
                 gap: '2px', padding: '5px 4px', borderRadius: '4px',
-                cursor: 'pointer', minHeight: '44px', justifyContent: 'center',
+                cursor: 'pointer', minHeight: '44px', minWidth: '55px', justifyContent: 'center',
                 position: 'relative', transition: 'background 0.15s',
                 backgroundColor: hovered ? '#e3f2fd' : 'transparent',
                 outline: isPending ? '2px solid #fd7e14' : 'none',
@@ -58,6 +59,8 @@ const MarkCell = ({ result, marks, markColor, isPending, getGradeColor, getGrade
 
 function Results() {
     const role = localStorage.getItem('role');
+    const windowWidth = useWindowWidth();
+    const isMobile = windowWidth <= 768;
     const linkedClassId = localStorage.getItem('linkedClassId');
 
     const [results, setResults] = useState([]);
@@ -764,7 +767,7 @@ const styles = {
     navRight: { display: 'flex', gap: '10px' },
     navBtn: { backgroundColor: 'transparent', color: 'white', border: '1px solid white', padding: '8px 16px', borderRadius: '5px', cursor: 'pointer' },
     logoutBtn: { backgroundColor: 'transparent', color: 'white', border: '1px solid white', padding: '8px 16px', borderRadius: '5px', cursor: 'pointer' },
-    content: { padding: '30px' },
+    content: { padding: 'clamp(12px, 3vw, 30px)' },
     error: { color: 'red', padding: '10px', backgroundColor: '#fff3f3', borderRadius: '5px', marginBottom: '15px' },
     success: { color: '#155724', padding: '10px', backgroundColor: '#d4edda', borderRadius: '5px', marginBottom: '15px' },
 
@@ -790,7 +793,7 @@ const styles = {
     searchInput: { padding: '10px 15px', borderRadius: '5px', border: '2px solid #ddd', fontSize: '14px', minWidth: '220px' },
 
     // Exam tiles
-    examGrid: { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '15px' },
+    examGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '15px' },
     examTile: { backgroundColor: 'white', borderRadius: '10px', boxShadow: '0 2px 8px rgba(0,0,0,0.1)', cursor: 'pointer', overflow: 'hidden' },
     examTileTop: { padding: '20px', textAlign: 'center' },
     examIcon: { fontSize: '36px', display: 'block', marginBottom: '10px' },
@@ -805,7 +808,7 @@ const styles = {
     sectionHeader: { padding: '10px 15px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
     sectionLabel: { color: 'white', fontWeight: 'bold', fontSize: '14px' },
     sectionMeta: { color: 'rgba(255,255,255,0.8)', fontSize: '12px' },
-    gradesRow: { display: 'flex', flexWrap: 'wrap', gap: '20px', padding: '15px', backgroundColor: '#fafafa' },
+    gradesRow: { display: 'flex', flexWrap: 'wrap', gap: '12px', padding: '12px', backgroundColor: '#fafafa' },
     gradeGroup: { display: 'flex', flexDirection: 'column', gap: '6px' },
     gradeLabel: { fontSize: '12px', fontWeight: 'bold', textAlign: 'center' },
     streamTiles: { display: 'flex', gap: '8px', flexWrap: 'wrap' },
@@ -829,13 +832,13 @@ const styles = {
     tableWrapper: { overflowX: 'auto' },
     table: { width: '100%', borderCollapse: 'collapse', minWidth: '800px' },
     tableHeader: { backgroundColor: '#1F3864' },
-    th: { color: 'white', padding: '10px 12px', textAlign: 'left', whiteSpace: 'nowrap', fontSize: '12px', fontWeight: 'bold' },
+    th: { color: 'white', padding: '8px 10px', textAlign: 'left', whiteSpace: 'nowrap', fontSize: '11px', fontWeight: 'bold' },
     rankCol: { width: '50px', position: 'sticky', left: 0, backgroundColor: '#1F3864', zIndex: 2 },
     stickyCol2: { position: 'sticky', left: '50px', backgroundColor: 'inherit', zIndex: 1, minWidth: '90px' },
     stickyCol3: { position: 'sticky', left: '140px', backgroundColor: 'inherit', zIndex: 1, minWidth: '150px', borderRight: '2px solid #ddd' },
     subjectTh: { textAlign: 'center', backgroundColor: '#2E75B6', minWidth: '85px' },
     totalTh: { textAlign: 'center', backgroundColor: '#1a2d4f', minWidth: '70px' },
-    td: { padding: '8px 12px', borderBottom: '1px solid #eee', fontSize: '13px' },
+    td: { padding: '7px 10px', borderBottom: '1px solid #eee', fontSize: '12px' },
     markTd: { padding: '4px 6px', borderBottom: '1px solid #eee', textAlign: 'center' },
     trEven: { backgroundColor: '#f9f9f9' },
     trOdd: { backgroundColor: 'white' },

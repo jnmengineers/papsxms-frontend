@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import useWindowWidth from '../hooks/useWindowWidth';
 import { useReactToPrint } from 'react-to-print';
 import api from '../services/api';
 import logo1 from '../assets/logo1.png';
@@ -84,6 +85,8 @@ const PrintableMarkSheet = React.forwardRef(({ students, subjects, className, ex
 
 function MarkEntry() {
     const role = localStorage.getItem('role');
+    const windowWidth = useWindowWidth();
+    const isMobile = windowWidth <= 768;
     const linkedClassId = localStorage.getItem('linkedClassId');
     const linkedClassName = localStorage.getItem('linkedClassName');
 
@@ -186,41 +189,22 @@ function MarkEntry() {
         }
     };
 
-    // ✅ Fixed — primary match by classId, strict fallback only
+    // ✅ Fixed — filter purely by schoolClass.classId (all 710 students have it)
     const fetchStudentsByClass = async (classId) => {
+        if (!classId) return;
         try {
             setLoading(true);
+            setStudents([]); // Clear first to avoid showing wrong students
             const r = await api.get('/api/students');
-            // Ensure classes are loaded
-            let allClasses = classes;
-            if (allClasses.length === 0) {
-                const cr = await api.get('/api/classes');
-                allClasses = cr.data;
-                setClasses(cr.data);
-            }
-            const targetClass = allClasses.find(c => String(c.classId) === String(classId));
-
-            setStudents(r.data.filter(s => {
-                // Primary — always use this if available (most reliable)
-                if (s.schoolClass?.classId) {
-                    return String(s.schoolClass.classId) === String(classId);
-                }
-                // Fallback — only if schoolClass missing from API response
-                if (targetClass && s.className) {
-                    // Exact className match e.g. "G5Y" === "G5Y"
-                    if (s.className === targetClass.className) return true;
-                    // Exact gradeLevel + exact stream match
-                    if (targetClass.stream && s.stream) {
-                        return s.stream === targetClass.stream &&
-                               s.className === targetClass.gradeLevel + targetClass.stream.charAt(0).toUpperCase();
-                    }
-                    // No stream — exact gradeLevel match only
-                    return s.className === targetClass.gradeLevel;
-                }
-                return false;
-            }));
+            const filtered = r.data.filter(s =>
+                String(s.schoolClass?.classId) === String(classId)
+            );
+            setStudents(filtered);
             setLoading(false);
-        } catch (e) { setLoading(false); }
+        } catch (e) {
+            setLoading(false);
+            setError('Failed to load students');
+        }
     };
 
     const fetchExistingMarksSingle = async () => {
@@ -581,28 +565,32 @@ function MarkEntry() {
                 )}
 
                 {/* ── MODE TABS ── */}
-                <div style={styles.modeTabs}>
+                <div style={{ ...styles.modeTabs, flexDirection: 'row' }}>
                     <button onClick={() => { setMode('single'); handleReset(); }} style={{
                         ...styles.modeTab,
                         backgroundColor: mode === 'single' ? '#1F3864' : 'white',
-                        color: mode === 'single' ? 'white' : '#1F3864'
+                        color: mode === 'single' ? 'white' : '#1F3864',
+                        padding: isMobile ? '10px 8px' : '12px 15px',
+                        fontSize: isMobile ? '13px' : '14px'
                     }}>
-                        📖 Single Subject
-                        <span style={styles.modeTabDesc}>One subject at a time</span>
+                        📖 {isMobile ? 'Single' : 'Single Subject'}
+                        {!isMobile && <span style={styles.modeTabDesc}>One subject at a time</span>}
                     </button>
                     <button onClick={() => { setMode('multi'); handleReset(); }} style={{
                         ...styles.modeTab,
                         backgroundColor: mode === 'multi' ? '#1F3864' : 'white',
-                        color: mode === 'multi' ? 'white' : '#1F3864'
+                        color: mode === 'multi' ? 'white' : '#1F3864',
+                        padding: isMobile ? '10px 8px' : '12px 15px',
+                        fontSize: isMobile ? '13px' : '14px'
                     }}>
-                        📚 Multiple Subjects
-                        <span style={styles.modeTabDesc}>All subjects in one table</span>
+                        📚 {isMobile ? 'Multi' : 'Multiple Subjects'}
+                        {!isMobile && <span style={styles.modeTabDesc}>All subjects in one table</span>}
                     </button>
                 </div>
 
                 {/* ── SETUP CARD ── */}
                 <div style={styles.card}>
-                    <div style={styles.grid3}>
+                    <div style={{ ...styles.grid3, gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)' }}>
                         <div style={styles.formGroup}>
                             <label style={styles.label}>🏫 Class</label>
                             {role === 'TEACHER' && !isInvigilating ? (
@@ -902,7 +890,7 @@ const styles = {
     navRight: { display: 'flex', gap: '10px' },
     navBtn: { backgroundColor: 'transparent', color: 'white', border: '1px solid white', padding: '8px 16px', borderRadius: '5px', cursor: 'pointer' },
     logoutBtn: { backgroundColor: 'transparent', color: 'white', border: '1px solid white', padding: '8px 16px', borderRadius: '5px', cursor: 'pointer' },
-    content: { padding: '30px' },
+    content: { padding: 'clamp(12px, 3vw, 30px)' },
     pageHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px', flexWrap: 'wrap', gap: '10px' },
     headerBtns: { display: 'flex', gap: '10px', flexWrap: 'wrap' },
     title: { color: '#1F3864', margin: '0 0 5px 0', fontSize: '24px' },
@@ -932,7 +920,7 @@ const styles = {
     grid3: { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '15px' },
     formGroup: { display: 'flex', flexDirection: 'column', gap: '6px' },
     label: { fontWeight: 'bold', color: '#1F3864', fontSize: '13px' },
-    select: { padding: '10px', borderRadius: '5px', border: '2px solid #ddd', fontSize: '14px', backgroundColor: 'white' },
+    select: { padding: '10px', borderRadius: '5px', border: '2px solid #ddd', fontSize: '16px', backgroundColor: 'white' },
     classDisplay: { padding: '10px 15px', borderRadius: '5px', border: '2px solid #1F3864', fontSize: '14px', backgroundColor: '#e3f2fd', color: '#1F3864', fontWeight: 'bold', display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
     lockedBadge: { backgroundColor: '#1F3864', color: 'white', padding: '2px 8px', borderRadius: '3px', fontSize: '11px' },
     proceedBtn: { backgroundColor: '#1F3864', color: 'white', border: 'none', padding: '10px', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold', fontSize: '13px' },
@@ -944,7 +932,7 @@ const styles = {
     selectAllBtn: { backgroundColor: '#28a745', color: 'white', border: 'none', padding: '6px 14px', borderRadius: '5px', cursor: 'pointer', fontSize: '12px', fontWeight: 'bold' },
     clearAllBtn: { backgroundColor: '#6c757d', color: 'white', border: 'none', padding: '6px 14px', borderRadius: '5px', cursor: 'pointer', fontSize: '12px' },
     subjectHint: { color: '#666', fontSize: '13px', marginBottom: '12px' },
-    subjectGrid: { display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px', marginBottom: '15px' },
+    subjectGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: '10px', marginBottom: '15px' },
     subjectTile: { padding: '12px 10px', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' },
     subjectCheck: { fontSize: '18px', flexShrink: 0 },
     subjectName: { fontSize: '13px', fontWeight: 'bold' },
@@ -964,9 +952,9 @@ const styles = {
     trEven: { backgroundColor: '#f9f9f9' },
     trOdd: { backgroundColor: 'white' },
     admNo: { fontFamily: 'monospace', fontSize: '11px', color: '#888' },
-    markInput: { width: '90px', padding: '7px', borderRadius: '5px', border: '2px solid #ddd', fontSize: '14px', textAlign: 'center', outline: 'none' },
+    markInput: { width: '90px', padding: '7px', borderRadius: '5px', border: '2px solid #ddd', fontSize: '16px', textAlign: 'center', outline: 'none' },
     multiMarkCell: { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px', position: 'relative' },
-    multiMarkInput: { width: '65px', padding: '5px 3px', borderRadius: '4px', border: '2px solid #ddd', fontSize: '13px', textAlign: 'center', outline: 'none' },
+    multiMarkInput: { width: '65px', padding: '5px 3px', borderRadius: '4px', border: '2px solid #ddd', fontSize: '16px', textAlign: 'center', outline: 'none' },
     savedDot: { position: 'absolute', top: 0, right: 0, color: '#2E75B6', fontSize: '10px' },
     updateBadge: { backgroundColor: '#fff3cd', color: '#856404', padding: '2px 6px', borderRadius: '3px', fontSize: '11px' },
     newBadge: { backgroundColor: '#d4edda', color: '#155724', padding: '2px 6px', borderRadius: '3px', fontSize: '11px' },
