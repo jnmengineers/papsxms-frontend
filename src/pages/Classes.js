@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import api from '../services/api';
 import logo1 from '../assets/logo1.png';
+import { classDisplayName, classReportName, gradeLabel, streamLabel, streamColor } from '../utils/classUtils';
 
 function Classes() {
     const [classes, setClasses] = useState([]);
@@ -271,7 +272,7 @@ function Classes() {
                     <div style={styles.headerLeft}>
                         {view !== 'grades' && <button onClick={handleBack} style={styles.backBtn}>← Back</button>}
                         <div>
-                            <h2 style={styles.title}>🏫 Classes{selectedGrade && ` › ${selectedGrade.gradeLevel}`}{selectedClass && ` › ${selectedClass.className}`}</h2>
+                            <h2 style={styles.title}>🏫 Classes{selectedGrade && ` › ${gradeLabel(selectedGrade.gradeLevel)}`}{selectedClass && ` › ${selectedClass.className}`}</h2>
                             <p style={styles.breadcrumb}>
                                 {view === 'grades' && `${classes.length} total classes`}
                                 {view === 'streams' && `${getClassesForGrade(selectedGrade?.gradeLevel).length} class(es) in ${selectedGrade?.gradeLevel}`}
@@ -317,7 +318,7 @@ function Classes() {
                                                     <div key={grade.gradeLevel}
                                                         style={{ ...styles.gradeTile, borderTop: `4px solid ${section.color}` }}
                                                         onClick={() => handleGradeClick(grade)}>
-                                                        <div style={{ ...styles.gradeLabel, color: section.color }}>{grade.gradeLevel}</div>
+                                                        <div style={{ ...styles.gradeLabel, color: section.color }}>{gradeLabel(grade.gradeLevel)}</div>
                                                         <div style={styles.gradeCount}>{grade.count} class{grade.count !== 1 ? 'es' : ''}</div>
                                                         <div style={styles.gradeArrow}>View →</div>
                                                     </div>
@@ -336,7 +337,7 @@ function Classes() {
                         {view === 'streams' && selectedGrade && (
                             <div>
                                 <div style={{ ...styles.sectionTitle, backgroundColor: getSectionColor(selectedGrade.section) }}>
-                                    <span>{selectedGrade.gradeLevel} — Classes</span>
+                                    <span>{gradeLabel(selectedGrade.gradeLevel)} — Classes</span>
                                     <span style={styles.sectionMeta}>{getClassesForGrade(selectedGrade.gradeLevel).length} class(es)</span>
                                 </div>
                                 <div style={styles.streamTiles}>
@@ -352,9 +353,9 @@ function Classes() {
                                                 }}>
                                                     <div style={styles.streamTop} onClick={() => handleClassClick(cls)}>
                                                         <div style={{ ...styles.streamBadge, backgroundColor: getStreamColor(cls.stream) }}>
-                                                            {cls.stream || 'SINGLE'}
+                                                            {streamLabel(cls.stream) || 'Single'}
                                                         </div>
-                                                        <div style={styles.streamName}>{cls.className}</div>
+                                                        <div style={styles.streamName}>{gradeLabel(cls.gradeLevel)}</div>
                                                         <div style={styles.streamTeacher}>
                                                             👨‍🏫 {cls.classTeacher ? `${cls.classTeacher.firstName} ${cls.classTeacher.lastName}` : 'No Teacher Assigned'}
                                                         </div>

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import api from '../services/api';
 import logo1 from '../assets/logo1.png';
+import { classDisplayName, classReportName, gradeLabel, streamLabel, streamColor } from '../utils/classUtils';
 
 function Teachers() {
     const [teachers, setTeachers] = useState([]);
@@ -289,7 +290,7 @@ function Teachers() {
                                                         </td>
                                                         <td style={styles.td}>
                                                             {assignedClasses.length > 0
-                                                                ? assignedClasses.map(c => <span key={c.classId} style={styles.classBadge}>{c.className}</span>)
+                                                                ? assignedClasses.map(c => <span key={c.classId} style={styles.classBadge}>{classDisplayName(c)}</span>)
                                                                 : <span style={styles.unassignedBadge}>Unassigned</span>}
                                                         </td>
                                                         <td style={styles.td}>
@@ -382,7 +383,7 @@ function Teachers() {
                                                     borderLeft: `4px solid ${cls.classTeacher ? '#28a745' : '#dc3545'}`
                                                 }}>
                                                     <div style={styles.classCardTop}>
-                                                        <span style={styles.classCardName}>{cls.className}</span>
+                                                        <span style={styles.classCardName}>{classDisplayName(cls)}</span>
                                                         <span style={{ ...styles.statusDot, backgroundColor: cls.classTeacher ? '#28a745' : '#dc3545' }}>
                                                             {cls.classTeacher ? '✅ Assigned' : '❌ Unassigned'}
                                                         </span>
