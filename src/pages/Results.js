@@ -614,17 +614,97 @@ function Results() {
                                     </div>
                                 </div>
 
+                                {isMobile ? (
+                                    /* ── MOBILE: Student cards layout ── */
+                                    <div style={{ padding: '10px' }}>
+                                        {rankedStudents.map((student, index) => {
+                                            const stats = getStudentStats(student.studentId);
+                                            const rank = index + 1;
+                                            const rankEmoji = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : `#${rank}`;
+                                            return (
+                                                <div key={student.studentId} style={{
+                                                    backgroundColor: 'white', borderRadius: '8px',
+                                                    marginBottom: '10px', border: '1px solid #eee',
+                                                    overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.08)'
+                                                }}>
+                                                    {/* Student header bar */}
+                                                    <div style={{ backgroundColor: '#1F3864', padding: '8px 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                        <div>
+                                                            <div style={{ color: 'white', fontWeight: 'bold', fontSize: '13px' }}>
+                                                                {rankEmoji} {student.firstName} {student.lastName}
+                                                            </div>
+                                                            <div style={{ color: '#BDD7EE', fontSize: '10px' }}>{student.admissionNumber}</div>
+                                                        </div>
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                                            <span style={{ backgroundColor: 'white', color: getMarkColor(parseFloat(stats.average)), fontWeight: 'bold', fontSize: '13px', padding: '2px 7px', borderRadius: '4px' }}>
+                                                                {stats.average}%
+                                                            </span>
+                                                            <span style={{ ...styles.gradeBadge, backgroundColor: getGradeColor(stats.grade), fontSize: '11px' }}>
+                                                                {stats.grade}
+                                                            </span>
+                                                            <button onClick={() => handleDeleteStudentRow(student)}
+                                                                style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.5)', cursor: 'pointer', fontSize: '14px', padding: '2px' }}>
+                                                                🗑️
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                    {/* Subject marks grid — 2 per row */}
+                                                    <div style={{ padding: '8px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '5px' }}>
+                                                        {pivotSubjects.map(sub => {
+                                                            const result = pivotData[student.studentId]?.[sub.id];
+                                                            const isEditing = editingCell?.studentId === student.studentId && editingCell?.subjectId === sub.id;
+                                                            const isPending = pendingChanges[`${student.studentId}_${sub.id}`];
+                                                            const marks = result?.marksObtained;
+                                                            return (
+                                                                <div key={sub.id} style={{
+                                                                    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                                                                    padding: '5px 8px', borderRadius: '5px',
+                                                                    backgroundColor: isPending ? '#fff3cd' : '#f8f9fa',
+                                                                    border: `1px solid ${isPending ? '#ffc107' : '#eee'}`
+                                                                }}>
+                                                                    <span style={{ fontSize: '11px', color: '#555', flex: 1, marginRight: '4px' }}>
+                                                                        {sub.name.length > 10 ? sub.name.substring(0, 10) + '…' : sub.name}
+                                                                    </span>
+                                                                    {isEditing ? (
+                                                                        <input ref={editInputRef} type="number" min="0" max="100"
+                                                                            style={{ width: '48px', padding: '2px 4px', border: '2px solid #2E75B6', borderRadius: '3px', fontSize: '14px', textAlign: 'center' }}
+                                                                            value={editingValue}
+                                                                            onChange={e => setEditingValue(e.target.value)}
+                                                                            onKeyDown={e => {
+                                                                                if (e.key === 'Enter') { e.preventDefault(); commitEdit(student.studentId, sub.id); }
+                                                                                if (e.key === 'Escape') cancelEdit();
+                                                                            }}
+                                                                            onBlur={() => commitEdit(student.studentId, sub.id)} />
+                                                                    ) : (
+                                                                        <span onClick={() => startEdit(student.studentId, sub.id, marks)}
+                                                                            style={{ fontWeight: 'bold', fontSize: '14px', color: result ? getMarkColor(marks) : '#ccc', cursor: 'pointer', minWidth: '28px', textAlign: 'right' }}>
+                                                                            {result ? marks : '+'}
+                                                                        </span>
+                                                                    )}
+                                                                </div>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                ) : (
                                 <div style={styles.tableWrapper}>
                                     <table style={styles.table}>
                                         <thead>
                                             <tr style={styles.tableHeader}>
-                                                <th style={{ ...styles.th, ...styles.rankCol }}>Rank</th>
-                                                <th style={{ ...styles.th, ...styles.stickyCol2 }}>Adm No</th>
-                                                <th style={{ ...styles.th, ...styles.stickyCol3 }}>Student Name</th>
+                                                {!isMobile && <th style={{ ...styles.th, ...styles.rankCol }}>Rank</th>}
+                                                {!isMobile && <th style={{ ...styles.th, ...styles.stickyCol2 }}>Adm No</th>}
+                                                <th style={{ ...styles.th, ...(isMobile ? styles.mobileNameCol : styles.stickyCol3) }}>
+                                                    {isMobile ? 'Student' : 'Student Name'}
+                                                </th>
                                                 {pivotSubjects.map(sub => (
                                                     <th key={sub.id} style={{ ...styles.th, ...styles.subjectTh }}>
                                                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px' }}>
-                                                            <span>{sub.name}</span>
+                                                            <span style={{ fontSize: isMobile ? '9px' : '11px' }}>
+                                                                {isMobile ? sub.name.split(' ')[0] : sub.name}
+                                                            </span>
                                                             <button
                                                                 title="Delete all results for this subject"
                                                                 onClick={() => handleDeleteSubjectColumn(sub)}
@@ -634,9 +714,9 @@ function Results() {
                                                         </div>
                                                     </th>
                                                 ))}
-                                                <th style={{ ...styles.th, ...styles.totalTh }}>Total</th>
-                                                <th style={{ ...styles.th, ...styles.totalTh }}>Avg %</th>
-                                                <th style={{ ...styles.th, ...styles.totalTh }}>Grade</th>
+                                                <th style={{ ...styles.th, ...styles.totalTh }}>Avg</th>
+                                                {!isMobile && <th style={{ ...styles.th, ...styles.totalTh }}>Total</th>}
+                                                <th style={{ ...styles.th, ...styles.totalTh }}>Grd</th>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -647,15 +727,20 @@ function Results() {
                                                 return (
                                                     <tr key={student.studentId}
                                                         style={{ ...(index % 2 === 0 ? styles.trEven : styles.trOdd) }}>
-                                                        <td style={{ ...styles.td, ...styles.rankCol, textAlign: 'center', fontWeight: 'bold' }}>
+                                                        {!isMobile && <td style={{ ...styles.td, ...styles.rankCol, textAlign: 'center', fontWeight: 'bold' }}>
                                                             {rankEmoji}
-                                                        </td>
-                                                        <td style={{ ...styles.td, ...styles.stickyCol2 }}>
+                                                        </td>}
+                                                        {!isMobile && <td style={{ ...styles.td, ...styles.stickyCol2 }}>
                                                             <span style={styles.admNo}>{student.admissionNumber}</span>
-                                                        </td>
-                                                        <td style={{ ...styles.td, ...styles.stickyCol3 }}>
-                                                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px' }}>
-                                                                <strong>{student.firstName} {student.lastName}</strong>
+                                                        </td>}
+                                                        <td style={{ ...styles.td, ...(isMobile ? styles.mobileNameCol : styles.stickyCol3) }}>
+                                                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '4px' }}>
+                                                                <div>
+                                                                    <strong style={{ fontSize: isMobile ? '11px' : '13px' }}>
+                                                                        {isMobile ? student.firstName : `${student.firstName} ${student.lastName}`}
+                                                                    </strong>
+                                                                    {isMobile && <div style={{ fontSize: '9px', color: '#999' }}>{student.admissionNumber}</div>}
+                                                                </div>
                                                                 <button
                                                                     title="Delete all results for this student"
                                                                     onClick={() => handleDeleteStudentRow(student)}
@@ -715,19 +800,19 @@ function Results() {
                                                                 </td>
                                                             );
                                                         })}
-                                                        <td style={{ ...styles.td, ...styles.totalCell }}><strong>{stats.total}</strong></td>
                                                         <td style={{ ...styles.td, ...styles.totalCell }}>
-                                                            <span style={{ color: getMarkColor(parseFloat(stats.average)), fontWeight: 'bold' }}>{stats.average}%</span>
+                                                            <span style={{ color: getMarkColor(parseFloat(stats.average)), fontWeight: 'bold', fontSize: isMobile ? '11px' : '13px' }}>{stats.average}%</span>
                                                         </td>
+                                                        {!isMobile && <td style={{ ...styles.td, ...styles.totalCell }}><strong>{stats.total}</strong></td>}
                                                         <td style={{ ...styles.td, ...styles.totalCell, textAlign: 'center' }}>
-                                                            <span style={{ ...styles.gradeBadge, backgroundColor: getGradeColor(stats.grade) }}>{stats.grade}</span>
+                                                            <span style={{ ...styles.gradeBadge, backgroundColor: getGradeColor(stats.grade), fontSize: isMobile ? '10px' : '12px', padding: isMobile ? '2px 5px' : '3px 8px' }}>{stats.grade}</span>
                                                         </td>
                                                     </tr>
                                                 );
                                             })}
                                             {/* Subject averages row */}
                                             <tr style={styles.averageRow}>
-                                                <td colSpan="3" style={{ ...styles.td, fontWeight: 'bold', color: '#1F3864' }}>📊 Subject Average</td>
+                                                <td colSpan={isMobile ? "1" : "3"} style={{ ...styles.td, fontWeight: 'bold', color: '#1F3864', fontSize: isMobile ? '10px' : '13px' }}>📊 Avg</td>
                                                 {pivotSubjects.map(sub => (
                                                     <td key={sub.id} style={{ ...styles.td, textAlign: 'center' }}>
                                                         <strong style={{ color: '#1F3864' }}>{getSubjectAverage(sub.id)}</strong>
@@ -739,6 +824,8 @@ function Results() {
                                     </table>
                                 </div>
 
+
+                                )}
                                 {/* Save bar */}
                                 {pendingCount > 0 && (
                                     <div style={styles.saveBar}>
@@ -839,7 +926,7 @@ const styles = {
     subjectTh: { textAlign: 'center', backgroundColor: '#2E75B6', minWidth: '85px' },
     totalTh: { textAlign: 'center', backgroundColor: '#1a2d4f', minWidth: '70px' },
     td: { padding: '7px 10px', borderBottom: '1px solid #eee', fontSize: '12px' },
-    markTd: { padding: '4px 6px', borderBottom: '1px solid #eee', textAlign: 'center' },
+    markTd: { padding: '2px 3px', borderBottom: '1px solid #eee', textAlign: 'center' },
     trEven: { backgroundColor: '#f9f9f9' },
     trOdd: { backgroundColor: 'white' },
 
@@ -866,7 +953,7 @@ const styles = {
     // Edit cell (input mode)
     editCellWrapper: { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px' },
     editInput: {
-        width: '65px', padding: '5px 3px', borderRadius: '4px',
+        width: '55px', padding: '4px 2px', borderRadius: '4px',
         border: '2px solid #2E75B6', fontSize: '14px', textAlign: 'center',
         outline: 'none', backgroundColor: '#e3f2fd'
     },
@@ -886,6 +973,7 @@ const styles = {
     discardBarBtn: { backgroundColor: '#dc3545', color: 'white', border: 'none', padding: '8px 16px', borderRadius: '5px', cursor: 'pointer', fontSize: '14px' },
 
     deleteRowBtn: { background: 'none', border: 'none', cursor: 'pointer', fontSize: '12px', opacity: 0.5, padding: '2px 4px', borderRadius: '3px', flexShrink: 0, transition: 'opacity 0.2s' },
+    mobileNameCol: { minWidth: '90px', maxWidth: '110px', position: 'static', backgroundColor: 'inherit', zIndex: 'auto', borderRight: '2px solid #eee' },
     deleteColBtn: { background: 'rgba(255,255,255,0.2)', border: 'none', cursor: 'pointer', fontSize: '10px', padding: '1px 4px', borderRadius: '3px', color: 'white', lineHeight: 1 },
     emptyCard: { backgroundColor: 'white', padding: '60px', borderRadius: '10px', textAlign: 'center', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' },
     emptyIcon: { fontSize: '48px', marginBottom: '15px' },
