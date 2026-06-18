@@ -5,6 +5,7 @@ import { classDisplayName } from '../utils/classUtils';
 
 function Users() {
     const [users, setUsers] = useState([]);
+    const [teachers, setTeachers] = useState([]);
     const [classes, setClasses] = useState([]);
     const [students, setStudents] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -12,21 +13,22 @@ function Users() {
     const [successMsg, setSuccessMsg] = useState('');
     const [showForm, setShowForm] = useState(false);
     const [search, setSearch] = useState('');
-    const [filterRole, setFilterRole] = useState('');
-    const [reassigning, setReassigning] = useState({}); // { userId: true }
-    const [formData, setFormData] = useState({ username: '', password: '', role: '' });
+    const [filterRole, setFilterRole] = useState('TEACHER');
+    const [formData, setFormData] = useState({ username: '', password: '', role: 'TEACHER' });
 
     useEffect(() => { fetchAll(); }, []);
 
     const fetchAll = async () => {
         setLoading(true);
         try {
-            const [uRes, cRes, sRes] = await Promise.all([
+            const [uRes, tRes, cRes, sRes] = await Promise.all([
                 api.get('/api/users'),
+                api.get('/api/teachers'),
                 api.get('/api/classes'),
                 api.get('/api/students')
             ]);
             setUsers(uRes.data);
+            setTeachers(tRes.data);
             setClasses(cRes.data);
             setStudents(sRes.data);
         } catch (err) {
@@ -35,30 +37,26 @@ function Users() {
         setLoading(false);
     };
 
+    // Get teacher name from LinkedId
+    const getTeacherName = (user) => {
+        if (!user.linkedId && !user.LinkedId) return null;
+        const id = user.linkedId || user.LinkedId;
+        const teacher = teachers.find(t => String(t.teacherId) === String(id));
+        return teacher ? `${teacher.firstName} ${teacher.lastName}` : null;
+    };
+
+    const getStudentsForClass = (classId) =>
+        students.filter(s => String(s.schoolClass?.classId) === String(classId));
+
     const handleAssignClass = async (userId, classId) => {
         if (!classId) return;
-        setReassigning(prev => ({ ...prev, [userId]: true }));
         try {
             await api.patch(`/api/users/${userId}/assign-class/${classId}`);
-            setSuccessMsg('✅ Class assigned successfully!');
+            setSuccessMsg('✅ Class assigned!');
             setTimeout(() => setSuccessMsg(''), 3000);
             fetchAll();
         } catch (err) {
             setError('Failed to assign class');
-            setTimeout(() => setError(''), 3000);
-        }
-        setReassigning(prev => ({ ...prev, [userId]: false }));
-    };
-
-    const handleUnassignClass = async (userId) => {
-        if (!window.confirm('Remove this teacher from their class?')) return;
-        try {
-            await api.patch(`/api/classes/unassign-teacher`, { userId });
-            setSuccessMsg('✅ Teacher unassigned from class');
-            setTimeout(() => setSuccessMsg(''), 3000);
-            fetchAll();
-        } catch (err) {
-            setError('Failed to unassign');
             setTimeout(() => setError(''), 3000);
         }
     };
@@ -67,19 +65,19 @@ function Users() {
         e.preventDefault();
         try {
             await api.post('/api/auth/register', formData);
-            setSuccessMsg('✅ User created successfully!');
+            setSuccessMsg('✅ User created!');
             setShowForm(false);
-            setFormData({ username: '', password: '', role: '' });
+            setFormData({ username: '', password: '', role: 'TEACHER' });
             setTimeout(() => setSuccessMsg(''), 3000);
             fetchAll();
         } catch (err) {
-            setError('Failed to add user. Username may already exist.');
+            setError('Failed to add user');
             setTimeout(() => setError(''), 3000);
         }
     };
 
     const handleDelete = async (id, username) => {
-        if (!window.confirm(`Delete user "${username}"? This cannot be undone.`)) return;
+        if (!window.confirm(`Delete user "${username}"?`)) return;
         try {
             await api.delete(`/api/users/${id}`);
             setSuccessMsg('User deleted');
@@ -87,30 +85,8 @@ function Users() {
             fetchAll();
         } catch (err) {
             setError('Failed to delete user');
-            setTimeout(() => setError(''), 3000);
         }
     };
-
-    const getStudentsForClass = (classId) =>
-        students.filter(s => String(s.schoolClass?.classId) === String(classId));
-
-    const getClassForUser = (user) =>
-        user.linkedClass
-            ? classes.find(c => String(c.classId) === String(user.linkedClass.classId)) || user.linkedClass
-            : null;
-
-    // Filter
-    const filtered = users.filter(u => {
-        if (search && !u.username?.toLowerCase().includes(search.toLowerCase())) return false;
-        if (filterRole && u.role !== filterRole) return false;
-        return true;
-    });
-
-    // Stats
-    const teachers = users.filter(u => u.role === 'TEACHER');
-    const assignedTeachers = teachers.filter(u => u.linkedClass);
-    const unassignedTeachers = teachers.filter(u => !u.linkedClass);
-    const unassignedClasses = classes.filter(c => !teachers.some(t => String(t.linkedClass?.classId) === String(c.classId)));
 
     const sections = [
         { value: 'PRE_SCHOOL', label: 'Pre-School', color: '#6f42c1' },
@@ -119,11 +95,26 @@ function Users() {
         { value: 'JUNIOR_SCHOOL', label: 'Junior School', color: '#20c997' }
     ];
 
-    const getRoleBadgeColor = (role) => {
-        if (role === 'ADMIN') return '#1F3864';
-        if (role === 'TEACHER') return '#2E75B6';
-        return '#28a745';
-    };
+    const getRoleColor = (role) => ({
+        ADMIN: '#1F3864', TEACHER: '#2E75B6', CLERK: '#28a745'
+    }[role] || '#666');
+
+    const filtered = users.filter(u => {
+        if (filterRole && u.role !== filterRole) return false;
+        if (search) {
+            const name = getTeacherName(u) || '';
+            return u.username?.toLowerCase().includes(search.toLowerCase()) ||
+                   name.toLowerCase().includes(search.toLowerCase());
+        }
+        return true;
+    });
+
+    const teacherUsers = users.filter(u => u.role === 'TEACHER');
+    const assigned = teacherUsers.filter(u => u.linkedClass);
+    const unassigned = teacherUsers.filter(u => !u.linkedClass);
+    const unassignedClasses = classes.filter(c =>
+        !teacherUsers.some(t => String(t.linkedClass?.classId) === String(c.classId))
+    );
 
     return (
         <div style={styles.container}>
@@ -139,11 +130,10 @@ function Users() {
             </div>
 
             <div style={styles.content}>
-                {/* Header */}
                 <div style={styles.pageHeader}>
                     <div>
                         <h2 style={styles.title}>👤 User Management</h2>
-                        <p style={styles.subtitle}>Manage teachers, admins and class assignments</p>
+                        <p style={styles.subtitle}>Manage system users and class assignments</p>
                     </div>
                     <button onClick={() => setShowForm(!showForm)} style={styles.addBtn}>
                         {showForm ? '✕ Cancel' : '+ Add User'}
@@ -153,88 +143,84 @@ function Users() {
                 {error && <div style={styles.error}>{error}</div>}
                 {successMsg && <div style={styles.success}>{successMsg}</div>}
 
-                {/* Stats Row */}
-                <div style={styles.statsRow}>
-                    <div style={styles.statCard}>
-                        <div style={{ ...styles.statIcon, backgroundColor: '#e3f2fd', color: '#2E75B6' }}>👤</div>
-                        <div>
-                            <div style={styles.statNum}>{users.length}</div>
-                            <div style={styles.statLabel}>Total Users</div>
-                        </div>
+                {/* Summary bar */}
+                <div style={styles.summaryBar}>
+                    <div style={styles.summaryItem}>
+                        <span style={styles.summaryNum}>{users.length}</span>
+                        <span style={styles.summaryLabel}>Total Users</span>
                     </div>
-                    <div style={styles.statCard}>
-                        <div style={{ ...styles.statIcon, backgroundColor: '#e8f5e9', color: '#28a745' }}>✅</div>
-                        <div>
-                            <div style={{ ...styles.statNum, color: '#28a745' }}>{assignedTeachers.length}</div>
-                            <div style={styles.statLabel}>Teachers Assigned</div>
-                        </div>
+                    <div style={styles.summaryDivider} />
+                    <div style={styles.summaryItem}>
+                        <span style={{ ...styles.summaryNum, color: '#28a745' }}>{assigned.length}</span>
+                        <span style={styles.summaryLabel}>Teachers Assigned</span>
                     </div>
-                    <div style={styles.statCard}>
-                        <div style={{ ...styles.statIcon, backgroundColor: '#fff3e0', color: '#fd7e14' }}>⚠️</div>
-                        <div>
-                            <div style={{ ...styles.statNum, color: '#fd7e14' }}>{unassignedTeachers.length}</div>
-                            <div style={styles.statLabel}>Teachers Unassigned</div>
-                        </div>
+                    <div style={styles.summaryDivider} />
+                    <div style={styles.summaryItem}>
+                        <span style={{ ...styles.summaryNum, color: '#fd7e14' }}>{unassigned.length}</span>
+                        <span style={styles.summaryLabel}>Unassigned Teachers</span>
                     </div>
-                    <div style={styles.statCard}>
-                        <div style={{ ...styles.statIcon, backgroundColor: '#fce4ec', color: '#dc3545' }}>🏫</div>
-                        <div>
-                            <div style={{ ...styles.statNum, color: '#dc3545' }}>{unassignedClasses.length}</div>
-                            <div style={styles.statLabel}>Classes Without Teacher</div>
-                        </div>
+                    <div style={styles.summaryDivider} />
+                    <div style={styles.summaryItem}>
+                        <span style={{ ...styles.summaryNum, color: '#dc3545' }}>{unassignedClasses.length}</span>
+                        <span style={styles.summaryLabel}>Classes Without Teacher</span>
                     </div>
                 </div>
 
-                {/* Add User Form */}
+                {/* Add user form */}
                 {showForm && (
                     <div style={styles.formCard}>
                         <h3 style={styles.formTitle}>➕ Add New User</h3>
-                        <form onSubmit={handleSubmit}>
-                            <div style={styles.formGrid}>
-                                <div style={styles.formGroup}>
-                                    <label style={styles.label}>Username</label>
-                                    <input style={styles.input} value={formData.username}
-                                        onChange={e => setFormData({...formData, username: e.target.value})}
-                                        placeholder="e.g. teacher01" required />
-                                </div>
-                                <div style={styles.formGroup}>
-                                    <label style={styles.label}>Password</label>
-                                    <input type="password" style={styles.input} value={formData.password}
-                                        onChange={e => setFormData({...formData, password: e.target.value})}
-                                        placeholder="Min 8 characters" required />
-                                </div>
-                                <div style={styles.formGroup}>
-                                    <label style={styles.label}>Role</label>
-                                    <select style={styles.input} value={formData.role}
-                                        onChange={e => setFormData({...formData, role: e.target.value})} required>
-                                        <option value="">Select Role</option>
-                                        <option value="ADMIN">Admin</option>
-                                        <option value="TEACHER">Teacher</option>
-                                        <option value="CLERK">Clerk</option>
-                                    </select>
-                                </div>
+                        <form onSubmit={handleSubmit} style={styles.formRow}>
+                            <div style={styles.formGroup}>
+                                <label style={styles.label}>Username</label>
+                                <input style={styles.input} value={formData.username}
+                                    onChange={e => setFormData({...formData, username: e.target.value})}
+                                    placeholder="e.g. jsmith" required />
                             </div>
-                            <button type="submit" style={styles.submitBtn}>💾 Save User</button>
+                            <div style={styles.formGroup}>
+                                <label style={styles.label}>Password</label>
+                                <input type="password" style={styles.input} value={formData.password}
+                                    onChange={e => setFormData({...formData, password: e.target.value})}
+                                    placeholder="Min 8 characters" required />
+                            </div>
+                            <div style={styles.formGroup}>
+                                <label style={styles.label}>Role</label>
+                                <select style={styles.input} value={formData.role}
+                                    onChange={e => setFormData({...formData, role: e.target.value})} required>
+                                    <option value="TEACHER">Teacher</option>
+                                    <option value="ADMIN">Admin</option>
+                                    <option value="CLERK">Clerk</option>
+                                </select>
+                            </div>
+                            <div style={styles.formGroup}>
+                                <label style={styles.label}>&nbsp;</label>
+                                <button type="submit" style={styles.submitBtn}>💾 Save</button>
+                            </div>
                         </form>
                     </div>
                 )}
 
                 {/* Filters */}
                 <div style={styles.filterBar}>
-                    <input style={styles.searchInput} placeholder="🔍 Search username..."
+                    <input style={styles.searchInput} placeholder="🔍 Search name or username..."
                         value={search} onChange={e => setSearch(e.target.value)} />
                     <div style={styles.roleTabs}>
-                        {['', 'ADMIN', 'TEACHER', 'CLERK'].map(role => (
-                            <button key={role}
-                                onClick={() => setFilterRole(role)}
+                        {[
+                            { label: 'All', value: '' },
+                            { label: 'Teachers', value: 'TEACHER' },
+                            { label: 'Admins', value: 'ADMIN' },
+                            { label: 'Clerks', value: 'CLERK' }
+                        ].map(tab => (
+                            <button key={tab.value}
+                                onClick={() => setFilterRole(tab.value)}
                                 style={{
                                     ...styles.roleTab,
-                                    backgroundColor: filterRole === role ? '#1F3864' : 'white',
-                                    color: filterRole === role ? 'white' : '#1F3864'
+                                    backgroundColor: filterRole === tab.value ? '#1F3864' : 'white',
+                                    color: filterRole === tab.value ? 'white' : '#1F3864'
                                 }}>
-                                {role === '' ? 'All' : role}
-                                <span style={styles.roleTabCount}>
-                                    {role === '' ? users.length : users.filter(u => u.role === role).length}
+                                {tab.label}
+                                <span style={styles.tabCount}>
+                                    {tab.value === '' ? users.length : users.filter(u => u.role === tab.value).length}
                                 </span>
                             </button>
                         ))}
@@ -242,118 +228,115 @@ function Users() {
                 </div>
 
                 {loading ? (
-                    <div style={styles.loadingCard}><p>⏳ Loading users...</p></div>
+                    <div style={styles.loadingCard}>⏳ Loading...</div>
                 ) : (
-                    <div style={styles.userGrid}>
-                        {filtered.map(user => {
-                            const linkedClass = getClassForUser(user);
-                            const classStudents = linkedClass ? getStudentsForClass(linkedClass.classId) : [];
-                            const isTeacher = user.role === 'TEACHER';
-                            const section = linkedClass
-                                ? sections.find(s => s.value === linkedClass.section)
-                                : null;
+                    <div style={styles.tableCard}>
+                        <table style={styles.table}>
+                            <thead>
+                                <tr style={styles.thead}>
+                                    <th style={styles.th}>#</th>
+                                    <th style={styles.th}>Name</th>
+                                    <th style={styles.th}>Username</th>
+                                    <th style={styles.th}>Role</th>
+                                    <th style={styles.th}>Assigned Class</th>
+                                    <th style={styles.th}>Students</th>
+                                    <th style={styles.th}>Reassign</th>
+                                    <th style={styles.th}>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {filtered.map((user, i) => {
+                                    const teacherName = getTeacherName(user);
+                                    const linkedClass = user.linkedClass
+                                        ? classes.find(c => String(c.classId) === String(user.linkedClass.classId)) || user.linkedClass
+                                        : null;
+                                    const classStudents = linkedClass ? getStudentsForClass(linkedClass.classId) : [];
+                                    const section = linkedClass ? sections.find(s => s.value === linkedClass.section) : null;
+                                    const isTeacher = user.role === 'TEACHER';
 
-                            return (
-                                <div key={user.userId} style={styles.userCard}>
-                                    {/* Card Header */}
-                                    <div style={{ ...styles.userCardHeader, backgroundColor: getRoleBadgeColor(user.role) }}>
-                                        <div style={styles.userAvatar}>
-                                            {user.username?.charAt(0).toUpperCase()}
-                                        </div>
-                                        <div style={styles.userInfo}>
-                                            <div style={styles.username}>{user.username}</div>
-                                            <span style={styles.rolePill}>{user.role}</span>
-                                        </div>
-                                        <button onClick={() => handleDelete(user.userId, user.username)}
-                                            style={styles.deleteBtn} title="Delete user">🗑️</button>
-                                    </div>
-
-                                    {/* Class Assignment */}
-                                    <div style={styles.userCardBody}>
-                                        {isTeacher ? (
-                                            <>
-                                                {/* Current class */}
+                                    return (
+                                        <tr key={user.userId} style={i % 2 === 0 ? styles.trEven : styles.trOdd}>
+                                            <td style={styles.td}>{i + 1}</td>
+                                            <td style={styles.td}>
+                                                <div style={styles.nameCell}>
+                                                    <div style={{ ...styles.avatar, backgroundColor: getRoleColor(user.role) }}>
+                                                        {(teacherName || user.username)?.charAt(0).toUpperCase()}
+                                                    </div>
+                                                    <span style={styles.nameText}>
+                                                        {teacherName || <span style={styles.noName}>—</span>}
+                                                    </span>
+                                                </div>
+                                            </td>
+                                            <td style={styles.td}>
+                                                <span style={styles.usernameText}>{user.username}</span>
+                                            </td>
+                                            <td style={styles.td}>
+                                                <span style={{ ...styles.roleBadge, backgroundColor: getRoleColor(user.role) }}>
+                                                    {user.role}
+                                                </span>
+                                            </td>
+                                            <td style={styles.td}>
                                                 {linkedClass ? (
-                                                    <div style={styles.assignedClass}>
-                                                        <div style={{ ...styles.classTag, borderLeft: `4px solid ${section?.color || '#1F3864'}` }}>
-                                                            <div style={styles.classTagTop}>
-                                                                <span style={styles.classTagName}>
-                                                                    🏫 {classDisplayName(linkedClass)}
-                                                                </span>
-                                                                <span style={{ ...styles.sectionPill, backgroundColor: section?.color || '#1F3864' }}>
-                                                                    {section?.label || linkedClass.section}
-                                                                </span>
-                                                            </div>
-                                                            <div style={styles.classTagStats}>
-                                                                <span>👥 {classStudents.length} students</span>
-                                                                <span>👦 {classStudents.filter(s => s.gender === 'Male').length} boys</span>
-                                                                <span>👧 {classStudents.filter(s => s.gender === 'Female').length} girls</span>
-                                                            </div>
-                                                        </div>
-                                                    </div>
+                                                    <span style={{ ...styles.classBadge, borderLeft: `3px solid ${section?.color || '#1F3864'}` }}>
+                                                        {classDisplayName(linkedClass)}
+                                                    </span>
+                                                ) : isTeacher ? (
+                                                    <span style={styles.unassignedBadge}>⚠️ Not assigned</span>
                                                 ) : (
-                                                    <div style={styles.noClass}>
-                                                        <span style={styles.noClassText}>⚠️ No class assigned</span>
-                                                    </div>
+                                                    <span style={styles.naText}>—</span>
                                                 )}
-
-                                                {/* Reassign dropdown */}
-                                                <div style={styles.assignRow}>
-                                                    <select style={styles.classSelect}
+                                            </td>
+                                            <td style={styles.td}>
+                                                {linkedClass ? (
+                                                    <span style={styles.studentCount}>
+                                                        👥 {classStudents.length}
+                                                    </span>
+                                                ) : <span style={styles.naText}>—</span>}
+                                            </td>
+                                            <td style={styles.td}>
+                                                {isTeacher ? (
+                                                    <select style={styles.assignSelect}
                                                         defaultValue=""
-                                                        onChange={e => handleAssignClass(user.userId, e.target.value)}
-                                                        disabled={reassigning[user.userId]}>
+                                                        onChange={e => handleAssignClass(user.userId, e.target.value)}>
                                                         <option value="">
-                                                            {linkedClass ? '🔄 Reassign class...' : '➕ Assign class...'}
+                                                            {linkedClass ? 'Reassign...' : 'Assign class...'}
                                                         </option>
-                                                        {sections.map(section => (
-                                                            <optgroup key={section.value} label={section.label}>
-                                                                {classes
-                                                                    .filter(c => c.section === section.value)
-                                                                    .map(cls => (
-                                                                        <option key={cls.classId} value={cls.classId}>
-                                                                            {classDisplayName(cls)}
-                                                                            {teachers.some(t => String(t.linkedClass?.classId) === String(cls.classId) && t.userId !== user.userId)
-                                                                                ? ' ⚠️ Has teacher'
-                                                                                : ''}
-                                                                        </option>
-                                                                    ))}
+                                                        {sections.map(sec => (
+                                                            <optgroup key={sec.value} label={sec.label}>
+                                                                {classes.filter(c => c.section === sec.value).map(cls => (
+                                                                    <option key={cls.classId} value={cls.classId}>
+                                                                        {classDisplayName(cls)}
+                                                                    </option>
+                                                                ))}
                                                             </optgroup>
                                                         ))}
                                                     </select>
-                                                    {reassigning[user.userId] && <span style={styles.savingText}>⏳</span>}
-                                                </div>
-                                            </>
-                                        ) : (
-                                            <div style={styles.nonTeacherInfo}>
-                                                <span style={styles.nonTeacherText}>
-                                                    {user.role === 'ADMIN' ? '🔑 Full system access' : '📋 Clerk access'}
-                                                </span>
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
-                            );
-                        })}
-
-                        {filtered.length === 0 && (
-                            <div style={styles.emptyCard}>
-                                <div style={styles.emptyIcon}>👤</div>
-                                <p>No users found</p>
-                            </div>
-                        )}
+                                                ) : <span style={styles.naText}>—</span>}
+                                            </td>
+                                            <td style={styles.td}>
+                                                <button onClick={() => handleDelete(user.userId, user.username)}
+                                                    style={styles.deleteBtn}>🗑️ Delete</button>
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
+                                {filtered.length === 0 && (
+                                    <tr>
+                                        <td colSpan="8" style={styles.emptyRow}>No users found</td>
+                                    </tr>
+                                )}
+                            </tbody>
+                        </table>
                     </div>
                 )}
 
-                {/* Unassigned Classes Warning */}
+                {/* Unassigned classes */}
                 {unassignedClasses.length > 0 && (
                     <div style={styles.warningCard}>
-                        <h3 style={styles.warningTitle}>⚠️ Classes Without a Teacher ({unassignedClasses.length})</h3>
-                        <div style={styles.unassignedGrid}>
+                        <strong style={styles.warningTitle}>⚠️ {unassignedClasses.length} class(es) without a teacher:</strong>
+                        <div style={styles.chipRow}>
                             {unassignedClasses.map(cls => (
-                                <div key={cls.classId} style={styles.unassignedChip}>
-                                    🏫 {classDisplayName(cls)}
-                                </div>
+                                <span key={cls.classId} style={styles.chip}>{classDisplayName(cls)}</span>
                             ))}
                         </div>
                     </div>
@@ -379,70 +362,59 @@ const styles = {
     subtitle: { color: '#666', margin: 0, fontSize: '14px' },
     addBtn: { backgroundColor: '#1F3864', color: 'white', border: 'none', padding: '10px 20px', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold' },
 
-    error: { color: 'red', padding: '10px 15px', backgroundColor: '#fff3f3', borderRadius: '5px', marginBottom: '15px', border: '1px solid #ffcdd2' },
+    error: { color: 'red', padding: '10px 15px', backgroundColor: '#fff3f3', borderRadius: '5px', marginBottom: '15px' },
     success: { color: '#155724', padding: '10px 15px', backgroundColor: '#d4edda', borderRadius: '5px', marginBottom: '15px' },
 
-    // Stats
-    statsRow: { display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '15px', marginBottom: '20px' },
-    statCard: { backgroundColor: 'white', borderRadius: '10px', padding: '15px', display: 'flex', alignItems: 'center', gap: '12px', boxShadow: '0 2px 4px rgba(0,0,0,0.08)' },
-    statIcon: { width: '44px', height: '44px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', flexShrink: 0 },
-    statNum: { fontSize: '26px', fontWeight: 'bold', color: '#1F3864', display: 'block' },
-    statLabel: { fontSize: '12px', color: '#666' },
+    summaryBar: { backgroundColor: 'white', borderRadius: '10px', padding: '15px 25px', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '20px', boxShadow: '0 2px 4px rgba(0,0,0,0.08)', flexWrap: 'wrap' },
+    summaryItem: { display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: '80px' },
+    summaryNum: { fontSize: '28px', fontWeight: 'bold', color: '#1F3864', lineHeight: 1 },
+    summaryLabel: { fontSize: '11px', color: '#888', marginTop: '3px', textAlign: 'center' },
+    summaryDivider: { width: '1px', height: '40px', backgroundColor: '#eee' },
 
-    // Form
     formCard: { backgroundColor: 'white', padding: '20px', borderRadius: '10px', marginBottom: '20px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)', border: '2px solid #1F3864' },
     formTitle: { color: '#1F3864', margin: '0 0 15px 0' },
-    formGrid: { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '15px', marginBottom: '15px' },
+    formRow: { display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px', alignItems: 'end' },
     formGroup: { display: 'flex', flexDirection: 'column', gap: '5px' },
     label: { fontSize: '12px', fontWeight: 'bold', color: '#1F3864' },
     input: { padding: '9px', borderRadius: '5px', border: '1px solid #ddd', fontSize: '14px' },
-    submitBtn: { backgroundColor: '#2E75B6', color: 'white', border: 'none', padding: '10px 20px', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold' },
+    submitBtn: { backgroundColor: '#2E75B6', color: 'white', border: 'none', padding: '9px 16px', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold', whiteSpace: 'nowrap' },
 
-    // Filters
-    filterBar: { display: 'flex', gap: '10px', marginBottom: '20px', flexWrap: 'wrap', alignItems: 'center' },
-    searchInput: { flex: 1, padding: '10px', borderRadius: '5px', border: '1px solid #ddd', fontSize: '14px', minWidth: '200px' },
+    filterBar: { display: 'flex', gap: '10px', marginBottom: '15px', flexWrap: 'wrap', alignItems: 'center' },
+    searchInput: { flex: 1, padding: '9px 12px', borderRadius: '5px', border: '1px solid #ddd', fontSize: '14px', minWidth: '200px' },
     roleTabs: { display: 'flex', gap: '5px' },
-    roleTab: { padding: '8px 14px', borderRadius: '5px', border: '2px solid #1F3864', cursor: 'pointer', fontWeight: 'bold', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px' },
-    roleTabCount: { backgroundColor: 'rgba(0,0,0,0.15)', padding: '1px 6px', borderRadius: '10px', fontSize: '11px' },
+    roleTab: { padding: '7px 12px', borderRadius: '5px', border: '2px solid #1F3864', cursor: 'pointer', fontWeight: 'bold', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '5px' },
+    tabCount: { backgroundColor: 'rgba(0,0,0,0.12)', padding: '1px 5px', borderRadius: '8px', fontSize: '11px' },
 
-    // User cards grid
-    userGrid: { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '15px', marginBottom: '20px' },
-    userCard: { backgroundColor: 'white', borderRadius: '10px', overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' },
-    userCardHeader: { padding: '15px', display: 'flex', alignItems: 'center', gap: '12px' },
-    userAvatar: { width: '42px', height: '42px', borderRadius: '50%', backgroundColor: 'rgba(255,255,255,0.2)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '18px', flexShrink: 0 },
-    userInfo: { flex: 1 },
-    username: { color: 'white', fontWeight: 'bold', fontSize: '15px' },
-    rolePill: { backgroundColor: 'rgba(255,255,255,0.25)', color: 'white', padding: '2px 8px', borderRadius: '3px', fontSize: '11px' },
-    deleteBtn: { background: 'none', border: 'none', cursor: 'pointer', fontSize: '16px', opacity: 0.7, padding: '4px' },
+    tableCard: { backgroundColor: 'white', borderRadius: '10px', overflow: 'hidden', boxShadow: '0 2px 4px rgba(0,0,0,0.08)', marginBottom: '20px', overflowX: 'auto' },
+    table: { width: '100%', borderCollapse: 'collapse', minWidth: '800px' },
+    thead: { backgroundColor: '#1F3864' },
+    th: { color: 'white', padding: '12px 14px', textAlign: 'left', fontSize: '12px', fontWeight: 'bold', whiteSpace: 'nowrap' },
+    td: { padding: '11px 14px', borderBottom: '1px solid #f0f0f0', fontSize: '13px' },
+    trEven: { backgroundColor: '#fafafa' },
+    trOdd: { backgroundColor: 'white' },
 
-    userCardBody: { padding: '15px' },
+    nameCell: { display: 'flex', alignItems: 'center', gap: '8px' },
+    avatar: { width: '32px', height: '32px', borderRadius: '50%', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '13px', flexShrink: 0 },
+    nameText: { fontWeight: 'bold', color: '#1F3864' },
+    noName: { color: '#aaa', fontStyle: 'italic', fontWeight: 'normal' },
+    usernameText: { fontFamily: 'monospace', fontSize: '12px', backgroundColor: '#f0f0f0', padding: '2px 6px', borderRadius: '3px', color: '#555' },
 
-    assignedClass: { marginBottom: '12px' },
-    classTag: { backgroundColor: '#f8f9fa', borderRadius: '6px', padding: '10px 12px' },
-    classTagTop: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px', flexWrap: 'wrap', gap: '4px' },
-    classTagName: { fontWeight: 'bold', color: '#1F3864', fontSize: '14px' },
-    sectionPill: { color: 'white', padding: '2px 8px', borderRadius: '3px', fontSize: '11px' },
-    classTagStats: { display: 'flex', gap: '12px', fontSize: '12px', color: '#666' },
+    roleBadge: { color: 'white', padding: '3px 8px', borderRadius: '3px', fontSize: '11px', fontWeight: 'bold' },
+    classBadge: { backgroundColor: '#e3f2fd', color: '#1F3864', padding: '4px 10px', borderRadius: '4px', fontSize: '12px', fontWeight: 'bold', paddingLeft: '8px' },
+    unassignedBadge: { color: '#e65100', backgroundColor: '#fff3e0', padding: '3px 8px', borderRadius: '3px', fontSize: '12px' },
+    naText: { color: '#ccc' },
+    studentCount: { color: '#2E75B6', fontWeight: 'bold', fontSize: '13px' },
 
-    noClass: { backgroundColor: '#fff3e0', borderRadius: '6px', padding: '10px 12px', marginBottom: '12px', border: '1px solid #ffe0b2' },
-    noClassText: { color: '#e65100', fontSize: '13px', fontWeight: 'bold' },
+    assignSelect: { padding: '6px 8px', borderRadius: '5px', border: '1px solid #ddd', fontSize: '12px', width: '140px' },
+    deleteBtn: { backgroundColor: '#dc3545', color: 'white', border: 'none', padding: '5px 10px', borderRadius: '4px', cursor: 'pointer', fontSize: '12px', whiteSpace: 'nowrap' },
+    emptyRow: { textAlign: 'center', padding: '30px', color: '#999' },
 
-    assignRow: { display: 'flex', alignItems: 'center', gap: '8px' },
-    classSelect: { flex: 1, padding: '8px', borderRadius: '5px', border: '2px solid #ddd', fontSize: '13px', backgroundColor: 'white' },
-    savingText: { fontSize: '16px' },
+    loadingCard: { backgroundColor: 'white', padding: '40px', borderRadius: '10px', textAlign: 'center', color: '#666' },
 
-    nonTeacherInfo: { padding: '10px 0' },
-    nonTeacherText: { color: '#666', fontSize: '13px' },
-
-    loadingCard: { backgroundColor: 'white', padding: '40px', borderRadius: '10px', textAlign: 'center' },
-    emptyCard: { gridColumn: '1/-1', backgroundColor: 'white', padding: '60px', borderRadius: '10px', textAlign: 'center' },
-    emptyIcon: { fontSize: '48px', marginBottom: '10px' },
-
-    // Unassigned warning
     warningCard: { backgroundColor: '#fff8e1', border: '2px solid #ffc107', borderRadius: '10px', padding: '15px 20px' },
-    warningTitle: { color: '#856404', margin: '0 0 12px 0', fontSize: '15px' },
-    unassignedGrid: { display: 'flex', flexWrap: 'wrap', gap: '8px' },
-    unassignedChip: { backgroundColor: '#fff3cd', color: '#856404', padding: '5px 12px', borderRadius: '20px', fontSize: '13px', fontWeight: 'bold', border: '1px solid #ffc107' },
+    warningTitle: { color: '#856404', display: 'block', marginBottom: '10px', fontSize: '14px' },
+    chipRow: { display: 'flex', flexWrap: 'wrap', gap: '8px' },
+    chip: { backgroundColor: '#fff3cd', color: '#856404', padding: '4px 12px', borderRadius: '20px', fontSize: '12px', border: '1px solid #ffc107' },
 };
 
 export default Users;
