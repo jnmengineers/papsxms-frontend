@@ -401,6 +401,8 @@ function MarkEntry() {
         }
 
         setStudentSaveStatus(prev => ({ ...prev, [student.studentId]: 'saving' }));
+        console.log('Per-student save:', student.firstName, 'results:', JSON.stringify(results));
+        console.log('marks state:', JSON.stringify(marks[student.studentId]));
 
         try {
             const response = await api.post('/api/results/bulk-save', {
@@ -412,9 +414,35 @@ function MarkEntry() {
                 setStudentSaveStatus(prev => ({ ...prev, [student.studentId]: 'error' }));
             } else {
                 setStudentSaveStatus(prev => ({ ...prev, [student.studentId]: 'saved' }));
-                // Refresh marks for this student
-                if (mode === 'single') fetchExistingMarksSingle();
-                else fetchExistingMarksMulti(selectedSubjectIds);
+                // ✅ Mark as saved in local state only — don't refresh all marks
+                // (refreshing resets state and causes keyboard issues on mobile)
+                if (mode === 'single') {
+                    setMarks(prev => ({
+                        ...prev,
+                        [student.studentId]: {
+                            ...prev[student.studentId],
+                            exists: true,
+                            resultId: prev[student.studentId]?.resultId
+                        }
+                    }));
+                } else {
+                    const selectedSubjects = subjects.filter(s => selectedSubjectIds.includes(s.subjectId));
+                    setMultiMarks(prev => {
+                        const updated = { ...prev };
+                        selectedSubjects.forEach(sub => {
+                            if (updated[student.studentId]?.[sub.subjectId]) {
+                                updated[student.studentId] = {
+                                    ...updated[student.studentId],
+                                    [sub.subjectId]: {
+                                        ...updated[student.studentId][sub.subjectId],
+                                        exists: true
+                                    }
+                                };
+                            }
+                        });
+                        return updated;
+                    });
+                }
             }
         } catch (e) {
             setStudentSaveStatus(prev => ({ ...prev, [student.studentId]: 'error' }));
