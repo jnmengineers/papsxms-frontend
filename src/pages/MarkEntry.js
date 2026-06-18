@@ -108,6 +108,7 @@ function MarkEntry() {
     const [multiMarks, setMultiMarks] = useState({});
 
     const [loading, setLoading] = useState(false);
+    const [studentSaveStatus, setStudentSaveStatus] = useState({}); // { studentId: 'saving'|'saved'|'error' }
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState('');
     const [successMsg, setSuccessMsg] = useState('');
@@ -190,7 +191,14 @@ function MarkEntry() {
         try {
             setLoading(true);
             const r = await api.get('/api/students');
-            const targetClass = classes.find(c => String(c.classId) === String(classId));
+            // If classes not loaded yet, fetch them now
+            let allClasses = classes;
+            if (allClasses.length === 0) {
+                const cr = await api.get('/api/classes');
+                allClasses = cr.data;
+                setClasses(cr.data);
+            }
+            const targetClass = allClasses.find(c => String(c.classId) === String(classId));
             setStudents(r.data.filter(s => {
                 // Primary: match by classId via schoolClass
                 if (String(s.schoolClass?.classId) === String(classId)) return true;
@@ -280,7 +288,10 @@ function MarkEntry() {
 
         if (results.length === 0) {
             setSaving(false);
-            setError('No marks to save — enter at least one mark first');
+            // Show more helpful message
+            const totalStudents = students.length;
+            const totalMarksEntered = Object.values(marks).filter(m => m?.marks !== '' && m?.marks !== undefined).length;
+            setError(`No valid marks to save. Students loaded: ${totalStudents}. Marks entered: ${totalMarksEntered}. Make sure marks are between 0-100.`);
             return;
         }
 
@@ -329,7 +340,10 @@ function MarkEntry() {
 
         if (results.length === 0) {
             setSaving(false);
-            setError('No marks to save — enter at least one mark first');
+            // Show more helpful message
+            const totalStudents = students.length;
+            const totalMarksEntered = Object.values(marks).filter(m => m?.marks !== '' && m?.marks !== undefined).length;
+            setError(`No valid marks to save. Students loaded: ${totalStudents}. Marks entered: ${totalMarksEntered}. Make sure marks are between 0-100.`);
             return;
         }
 
@@ -350,6 +364,56 @@ function MarkEntry() {
             setSaving(false);
             setError(`Save failed: ${e.response?.data?.message || e.message}. Please try again.`);
             console.error('Bulk save error:', e.response?.data || e.message);
+        }
+    };
+
+    // ── Save marks for a single student ─────────────────────────────────────
+    const handleSaveStudent = async (student) => {
+        const selectedSubjects = subjects.filter(s => selectedSubjectIds.includes(s.subjectId));
+        const studentMarks = mode === 'single'
+            ? [{ subjectId: parseInt(selectedSubject), markData: marks[student.studentId] }]
+            : selectedSubjects.map(sub => ({ subjectId: sub.subjectId, markData: multiMarks[student.studentId]?.[sub.subjectId] }));
+
+        const results = studentMarks
+            .filter(({ markData }) => markData?.marks !== '' && markData?.marks !== undefined)
+            .map(({ subjectId, markData }) => {
+                const val = parseFloat(markData.marks);
+                if (isNaN(val) || val < 0 || val > 100) return null;
+                return {
+                    studentId: student.studentId,
+                    subjectId,
+                    marksObtained: val,
+                    maxMarks: 100,
+                    resultId: markData.resultId || null
+                };
+            })
+            .filter(Boolean);
+
+        if (results.length === 0) {
+            setStudentSaveStatus(prev => ({ ...prev, [student.studentId]: 'error' }));
+            setTimeout(() => setStudentSaveStatus(prev => ({ ...prev, [student.studentId]: null })), 2000);
+            return;
+        }
+
+        setStudentSaveStatus(prev => ({ ...prev, [student.studentId]: 'saving' }));
+
+        try {
+            const response = await api.post('/api/results/bulk-save', {
+                examId: parseInt(selectedExam),
+                results
+            });
+            const data = response.data;
+            if (data.failed > 0) {
+                setStudentSaveStatus(prev => ({ ...prev, [student.studentId]: 'error' }));
+            } else {
+                setStudentSaveStatus(prev => ({ ...prev, [student.studentId]: 'saved' }));
+                // Refresh marks for this student
+                if (mode === 'single') fetchExistingMarksSingle();
+                else fetchExistingMarksMulti(selectedSubjectIds);
+            }
+        } catch (e) {
+            setStudentSaveStatus(prev => ({ ...prev, [student.studentId]: 'error' }));
+            console.error('Save student failed:', student.firstName, e.response?.data || e.message);
         }
     };
 
@@ -596,6 +660,7 @@ function MarkEntry() {
                                                 <th style={styles.th}>Marks (0-100)</th>
                                                 <th style={styles.th}>Grade</th>
                                                 <th style={styles.th}>Status</th>
+                                                <th style={styles.th}>Save</th>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -623,9 +688,23 @@ function MarkEntry() {
                                                             {grade && <span style={{ backgroundColor: grade.color, color: 'white', padding: '3px 10px', borderRadius: '3px', fontWeight: 'bold', fontSize: '13px' }}>{grade.label}</span>}
                                                         </td>
                                                         <td style={styles.td}>
-                                                            {markData?.exists ? <span style={styles.updateBadge}>✏️ Update</span>
-                                                                : markData?.marks ? <span style={styles.newBadge}>🆕 New</span>
-                                                                : <span style={styles.emptyBadge}>—</span>}
+                                                            {studentSaveStatus[student.studentId] === 'saving'
+                                                                ? <span style={styles.savingBadge}>⏳ Saving...</span>
+                                                                : studentSaveStatus[student.studentId] === 'saved'
+                                                                    ? <span style={styles.savedBadge}>✅ Saved</span>
+                                                                    : studentSaveStatus[student.studentId] === 'error'
+                                                                        ? <span style={styles.errorBadge}>❌ Failed</span>
+                                                                        : markData?.exists ? <span style={styles.updateBadge}>✏️ Update</span>
+                                                                            : markData?.marks ? <span style={styles.newBadge}>🆕 New</span>
+                                                                            : <span style={styles.emptyBadge}>—</span>}
+                                                        </td>
+                                                        <td style={styles.td}>
+                                                            <button
+                                                                onClick={() => handleSaveStudent(student)}
+                                                                style={styles.saveRowBtn}
+                                                                disabled={studentSaveStatus[student.studentId] === 'saving'}>
+                                                                💾
+                                                            </button>
                                                         </td>
                                                     </tr>
                                                 );
@@ -637,7 +716,9 @@ function MarkEntry() {
                                     <button onClick={handleSaveSingle} style={styles.saveBtn} disabled={saving}>
                                         {saving ? '⏳ Saving...' : '💾 Save All Marks'}
                                     </button>
-                                    <p style={styles.hint}>Only rows with marks entered will be saved</p>
+                                    <p style={styles.hint}>
+                                        ⚠️ Empty cells are <strong>not saved</strong>. Enter <strong>0</strong> for absent students or those who scored zero.
+                                    </p>
                                 </div>
                             </>
                         )}
@@ -703,6 +784,7 @@ function MarkEntry() {
                                                         {sub.subjectName}
                                                     </th>
                                                 ))}
+                                                <th style={{ ...styles.th, textAlign: 'center', backgroundColor: '#28a745', color: 'white', minWidth: '60px' }}>Save</th>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -730,6 +812,16 @@ function MarkEntry() {
                                                             </td>
                                                         );
                                                     })}
+                                                    {/* Per-student save button */}
+                                                    <td style={{ ...styles.td, textAlign: 'center', padding: '4px' }}>
+                                                        {studentSaveStatus[student.studentId] === 'saving'
+                                                            ? <span style={styles.savingBadge}>⏳</span>
+                                                            : studentSaveStatus[student.studentId] === 'saved'
+                                                                ? <span style={styles.savedBadge}>✅</span>
+                                                                : studentSaveStatus[student.studentId] === 'error'
+                                                                    ? <button onClick={() => handleSaveStudent(student)} style={styles.retryBtn}>❌ Retry</button>
+                                                                    : <button onClick={() => handleSaveStudent(student)} style={styles.saveRowBtn}>💾</button>}
+                                                    </td>
                                                 </tr>
                                             ))}
                                         </tbody>
@@ -740,7 +832,10 @@ function MarkEntry() {
                                         {saving ? '⏳ Saving...' : '💾 Save All Marks'}
                                     </button>
                                     <button onClick={() => setStep(2)} style={styles.backBtn}>← Change Subjects</button>
-                                    <p style={styles.hint}>● = already saved. Empty cells skipped.</p>
+                                    <p style={styles.hint}>
+                                        ⚠️ Empty cells are <strong>not saved</strong>. Enter <strong>0</strong> for absent or zero-score students.
+                                        ● = already saved in database.
+                                    </p>
                                 </div>
                             </>
                         )}
@@ -843,6 +938,11 @@ const styles = {
     newBadge: { backgroundColor: '#d4edda', color: '#155724', padding: '2px 6px', borderRadius: '3px', fontSize: '11px' },
     emptyBadge: { color: '#aaa', fontSize: '12px' },
     saveSection: { padding: '15px 20px', borderTop: '2px solid #f0f2f5', display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap', backgroundColor: '#f8f9fa' },
+    saveRowBtn: { backgroundColor: '#2E75B6', color: 'white', border: 'none', padding: '4px 8px', borderRadius: '4px', cursor: 'pointer', fontSize: '13px' },
+    retryBtn: { backgroundColor: '#dc3545', color: 'white', border: 'none', padding: '4px 8px', borderRadius: '4px', cursor: 'pointer', fontSize: '11px' },
+    savingBadge: { color: '#fd7e14', fontSize: '11px', fontWeight: 'bold' },
+    savedBadge: { color: '#28a745', fontSize: '11px', fontWeight: 'bold' },
+    errorBadge: { color: '#dc3545', fontSize: '11px', fontWeight: 'bold' },
     saveBtn: { backgroundColor: '#28a745', color: 'white', border: 'none', padding: '10px 30px', borderRadius: '5px', cursor: 'pointer', fontSize: '15px', fontWeight: 'bold' },
     backBtn: { backgroundColor: '#6c757d', color: 'white', border: 'none', padding: '10px 20px', borderRadius: '5px', cursor: 'pointer', fontSize: '14px' },
     hint: { color: '#666', fontSize: '12px', fontStyle: 'italic', margin: 0 },
