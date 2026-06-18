@@ -186,12 +186,12 @@ function MarkEntry() {
         }
     };
 
-    // ✅ Fixed — fallback to className/stream matching when schoolClass is missing
+    // ✅ Fixed — primary match by classId, strict fallback only
     const fetchStudentsByClass = async (classId) => {
         try {
             setLoading(true);
             const r = await api.get('/api/students');
-            // If classes not loaded yet, fetch them now
+            // Ensure classes are loaded
             let allClasses = classes;
             if (allClasses.length === 0) {
                 const cr = await api.get('/api/classes');
@@ -199,18 +199,23 @@ function MarkEntry() {
                 setClasses(cr.data);
             }
             const targetClass = allClasses.find(c => String(c.classId) === String(classId));
+
             setStudents(r.data.filter(s => {
-                // Primary: match by classId via schoolClass
-                if (String(s.schoolClass?.classId) === String(classId)) return true;
-                // Fallback: match by className or gradeLevel+stream
+                // Primary — always use this if available (most reliable)
+                if (s.schoolClass?.classId) {
+                    return String(s.schoolClass.classId) === String(classId);
+                }
+                // Fallback — only if schoolClass missing from API response
                 if (targetClass && s.className) {
+                    // Exact className match e.g. "G5Y" === "G5Y"
                     if (s.className === targetClass.className) return true;
-                    if (targetClass.stream) {
+                    // Exact gradeLevel + exact stream match
+                    if (targetClass.stream && s.stream) {
                         return s.stream === targetClass.stream &&
-                            (s.className?.includes(targetClass.gradeLevel) ||
-                             s.className === targetClass.gradeLevel);
+                               s.className === targetClass.gradeLevel + targetClass.stream.charAt(0).toUpperCase();
                     }
-                    return s.className?.includes(targetClass.gradeLevel);
+                    // No stream — exact gradeLevel match only
+                    return s.className === targetClass.gradeLevel;
                 }
                 return false;
             }));
