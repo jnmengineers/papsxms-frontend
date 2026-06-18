@@ -255,73 +255,102 @@ function MarkEntry() {
         setSelectedSubjectIds(prev => prev.includes(subjectId) ? prev.filter(id => id !== subjectId) : [...prev, subjectId]);
     };
 
-    // ✅ Fixed — PUT now sends full required payload
+    // ✅ Bulk save — one API call for all marks
     const handleSaveSingle = async () => {
         setSaving(true); setError(''); setSuccessMsg('');
-        let saved = 0, updated = 0, failed = 0;
-        for (const student of students) {
-            const markData = marks[student.studentId];
-            if (!markData || markData.marks === '' || markData.marks === undefined) continue;
-            try {
-                if (markData.exists && markData.resultId) {
-                    await api.put(`/api/results/${markData.resultId}`, {
-                        marksObtained: parseFloat(markData.marks), maxMarks: 100,
-                        student: { studentId: student.studentId },
-                        subject: { subjectId: parseInt(selectedSubject) },
-                        exam: { examId: parseInt(selectedExam) }
-                    });
-                    updated++;
-                } else {
-                    await api.post('/api/results', {
-                        marksObtained: parseFloat(markData.marks), maxMarks: 100,
-                        student: { studentId: student.studentId },
-                        subject: { subjectId: parseInt(selectedSubject) },
-                        exam: { examId: parseInt(selectedExam) }
-                    });
-                    saved++;
-                }
-            } catch (e) { failed++; }
+
+        // Build bulk payload — only include students with marks entered
+        const results = students
+            .filter(student => {
+                const markData = marks[student.studentId];
+                if (!markData || markData.marks === '' || markData.marks === undefined) return false;
+                const val = parseFloat(markData.marks);
+                return !isNaN(val) && val >= 0 && val <= 100;
+            })
+            .map(student => {
+                const markData = marks[student.studentId];
+                return {
+                    studentId: student.studentId,
+                    subjectId: parseInt(selectedSubject),
+                    marksObtained: parseFloat(markData.marks),
+                    maxMarks: 100,
+                    resultId: markData.resultId || null  // null = new, id = update
+                };
+            });
+
+        if (results.length === 0) {
+            setSaving(false);
+            setError('No marks to save — enter at least one mark first');
+            return;
         }
-        setSaving(false);
-        if (failed > 0) setError(`${failed} failed. ${saved} saved, ${updated} updated.`);
-        else setSuccessMsg(`✅ ${saved} new + ${updated} updated!`);
-        fetchExistingMarksSingle();
+
+        try {
+            const response = await api.post('/api/results/bulk-save', {
+                examId: parseInt(selectedExam),
+                results
+            });
+            const data = response.data;
+            setSaving(false);
+            if (data.failed > 0) {
+                setError(`⚠️ ${data.failed} failed. ${data.saved} saved, ${data.updated} updated. ${data.errors?.[0] || ''}`);
+            } else {
+                setSuccessMsg(`✅ ${data.saved} new mark(s) saved, ${data.updated} updated! ${data.skipped > 0 ? `(${data.skipped} skipped)` : ''}`);
+            }
+            fetchExistingMarksSingle();
+        } catch (e) {
+            setSaving(false);
+            setError(`Save failed: ${e.response?.data?.message || e.message}. Please try again.`);
+            console.error('Bulk save error:', e.response?.data || e.message);
+        }
     };
 
-    // ✅ Fixed — PUT now sends full required payload
+    // ✅ Bulk save — one API call for ALL marks across all subjects
     const handleSaveMulti = async () => {
         setSaving(true); setError(''); setSuccessMsg('');
-        let saved = 0, updated = 0, failed = 0;
         const selectedSubjects = subjects.filter(s => selectedSubjectIds.includes(s.subjectId));
+
+        // Build bulk payload — only include cells with marks entered
+        const results = [];
         for (const student of students) {
             for (const subject of selectedSubjects) {
                 const markData = multiMarks[student.studentId]?.[subject.subjectId];
                 if (!markData || markData.marks === '' || markData.marks === undefined) continue;
-                try {
-                    if (markData.exists && markData.resultId) {
-                        await api.put(`/api/results/${markData.resultId}`, {
-                            marksObtained: parseFloat(markData.marks), maxMarks: 100,
-                            student: { studentId: student.studentId },
-                            subject: { subjectId: subject.subjectId },
-                            exam: { examId: parseInt(selectedExam) }
-                        });
-                        updated++;
-                    } else {
-                        await api.post('/api/results', {
-                            marksObtained: parseFloat(markData.marks), maxMarks: 100,
-                            student: { studentId: student.studentId },
-                            subject: { subjectId: subject.subjectId },
-                            exam: { examId: parseInt(selectedExam) }
-                        });
-                        saved++;
-                    }
-                } catch (e) { failed++; }
+                const val = parseFloat(markData.marks);
+                if (isNaN(val) || val < 0 || val > 100) continue;
+                results.push({
+                    studentId: student.studentId,
+                    subjectId: subject.subjectId,
+                    marksObtained: val,
+                    maxMarks: 100,
+                    resultId: markData.resultId || null
+                });
             }
         }
-        setSaving(false);
-        if (failed > 0) setError(`${failed} failed. ${saved} saved, ${updated} updated.`);
-        else setSuccessMsg(`✅ ${saved} new + ${updated} updated!`);
-        fetchExistingMarksMulti(selectedSubjectIds);
+
+        if (results.length === 0) {
+            setSaving(false);
+            setError('No marks to save — enter at least one mark first');
+            return;
+        }
+
+        try {
+            const response = await api.post('/api/results/bulk-save', {
+                examId: parseInt(selectedExam),
+                results
+            });
+            const data = response.data;
+            setSaving(false);
+            if (data.failed > 0) {
+                setError(`⚠️ ${data.failed} failed. ${data.saved} saved, ${data.updated} updated. ${data.errors?.[0] || ''}`);
+            } else {
+                setSuccessMsg(`✅ ${data.saved} new mark(s) saved, ${data.updated} updated! ${data.skipped > 0 ? `(${data.skipped} empty cells skipped)` : ''}`);
+            }
+            fetchExistingMarksMulti(selectedSubjectIds);
+        } catch (e) {
+            setSaving(false);
+            setError(`Save failed: ${e.response?.data?.message || e.message}. Please try again.`);
+            console.error('Bulk save error:', e.response?.data || e.message);
+        }
     };
 
     const handleProceedToSubjectSelect = async () => {
