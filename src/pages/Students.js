@@ -13,7 +13,7 @@ function Students() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [showAddForm, setShowAddForm] = useState(false);
-    const [editingStudent, setEditingStudent] = useState(null); // student being edited inline
+    const [editingStudent, setEditingStudent] = useState(null);
     const [search, setSearch] = useState('');
     const [filterGender, setFilterGender] = useState('');
     const [selectedClassFilter, setSelectedClassFilter] = useState('');
@@ -49,7 +49,9 @@ function Students() {
             s.admissionNumber?.toLowerCase().includes(search.toLowerCase())
         );
         if (filterGender) data = data.filter(s => s.gender === filterGender);
-        if (selectedClassFilter) data = data.filter(s => s.className === selectedClassFilter);
+        if (selectedClassFilter) data = data.filter(s =>
+            String(s.schoolClass?.classId) === String(selectedClassFilter)
+        );
         setFiltered(data);
     }, [search, filterGender, selectedClassFilter, students]);
 
@@ -106,8 +108,22 @@ function Students() {
     const getClassesForGrade = (gradeLevel) =>
         classes.filter(c => (c.gradeLevel || extractGrade(c.className)) === gradeLevel);
 
-    const getStudentsForClass = (className) =>
-        students.filter(s => s.className === className);
+    // ✅ Fixed — filter by classId (reliable) with className fallback
+    const getStudentsForClass = (className, classId) => {
+        if (classId) {
+            return students.filter(s => String(s.schoolClass?.classId) === String(classId));
+        }
+        return students.filter(s =>
+            s.className === className || s.schoolClass?.className === className
+        );
+    };
+
+    // ✅ Fixed — find class by classId first, then className
+    const findClassForStudent = (student) =>
+        classes.find(c =>
+            String(c.classId) === String(student.schoolClass?.classId) ||
+            c.className === student.className
+        );
 
     const gradesBySection = () => {
         const grouped = {};
@@ -123,15 +139,17 @@ function Students() {
     const getStreamColor = (stream) => streamColors[stream?.toUpperCase()] || streamColors.default;
 
     const handleGradeClick = (grade) => { setSelectedGrade(grade); setSelectedClass(null); setView('streams'); };
-    const handleClassClick = (cls) => { setSelectedClass(cls); setSelectedClassFilter(cls.className); setView('students'); };
+    const handleClassClick = (cls) => {
+        setSelectedClass(cls);
+        setSelectedClassFilter(cls.classId); // ✅ use classId not className
+        setView('students');
+    };
     const handleBack = () => {
         if (view === 'students') { setView('streams'); setSelectedClass(null); setSelectedClassFilter(''); setEditingStudent(null); }
         else if (view === 'streams') { setView('grades'); setSelectedGrade(null); }
     };
 
-    // ── Open inline edit for a student ──────────────────────────────────────
     const handleEdit = (student) => {
-        // toggle off if clicking same student
         if (editingStudent?.studentId === student.studentId) {
             setEditingStudent(null);
             return;
@@ -192,7 +210,6 @@ function Students() {
         }
     };
 
-    // Shared student form fields
     const StudentFormFields = ({ onSubmit, onCancel, submitLabel, showClassField = false }) => (
         <form onSubmit={onSubmit} style={styles.inlineForm}>
             <div style={styles.formGrid}>
@@ -267,7 +284,6 @@ function Students() {
             </div>
 
             <div style={styles.content}>
-                {/* Header */}
                 <div style={styles.header}>
                     <div style={styles.headerLeft}>
                         {view !== 'grades' && (
@@ -282,7 +298,7 @@ function Students() {
                             <p style={styles.breadcrumb}>
                                 {view === 'grades' && `${students.length} total students across all classes`}
                                 {view === 'streams' && `${getClassesForGrade(selectedGrade?.gradeLevel).length} class(es) in ${selectedGrade?.gradeLevel}`}
-                                {view === 'students' && `${getStudentsForClass(selectedClass?.className).length} student(s) in ${selectedClass?.className}`}
+                                {view === 'students' && `${getStudentsForClass(selectedClass?.className, selectedClass?.classId).length} student(s) in ${selectedClass?.className}`}
                             </p>
                         </div>
                     </div>
@@ -293,7 +309,6 @@ function Students() {
 
                 {error && <p style={styles.error}>{error}</p>}
 
-                {/* Add Form — top only, for new students */}
                 {showAddForm && (
                     <div style={styles.addFormCard}>
                         <h3 style={styles.formTitle}>➕ Add New Student</h3>
@@ -314,7 +329,7 @@ function Students() {
                                 <div style={styles.statsRow}>
                                     {sections.map(section => {
                                         const sectionStudents = students.filter(s => {
-                                            const cls = classes.find(c => c.className === s.className);
+                                            const cls = findClassForStudent(s);
                                             return cls?.section === section.value;
                                         });
                                         const sectionClasses = classes.filter(c => c.section === section.value);
@@ -359,7 +374,7 @@ function Students() {
                                                 </div>
                                                 <span style={styles.sectionCount}>
                                                     {students.filter(s => {
-                                                        const cls = classes.find(c => c.className === s.className);
+                                                        const cls = findClassForStudent(s);
                                                         return cls?.section === section.value;
                                                     }).length} students
                                                 </span>
@@ -367,7 +382,7 @@ function Students() {
                                             <div style={styles.gradeTiles}>
                                                 {sectionGrades.map(grade => {
                                                     const gradeStudents = students.filter(s => {
-                                                        const cls = classes.find(c => c.className === s.className);
+                                                        const cls = findClassForStudent(s);
                                                         return (cls?.gradeLevel || extractGrade(cls?.className)) === grade.gradeLevel;
                                                     });
                                                     return (
@@ -416,7 +431,7 @@ function Students() {
                                                             <td style={styles.td}>
                                                                 <span style={{ ...styles.genderBadge, backgroundColor: s.gender === 'Male' ? '#2E75B6' : '#e83e8c' }}>{s.gender}</span>
                                                             </td>
-                                                            <td style={styles.td}>{s.className}</td>
+                                                            <td style={styles.td}>{s.schoolClass?.className || s.className}</td>
                                                             <td style={styles.td}>
                                                                 <button onClick={() => navigate(`/student/${s.studentId}`)} style={styles.viewBtn}>👤</button>
                                                                 <button onClick={() => handleEdit(s)} style={styles.editBtn}>Edit</button>
@@ -444,12 +459,12 @@ function Students() {
                                             <span style={styles.sectionMeta}>{gradeClasses.length} class(es)</span>
                                         </div>
                                         <span style={styles.sectionCount}>
-                                            {gradeClasses.reduce((sum, c) => sum + getStudentsForClass(c.className).length, 0)} students
+                                            {gradeClasses.reduce((sum, c) => sum + getStudentsForClass(c.className, c.classId).length, 0)} students
                                         </span>
                                     </div>
                                     <div style={styles.streamTiles}>
                                         {gradeClasses.map(cls => {
-                                            const clsStudents = getStudentsForClass(cls.className);
+                                            const clsStudents = getStudentsForClass(cls.className, cls.classId);
                                             const streamColor = getStreamColor(cls.stream);
                                             return (
                                                 <div key={cls.classId}
@@ -486,7 +501,7 @@ function Students() {
                         {/* ── VIEW 3: Students in Class ── */}
                         {view === 'students' && selectedClass && (() => {
                             const sectionInfo = getSectionInfo(selectedClass.section || extractSection(selectedClass.gradeLevel || extractGrade(selectedClass.className)));
-                            const clsStudents = getStudentsForClass(selectedClass.className).filter(s => {
+                            const clsStudents = getStudentsForClass(selectedClass.className, selectedClass.classId).filter(s => {
                                 if (search && !`${s.firstName} ${s.lastName}`.toLowerCase().includes(search.toLowerCase()) && !s.admissionNumber?.toLowerCase().includes(search.toLowerCase())) return false;
                                 if (filterGender && s.gender !== filterGender) return false;
                                 return true;
@@ -531,7 +546,6 @@ function Students() {
                                         <div style={styles.studentGrid}>
                                             {clsStudents.map((student, index) => (
                                                 <div key={student.studentId}>
-                                                    {/* ── Student Card ── */}
                                                     <div style={{
                                                         ...styles.studentCard,
                                                         outline: editingStudent?.studentId === student.studentId ? '2px solid #2E75B6' : 'none'
@@ -560,7 +574,6 @@ function Students() {
                                                         </div>
                                                     </div>
 
-                                                    {/* ── Inline Edit Form — opens below this student card ── */}
                                                     {editingStudent?.studentId === student.studentId && (
                                                         <div style={styles.inlineEditCard}>
                                                             <div style={styles.inlineEditHeader}>
@@ -608,18 +621,12 @@ const styles = {
     breadcrumb: { color: '#666', margin: '3px 0 0 0', fontSize: '13px' },
     addBtn: { backgroundColor: '#1F3864', color: 'white', border: 'none', padding: '10px 20px', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold' },
     error: { color: 'red', marginBottom: '15px' },
-
-    // Add form
     addFormCard: { backgroundColor: 'white', padding: '20px', borderRadius: '10px', marginBottom: '20px', boxShadow: '0 2px 8px rgba(0,0,0,0.12)', border: '2px solid #1F3864' },
     formTitle: { color: '#1F3864', margin: '0 0 15px 0' },
-
-    // Inline edit
     inlineEditCard: { backgroundColor: 'white', borderRadius: '0 0 8px 8px', padding: '15px', border: '2px solid #2E75B6', borderTop: 'none', marginTop: '-2px' },
     inlineEditHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' },
     inlineEditTitle: { color: '#2E75B6', margin: 0, fontSize: '13px' },
     closeBtn: { background: 'none', border: 'none', fontSize: '16px', cursor: 'pointer', color: '#999' },
-
-    // Form shared
     inlineForm: {},
     formGrid: { display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px', marginBottom: '12px' },
     formGroup: { display: 'flex', flexDirection: 'column', gap: '4px' },
@@ -628,8 +635,6 @@ const styles = {
     btnGroup: { display: 'flex', gap: '8px' },
     submitBtn: { backgroundColor: '#2E75B6', color: 'white', border: 'none', padding: '8px 16px', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold', fontSize: '12px' },
     cancelBtn: { backgroundColor: '#6c757d', color: 'white', border: 'none', padding: '8px 14px', borderRadius: '5px', cursor: 'pointer', fontSize: '12px' },
-
-    // Stats Row
     statsRow: { display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px', marginBottom: '20px' },
     statCard: { backgroundColor: 'white', borderRadius: '10px', padding: '15px', display: 'flex', alignItems: 'center', gap: '12px', boxShadow: '0 2px 4px rgba(0,0,0,0.08)' },
     statIcon: { width: '44px', height: '44px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '18px', flexShrink: 0 },
@@ -637,18 +642,15 @@ const styles = {
     statNum: { fontSize: '26px', fontWeight: 'bold', display: 'block' },
     statLabel: { fontSize: '12px', color: '#333', fontWeight: 'bold' },
     statMeta: { fontSize: '11px', color: '#999' },
-
     searchCard: { backgroundColor: 'white', padding: '15px', borderRadius: '10px', marginBottom: '20px', boxShadow: '0 2px 4px rgba(0,0,0,0.08)', display: 'flex', gap: '10px', flexWrap: 'wrap' },
     searchInput: { flex: 1, padding: '10px', borderRadius: '5px', border: '1px solid #ddd', fontSize: '14px', minWidth: '200px' },
     filterSelect: { padding: '10px', borderRadius: '5px', border: '1px solid #ddd', fontSize: '14px' },
     clearBtn: { backgroundColor: '#6c757d', color: 'white', border: 'none', padding: '10px 15px', borderRadius: '5px', cursor: 'pointer' },
-
     sectionBlock: { marginBottom: '25px', borderRadius: '10px', overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' },
     sectionTitle: { padding: '12px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
     sectionLabel: { color: 'white', fontWeight: 'bold', fontSize: '15px', marginRight: '10px' },
     sectionMeta: { color: 'rgba(255,255,255,0.8)', fontSize: '12px' },
     sectionCount: { backgroundColor: 'rgba(255,255,255,0.2)', color: 'white', padding: '4px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: 'bold' },
-
     gradeTiles: { display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '12px', padding: '15px', backgroundColor: 'white' },
     gradeTile: { backgroundColor: 'white', padding: '15px 10px', borderRadius: '10px', textAlign: 'center', cursor: 'pointer', boxShadow: '0 2px 6px rgba(0,0,0,0.08)', border: '1px solid #eee' },
     gradeLabel: { fontSize: '22px', fontWeight: 'bold', marginBottom: '4px' },
@@ -658,7 +660,6 @@ const styles = {
     femaleCount: { fontSize: '11px', color: '#e83e8c', fontWeight: 'bold' },
     gradeClasses: { fontSize: '11px', color: '#999', marginBottom: '6px' },
     viewArrow: { fontSize: '12px', fontWeight: 'bold' },
-
     streamTiles: { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '15px', padding: '15px', backgroundColor: 'white', borderRadius: '0 0 10px 10px' },
     streamTile: { backgroundColor: 'white', borderRadius: '10px', padding: '20px', cursor: 'pointer', boxShadow: '0 2px 8px rgba(0,0,0,0.1)', border: '1px solid #eee', textAlign: 'center' },
     streamBadge: { color: 'white', padding: '4px 14px', borderRadius: '20px', fontSize: '12px', fontWeight: 'bold', display: 'inline-block', marginBottom: '10px' },
@@ -669,7 +670,6 @@ const styles = {
     streamStatLabel: { fontSize: '11px', color: '#999' },
     streamTeacher: { fontSize: '12px', color: '#666', marginBottom: '10px' },
     viewStudentsBtn: { fontSize: '13px', fontWeight: 'bold' },
-
     classHeader: { padding: '20px', borderRadius: '10px 10px 0 0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '15px' },
     classHeaderTitle: { color: 'white', margin: '0 0 5px 0', fontSize: '20px' },
     classHeaderMeta: { color: 'rgba(255,255,255,0.8)', margin: 0, fontSize: '13px' },
@@ -677,10 +677,7 @@ const styles = {
     classStatBox: { textAlign: 'center', backgroundColor: 'rgba(255,255,255,0.15)', padding: '8px 15px', borderRadius: '8px' },
     classStatNum: { color: 'white', fontSize: '24px', fontWeight: 'bold', display: 'block' },
     classStatLabel: { color: 'rgba(255,255,255,0.8)', fontSize: '11px' },
-
     classSearchBar: { display: 'flex', gap: '10px', padding: '12px 15px', backgroundColor: 'white', marginBottom: '2px', flexWrap: 'wrap' },
-
-    // Student grid — 4 cols, each item is card + optional inline edit below
     studentGrid: { display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px', padding: '15px', backgroundColor: 'white', borderRadius: '0 0 10px 10px', boxShadow: '0 2px 4px rgba(0,0,0,0.08)' },
     studentCard: { backgroundColor: '#f8f9fa', borderRadius: '10px', overflow: 'visible', border: '1px solid #eee', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' },
     studentCardTop: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 12px 0 12px' },
@@ -695,7 +692,6 @@ const styles = {
     editBtnSm: { backgroundColor: '#2E75B6', color: 'white', border: 'none', padding: '5px 8px', borderRadius: '4px', cursor: 'pointer', fontSize: '12px' },
     cancelEditBtnSm: { backgroundColor: '#6c757d', color: 'white', border: 'none', padding: '5px 8px', borderRadius: '4px', cursor: 'pointer', fontSize: '12px' },
     deleteBtnSm: { backgroundColor: '#dc3545', color: 'white', border: 'none', padding: '5px 8px', borderRadius: '4px', cursor: 'pointer', fontSize: '12px' },
-
     tableCard: { backgroundColor: 'white', borderRadius: '10px', overflow: 'hidden', boxShadow: '0 2px 4px rgba(0,0,0,0.1)', marginTop: '20px' },
     tableTopBar: { backgroundColor: '#1F3864', padding: '12px 20px' },
     tableTitle: { color: 'white', margin: 0, fontSize: '15px' },
@@ -709,7 +705,6 @@ const styles = {
     viewBtn: { backgroundColor: '#6f42c1', color: 'white', border: 'none', padding: '4px 8px', borderRadius: '3px', cursor: 'pointer', marginRight: '4px', fontSize: '12px' },
     editBtn: { backgroundColor: '#2E75B6', color: 'white', border: 'none', padding: '4px 8px', borderRadius: '3px', cursor: 'pointer', marginRight: '4px', fontSize: '12px' },
     deleteBtn: { backgroundColor: '#dc3545', color: 'white', border: 'none', padding: '4px 8px', borderRadius: '3px', cursor: 'pointer', fontSize: '12px' },
-
     emptyState: { backgroundColor: 'white', padding: '60px', borderRadius: '0 0 10px 10px', textAlign: 'center', boxShadow: '0 2px 4px rgba(0,0,0,0.08)' },
     emptyIcon: { fontSize: '48px', marginBottom: '15px' },
 };
