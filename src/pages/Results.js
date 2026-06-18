@@ -268,31 +268,27 @@ function Results() {
         setSaving(true); setError(''); setSuccessMsg('');
         let saved = 0, updated = 0, failed = 0;
 
-        for (const change of changes) {
-            try {
-                if (change.resultId) {
-                    // ✅ PUT requires full result object with @NotNull fields
-                    const existing = results.find(r => String(r.resultId) === String(change.resultId));
-                    await api.put(`/api/results/${change.resultId}`, {
-                        marksObtained: change.marks,
-                        maxMarks: existing?.maxMarks || 100,
-                        student: { studentId: change.studentId },
-                        subject: { subjectId: change.subjectId },
-                        exam: { examId: parseInt(change.examId) },
-                        grade: existing?.grade || null,
-                        remarks: existing?.remarks || null
-                    });
-                    updated++;
-                } else {
-                    await api.post('/api/results', {
-                        marksObtained: change.marks, maxMarks: 100,
-                        student: { studentId: change.studentId },
-                        subject: { subjectId: change.subjectId },
-                        exam: { examId: parseInt(change.examId) }
-                    });
-                    saved++;
-                }
-            } catch (e) { failed++; }
+        // ✅ Use bulk-save endpoint — reliable, handles duplicates, auto-grades
+        const bulkPayload = {
+            examId: parseInt(filterExam),
+            results: changes.map(change => ({
+                studentId: change.studentId,
+                subjectId: change.subjectId,
+                marksObtained: change.marks,
+                maxMarks: 100,
+                resultId: change.resultId || null
+            }))
+        };
+
+        try {
+            const response = await api.post('/api/results/bulk-save', bulkPayload);
+            const data = response.data;
+            saved = data.saved || 0;
+            updated = data.updated || 0;
+            failed = data.failed || 0;
+        } catch (e) {
+            failed = changes.length;
+            console.error('Bulk save error:', e.response?.data || e.message);
         }
 
         setSaving(false);
