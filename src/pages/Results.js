@@ -324,25 +324,25 @@ function Results() {
     };
 
     const getGradeLabel = (marks) => {
-        if (marks >= 80) return 'A';
-        if (marks >= 60) return 'B';
-        if (marks >= 40) return 'C';
-        return 'D';
+        if (marks >= 75) return 'EE';
+        if (marks >= 55) return 'ME';
+        if (marks >= 40) return 'AE';
+        return 'BE';
     };
 
     const getGradeColor = (grade) => {
-        if (grade === 'A') return '#28a745';
-        if (grade === 'B') return '#2E75B6';
-        if (grade === 'C') return '#ffc107';
-        return '#dc3545';
+        if (grade === 'EE') return '#28a745';
+        if (grade === 'ME') return '#2E75B6';
+        if (grade === 'AE') return '#ffc107';
+        return '#dc3545';  // BE
     };
 
     const getMarkColor = (marks) => {
         if (!marks && marks !== 0) return '#999';
-        if (marks >= 80) return '#28a745';
-        if (marks >= 60) return '#2E75B6';
-        if (marks >= 40) return '#ffc107';
-        return '#dc3545';
+        if (marks >= 75) return '#28a745';   // EE
+        if (marks >= 55) return '#2E75B6';   // ME
+        if (marks >= 40) return '#ffc107';   // AE
+        return '#dc3545';                     // BE
     };
 
     // Calculate student total and average
@@ -381,10 +381,10 @@ function Results() {
         const total = studentResults.reduce((sum, r) => sum + r.marksObtained, 0);
         const average = total / studentResults.length;
 
-        let grade = 'D';
-        if (average >= 80) grade = 'A';
-        else if (average >= 60) grade = 'B';
-        else if (average >= 40) grade = 'C';
+        let grade = 'BE';
+        if (average >= 75) grade = 'EE';
+        else if (average >= 55) grade = 'ME';
+        else if (average >= 40) grade = 'AE';
 
         return {
             total: total.toFixed(1),
@@ -659,10 +659,10 @@ function Results() {
                                 {/* Legend */}
                                 <div style={styles.legend}>
                                     <span style={styles.legendTitle}>Grade Legend:</span>
-                                    <span style={{...styles.legendItem, color: '#28a745'}}>● A (80-100) Excellent</span>
-                                    <span style={{...styles.legendItem, color: '#2E75B6'}}>● B (60-79) Good</span>
-                                    <span style={{...styles.legendItem, color: '#ffc107'}}>● C (40-59) Average</span>
-                                    <span style={{...styles.legendItem, color: '#dc3545'}}>● D (0-39) Below Average</span>
+                                    <span style={{...styles.legendItem, color: '#28a745'}}>● EE (75-100) Exceeding Expectation</span>
+                                    <span style={{...styles.legendItem, color: '#2E75B6'}}>● ME (55-74) Meeting Expectation</span>
+                                    <span style={{...styles.legendItem, color: '#ffc107'}}>● AE (40-54) Approaching Expectation</span>
+                                    <span style={{...styles.legendItem, color: '#dc3545'}}>● BE (0-39) Below Expectation</span>
                                 </div>
                             </div>
                         )}
