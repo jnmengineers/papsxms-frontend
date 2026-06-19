@@ -334,15 +334,15 @@ function Results() {
         if (grade === 'EE') return '#28a745';
         if (grade === 'ME') return '#2E75B6';
         if (grade === 'AE') return '#ffc107';
-        return '#dc3545';  // BE
+        return '#dc3545'; // BE
     };
 
     const getMarkColor = (marks) => {
         if (!marks && marks !== 0) return '#999';
-        if (marks >= 75) return '#28a745';   // EE
-        if (marks >= 55) return '#2E75B6';   // ME
-        if (marks >= 40) return '#ffc107';   // AE
-        return '#dc3545';                     // BE
+        if (marks >= 75) return '#28a745';  // EE
+        if (marks >= 55) return '#2E75B6';  // ME
+        if (marks >= 40) return '#ffc107';  // AE
+        return '#dc3545';                    // BE
     };
 
     // Calculate student total and average
@@ -659,10 +659,10 @@ function Results() {
                                 {/* Legend */}
                                 <div style={styles.legend}>
                                     <span style={styles.legendTitle}>Grade Legend:</span>
-                                    <span style={{...styles.legendItem, color: '#28a745'}}>● EE (75-100) Exceeding Expectation</span>
-                                    <span style={{...styles.legendItem, color: '#2E75B6'}}>● ME (55-74) Meeting Expectation</span>
-                                    <span style={{...styles.legendItem, color: '#ffc107'}}>● AE (40-54) Approaching Expectation</span>
-                                    <span style={{...styles.legendItem, color: '#dc3545'}}>● BE (0-39) Below Expectation</span>
+                                    <span style={{...styles.legendItem, color: '#28a745'}}>● EE (75-100) Exceeding Expectations</span>
+                                    <span style={{...styles.legendItem, color: '#2E75B6'}}>● ME (55-74) Meeting Expectations</span>
+                                    <span style={{...styles.legendItem, color: '#ffc107'}}>● AE (40-54) Approaching Expectations</span>
+                                    <span style={{...styles.legendItem, color: '#dc3545'}}>● BE (0-39) Below Expectations</span>
                                 </div>
                             </div>
                         )}
