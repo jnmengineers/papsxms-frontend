@@ -1,8 +1,209 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { useReactToPrint } from 'react-to-print';
 import api from '../services/api';
 import logo1 from '../assets/logo1.png';
+import logo2 from '../assets/logo2.png';
+
+// ── Printable Results Report ──────────────────────────────────────────────────
+const PrintableResultsReport = React.forwardRef(({ students, subjects, pivotData, className, examName, academicYear, term, getGradeLabel, getMarkColor, getGradeColor }, ref) => {
+    const rankedStudents = [...students].sort((a, b) => {
+        const totalA = subjects.reduce((sum, sub) => sum + (pivotData[a.studentId]?.[sub.id]?.marksObtained || 0), 0);
+        const totalB = subjects.reduce((sum, sub) => sum + (pivotData[b.studentId]?.[sub.id]?.marksObtained || 0), 0);
+        return totalB - totalA;
+    });
+
+    const getStudentTotal = (studentId) =>
+        subjects.reduce((sum, sub) => sum + (pivotData[studentId]?.[sub.id]?.marksObtained || 0), 0);
+
+    const getStudentAvg = (studentId) => {
+        const results = subjects.map(sub => pivotData[studentId]?.[sub.id]).filter(Boolean);
+        if (!results.length) return 0;
+        return results.reduce((sum, r) => sum + r.marksObtained, 0) / results.length;
+    };
+
+    const getSubjectTotal = (subjectId) =>
+        students.reduce((sum, s) => sum + (pivotData[s.studentId]?.[subjectId]?.marksObtained || 0), 0);
+
+    const getSubjectMean = (subjectId) => {
+        const results = students.map(s => pivotData[s.studentId]?.[subjectId]).filter(Boolean);
+        if (!results.length) return '-';
+        return (results.reduce((sum, r) => sum + r.marksObtained, 0) / results.length).toFixed(1);
+    };
+
+    // Short code for subject headers
+    const getSubjectCode = (name) => {
+        const codes = {
+            'mathematics': 'MTH', 'maths': 'MTH', 'math': 'MTH',
+            'english': 'ENG', 'kiswahili': 'KSW', 'swahili': 'KSW',
+            'science': 'SCI', 'science & technology': 'S&T',
+            'integrated science': 'I.SCI',
+            'social studies': 'SST', 'social': 'SST',
+            'creative activities': 'CRE.A', 'creative arts': 'CRE.A',
+            'creative': 'CRE',
+            'environmental': 'ENV',
+            'religious': 'CRE', 'cre': 'CRE',
+            'agriculture': 'AGRI', 'agric': 'AGRI',
+            'agric & nutrition': 'AGR', 'agriculture & nutrition': 'AGR',
+            'literacy': 'LIT', 'language': 'LANG',
+            'number work': 'NUM', 'integrated': 'INT',
+            'pre-technical': 'P.TEC', 'pre technical': 'P.TEC',
+        };
+        const lower = name.toLowerCase().trim();
+        if (codes[lower]) return codes[lower];
+        // Auto-shorten: take first 3 chars of each word
+        const words = name.split(/[\s&]+/).filter(Boolean);
+        if (words.length === 1) return name.substring(0, 4).toUpperCase();
+        return words.map(w => w.substring(0, 3).toUpperCase()).join('.');
+    };
+
+    // Subject rank by mean descending
+    const subjectMeans = subjects.map(sub => ({
+        id: sub.id,
+        mean: parseFloat(getSubjectMean(sub.id)) || 0
+    }));
+    const sortedByMean = [...subjectMeans].sort((a, b) => b.mean - a.mean);
+    const subjectRanks = {};
+    sortedByMean.forEach((s, i) => { subjectRanks[s.id] = i + 1; });
+
+    return (
+        <div ref={ref} style={pStyles.page}>
+            {/* School Header */}
+            <div style={pStyles.header}>
+                <div style={pStyles.headerRow}>
+                    <img src={logo1} alt="Logo" style={pStyles.logo} />
+                    <div style={pStyles.schoolInfo}>
+                        <h1 style={pStyles.schoolName}>PIPELINE ADVENTIST PRIMARY & JUNIOR SECONDARY SCHOOL</h1>
+                        <p style={pStyles.motto}>Abreast with the Best in Holistic Education</p>
+                        <p style={pStyles.contact}>P.O. BOX 61774-00200, NAIROBI | Tel: 0713 301 521 / 0721 885 996</p>
+                    </div>
+                    <img src={logo2} alt="Logo" style={pStyles.logo} />
+                </div>
+                <div style={pStyles.banner}>
+                    <h2 style={pStyles.bannerTitle}>CLASS RESULTS REPORT</h2>
+                    <p style={pStyles.bannerSub}>{className} | {examName} | Term {term} {academicYear}</p>
+                </div>
+            </div>
+
+            {/* Results Table */}
+            <div style={{ overflowX: 'auto' }}>
+                <table style={pStyles.table}>
+                    <thead>
+                        <tr style={pStyles.thead}>
+                            <th style={pStyles.thRank}>RANK</th>
+                            <th style={pStyles.thAdm}>ADM NO</th>
+                            <th style={pStyles.thName}>STUDENT NAME</th>
+                            {subjects.map(sub => (
+                                <th key={sub.id} style={pStyles.thSub}>
+                                    <div style={pStyles.rotated}>{getSubjectCode(sub.name)}</div>
+                                </th>
+                            ))}
+                            <th style={pStyles.thTotal}>TOTAL</th>
+                            <th style={pStyles.thTotal}>AVG%</th>
+                            <th style={pStyles.thTotal}>GRD</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {rankedStudents.map((student, index) => {
+                            const total = getStudentTotal(student.studentId);
+                            const avg = getStudentAvg(student.studentId);
+                            const grade = getGradeLabel(avg);
+                            return (
+                                <tr key={student.studentId} style={index % 2 === 0 ? pStyles.trEven : pStyles.trOdd}>
+                                    <td style={pStyles.tdC}>
+                                        <strong>{index === 0 ? '1' : index === 1 ? '2' : index === 2 ? '3' : index + 1}</strong>
+                                    </td>
+                                    <td style={pStyles.td}>{student.admissionNumber}</td>
+                                    <td style={pStyles.tdName}><strong>{student.firstName} {student.lastName}</strong></td>
+                                    {subjects.map(sub => {
+                                        const result = pivotData[student.studentId]?.[sub.id];
+                                        return (
+                                            <td key={sub.id} style={pStyles.tdC}>
+                                                {result ? result.marksObtained : '—'}
+                                            </td>
+                                        );
+                                    })}
+                                    <td style={pStyles.tdTotal}><strong>{total.toFixed(0)}</strong></td>
+                                    <td style={pStyles.tdTotal}><strong>{avg.toFixed(1)}%</strong></td>
+                                    <td style={pStyles.tdTotal}><strong>{grade}</strong></td>
+                                </tr>
+                            );
+                        })}
+                        {/* Subject totals row */}
+                        <tr style={pStyles.totalRow}>
+                            <td colSpan="3" style={{ ...pStyles.td, fontWeight: 'bold', fontSize: '9px' }}>📊 SUBJECT TOTAL</td>
+                            {subjects.map(sub => (
+                                <td key={sub.id} style={{ ...pStyles.tdC, fontWeight: 'bold' }}>
+                                    {getSubjectTotal(sub.id)}
+                                </td>
+                            ))}
+                            <td colSpan="3" style={pStyles.td} />
+                        </tr>
+                        {/* Subject mean row */}
+                        <tr style={pStyles.meanRow}>
+                            <td colSpan="3" style={{ ...pStyles.td, fontWeight: 'bold', fontSize: '9px' }}>📈 SUBJECT MEAN</td>
+                            {subjects.map(sub => (
+                                <td key={sub.id} style={{ ...pStyles.tdC, fontWeight: 'bold' }}>
+                                    {getSubjectMean(sub.id)}
+                                </td>
+                            ))}
+                            <td colSpan="3" style={pStyles.td} />
+                        </tr>
+                        {/* Subject rank row */}
+                        <tr style={pStyles.rankRow}>
+                            <td colSpan="3" style={{ ...pStyles.td, fontWeight: 'bold', fontSize: '9px', color: '#6f42c1' }}>🏆 SUBJECT RANK</td>
+                            {subjects.map(sub => {
+                                const rank = subjectRanks[sub.id];
+                                return (
+                                    <td key={sub.id} style={{ ...pStyles.tdC, fontWeight: 'bold' }}>
+                                        #{rank}
+                                    </td>
+                                );
+                            })}
+                            <td colSpan="3" style={pStyles.td} />
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            {/* Summary */}
+            <div style={pStyles.summary}>
+                <div style={pStyles.summaryItem}>
+                    <strong>Total Students:</strong> {students.length}
+                </div>
+                <div style={pStyles.summaryItem}>
+                    <strong>Class Average:</strong> {students.length > 0 ? (students.reduce((sum, s) => sum + getStudentAvg(s.studentId), 0) / students.length).toFixed(2) : 0}%
+                </div>
+                <div style={pStyles.summaryItem}>
+                    <strong>Top Student:</strong> {rankedStudents[0] ? `${rankedStudents[0].firstName} ${rankedStudents[0].lastName} (${getStudentAvg(rankedStudents[0].studentId).toFixed(1)}%)` : '-'}
+                </div>
+                <div style={pStyles.summaryItem}>
+                    <strong>Date Printed:</strong> {new Date().toLocaleDateString()}
+                </div>
+            </div>
+
+            {/* Footer */}
+            <div style={pStyles.footer}>
+                <div style={pStyles.sigBox}>
+                    <p style={pStyles.sig}>Class Teacher: _________________________</p>
+                    <p style={pStyles.sig}>Signature: _____________ Date: __________</p>
+                </div>
+                <div style={pStyles.sigBox}>
+                    <p style={pStyles.sig}>Principal: _________________________</p>
+                    <p style={pStyles.sig}>Signature: _____________ Date: __________</p>
+                </div>
+            </div>
+            <p style={pStyles.footerNote}>Pipeline Adventist School — Official Class Results Report — {new Date().toLocaleDateString()}</p>
+        </div>
+    );
+});
 
 function Results() {
+    const printRef = useRef();
+    const handlePrint = useReactToPrint({
+        contentRef: printRef,
+        documentTitle: `Results_${filterClass}_${filterExam}`
+    });
+
     const [results, setResults] = useState([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
@@ -119,6 +320,13 @@ function Results() {
         setPivotSubjects([]);
         setPivotData({});
         setError('');
+    };
+
+    const getGradeLabel = (marks) => {
+        if (marks >= 80) return 'A';
+        if (marks >= 60) return 'B';
+        if (marks >= 40) return 'C';
+        return 'D';
     };
 
     const getGradeColor = (grade) => {
@@ -301,6 +509,11 @@ function Results() {
                                             {pivotStudents.length} students | {pivotSubjects.length} subjects
                                         </p>
                                     </div>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                                        <button onClick={handlePrint} style={styles.printBtn}>
+                                            🖨️ Print Results
+                                        </button>
+                                    </div>
                                     <div style={styles.tableBadges}>
                                         <span style={styles.badge}>👥 {pivotStudents.length} Students</span>
                                         <span style={styles.badge}>📚 {pivotSubjects.length} Subjects</span>
@@ -433,7 +646,6 @@ function Results() {
                                                     <td colSpan="3" style={{ ...styles.td, fontWeight: 'bold', color: '#6f42c1', fontSize: '12px' }}>🏆 Subject Rank</td>
                                                     {pivotSubjects.map(sub => {
                                                         const rank = subjectRanks[sub.id];
-                                                        const emoji = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : `#${rank}`;
                                                         return <td key={sub.id} style={{ ...styles.td, textAlign: 'center', fontSize: '14px' }}>{emoji}</td>;
                                                     })}
                                                     <td colSpan="3" style={styles.td} />
@@ -470,6 +682,24 @@ function Results() {
                         </ol>
                     </div>
                 )}
+            </div>
+        </div>
+
+            {/* Hidden printable area */}
+            <div style={{ display: 'none' }}>
+                <PrintableResultsReport
+                    ref={printRef}
+                    students={pivotStudents}
+                    subjects={pivotSubjects}
+                    pivotData={pivotData}
+                    className={filterClass || ''}
+                    examName={selectedExamName}
+                    academicYear={exams.find(e => String(e.examId) === String(filterExam))?.academicYear || ''}
+                    term={exams.find(e => String(e.examId) === String(filterExam))?.term || ''}
+                    getGradeLabel={getGradeLabel}
+                    getMarkColor={getMarkColor}
+                    getGradeColor={getGradeColor}
+                />
             </div>
         </div>
     );
@@ -549,6 +779,44 @@ const styles = {
     // Empty and instruction cards
     emptyCard: { backgroundColor: 'white', padding: '40px', borderRadius: '10px', textAlign: 'center', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' },
     instructionCard: { backgroundColor: 'white', padding: '25px', borderRadius: '10px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }
+};
+
+// ── Print Styles ─────────────────────────────────────────────────────────────
+const pStyles = {
+    page: { padding: '12px', fontFamily: 'Arial, sans-serif', color: '#000', fontSize: '10px' },
+    header: { borderBottom: '3px solid #1F3864', paddingBottom: '8px', marginBottom: '10px' },
+    headerRow: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' },
+    logo: { width: '65px', height: '65px', objectFit: 'contain' },
+    schoolInfo: { textAlign: 'center', flex: 1, padding: '0 8px' },
+    schoolName: { color: '#1F3864', fontSize: '12px', margin: '0 0 3px 0', textTransform: 'uppercase', fontWeight: 'bold' },
+    motto: { color: '#2E75B6', fontStyle: 'italic', margin: '0 0 2px 0', fontSize: '10px' },
+    contact: { fontSize: '9px', color: '#666', margin: 0 },
+    banner: { backgroundColor: '#1F3864', padding: '5px 10px', textAlign: 'center' },
+    bannerTitle: { color: 'white', margin: '0 0 2px 0', fontSize: '12px' },
+    bannerSub: { color: '#BDD7EE', margin: 0, fontSize: '10px' },
+    table: { width: '100%', borderCollapse: 'collapse', fontSize: '9px' },
+    thead: { backgroundColor: '#1F3864' },
+    thRank: { color: 'white', padding: '4px 5px', textAlign: 'center', fontSize: '9px', width: '30px' },
+    thAdm: { color: 'white', padding: '4px 5px', textAlign: 'left', fontSize: '9px', minWidth: '60px' },
+    thName: { color: 'white', padding: '4px 5px', textAlign: 'left', fontSize: '9px', minWidth: '120px' },
+    thSub: { color: 'white', padding: '2px', textAlign: 'center', fontSize: '8px', width: '45px', verticalAlign: 'bottom' },
+    thTotal: { color: '#FFD700', padding: '4px 5px', textAlign: 'center', fontSize: '9px', fontWeight: 'bold', minWidth: '35px' },
+    rotated: { writingMode: 'vertical-rl', transform: 'rotate(180deg)', whiteSpace: 'nowrap', fontSize: '8px', padding: '3px 1px', minHeight: '55px', display: 'flex', alignItems: 'center', justifyContent: 'center' },
+    td: { padding: '3px 5px', borderBottom: '1px solid #ddd', fontSize: '9px' },
+    tdC: { padding: '3px 3px', borderBottom: '1px solid #ddd', fontSize: '9px', textAlign: 'center' },
+    tdName: { padding: '3px 5px', borderBottom: '1px solid #ddd', fontSize: '9px', whiteSpace: 'nowrap' },
+    tdTotal: { padding: '3px 5px', borderBottom: '1px solid #ddd', fontSize: '9px', textAlign: 'center', backgroundColor: '#f0f4ff', fontWeight: 'bold' },
+    trEven: { backgroundColor: '#f8f9fa' },
+    trOdd: { backgroundColor: 'white' },
+    totalRow: { backgroundColor: '#e8f4f8', borderTop: '2px solid #2E75B6' },
+    meanRow: { backgroundColor: '#e3f2fd' },
+    rankRow: { backgroundColor: '#f3e5f5', borderBottom: '2px solid #6f42c1' },
+    summary: { display: 'flex', gap: '15px', flexWrap: 'wrap', padding: '6px 0', borderTop: '1px solid #ddd', marginTop: '6px', fontSize: '9px' },
+    summaryItem: { fontSize: '9px' },
+    footer: { display: 'flex', gap: '30px', marginTop: '12px', borderTop: '2px solid #1F3864', paddingTop: '8px' },
+    sigBox: { flex: 1 },
+    sig: { fontSize: '9px', margin: '0 0 6px 0', color: '#333' },
+    footerNote: { textAlign: 'center', fontSize: '8px', color: '#999', marginTop: '8px' },
 };
 
 export default Results;
