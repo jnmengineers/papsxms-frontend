@@ -571,14 +571,12 @@ function Results() {
                                                                             }}>
                                                                                 {result.marksObtained}
                                                                             </span>
-                                                                            {result.grade && (
-                                                                                <span style={{
+                                                                            <span style={{
                                                                                     ...styles.gradeSmall,
-                                                                                    backgroundColor: getGradeColor(result.grade)
+                                                                                    backgroundColor: getGradeColor(getGradeLabel(result.marksObtained))
                                                                                 }}>
-                                                                                    {result.grade}
+                                                                                    {getGradeLabel(result.marksObtained)}
                                                                                 </span>
-                                                                            )}
                                                                         </div>
                                                                     ) : (
                                                                         <span style={styles.noMark}>—</span>
