@@ -197,6 +197,17 @@ function Results() {
 
     const selectedExamName = exams.find(e => String(e.examId) === String(filterExam))?.examName || '';
 
+    // ✅ Sort students by total marks descending for correct ranking
+    const rankedStudents = [...pivotStudents].sort((a, b) => {
+        const statsA = getStudentStats(a.studentId);
+        const statsB = getStudentStats(b.studentId);
+        const totalA = parseFloat(statsA.total) || 0;
+        const totalB = parseFloat(statsB.total) || 0;
+        if (totalB !== totalA) return totalB - totalA;
+        // Tiebreak by average
+        return parseFloat(statsB.average) - parseFloat(statsA.average);
+    });
+
     return (
         <div style={styles.container}>
             {/* Navbar */}
@@ -318,7 +329,7 @@ function Results() {
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            {pivotStudents.map((student, index) => {
+                                            {rankedStudents.map((student, index) => {
                                                 const stats = getStudentStats(student.studentId);
                                                 return (
                                                     <tr key={student.studentId}
