@@ -23,11 +23,9 @@ const PrintHeader = ({ title, subtitle }) => (
     </div>
 );
 
-// ─── Printable Merit List (Stream or Grade) ───────────────────────────────────
+// ─── Printable Merit List ─────────────────────────────────────────────────────
 const PrintableMeritList = React.forwardRef(({ reportCards, results, title, subtitle, level, subjects }, ref) => {
     const sorted = [...reportCards].sort((a, b) => (a.classRank || 999) - (b.classRank || 999));
-
-    // Get marks for a student+subject
     const getMark = (studentId, subjectId) => {
         const r = results.find(res =>
             String(res.student?.studentId) === String(studentId) &&
@@ -35,53 +33,45 @@ const PrintableMeritList = React.forwardRef(({ reportCards, results, title, subt
         );
         return r ? r.marksObtained : '-';
     };
-
     return (
         <div ref={ref} style={pStyles.page}>
             <PrintHeader title={title} subtitle={subtitle} />
-            <div style={{ overflowX: 'auto' }}>
-                <table style={pStyles.meritTable}>
-                    <thead>
-                        <tr style={pStyles.thead}>
-                            <th style={pStyles.th}>RANK</th>
-                            {level === 'grade' && <th style={pStyles.th}>STREAM</th>}
-                            <th style={pStyles.th}>ADM NO</th>
-                            <th style={pStyles.th}>NAME</th>
-                            {subjects.map(sub => (
-                                <th key={sub.subjectId} style={pStyles.thSubject}>
-                                    {sub.subjectName.toUpperCase()}
-                                </th>
-                            ))}
-                            <th style={pStyles.thTotal}>TOTAL</th>
-                            <th style={pStyles.thTotal}>AVG %</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {sorted.map((card, i) => (
-                            <tr key={card.reportId} style={i % 2 === 0 ? pStyles.trEven : pStyles.trOdd}>
-                                <td style={pStyles.tdCenter}><strong>{card.classRank || i + 1}</strong></td>
-                                {level === 'grade' && (
-                                    <td style={pStyles.tdCenter}>{card.student?.className}</td>
-                                )}
-                                <td style={pStyles.td}>{card.student?.admissionNumber || '-'}</td>
-                                <td style={pStyles.tdName}><strong>{card.student?.firstName} {card.student?.lastName}</strong></td>
-                                {subjects.map(sub => (
-                                    <td key={sub.subjectId} style={pStyles.tdCenter}>
-                                        {getMark(card.student?.studentId, sub.subjectId)}
-                                    </td>
-                                ))}
-                                <td style={pStyles.tdTotal}><strong>{card.totalMarks}</strong></td>
-                                <td style={pStyles.tdTotal}><strong>{card.averageMarks?.toFixed(1)}%</strong></td>
-                            </tr>
+            <table style={pStyles.meritTable}>
+                <thead>
+                    <tr style={pStyles.thead}>
+                        <th style={pStyles.th}>RANK</th>
+                        {level === 'grade' && <th style={pStyles.th}>STREAM</th>}
+                        <th style={pStyles.th}>ADM NO</th>
+                        <th style={pStyles.th}>NAME</th>
+                        {subjects.map(sub => (
+                            <th key={sub.subjectId} style={pStyles.thSubject}>{sub.subjectName.toUpperCase()}</th>
                         ))}
-                    </tbody>
-                </table>
-            </div>
-            {/* Summary */}
+                        <th style={pStyles.thTotal}>TOTAL</th>
+                        <th style={pStyles.thTotal}>AVG %</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {sorted.map((card, i) => (
+                        <tr key={card.reportId} style={i % 2 === 0 ? pStyles.trEven : pStyles.trOdd}>
+                            <td style={pStyles.tdCenter}><strong>{card.classRank || i + 1}</strong></td>
+                            {level === 'grade' && <td style={pStyles.tdCenter}>{card.student?.className}</td>}
+                            <td style={pStyles.td}>{card.student?.admissionNumber || '-'}</td>
+                            <td style={pStyles.tdName}><strong>{card.student?.firstName} {card.student?.lastName}</strong></td>
+                            {subjects.map(sub => (
+                                <td key={sub.subjectId} style={pStyles.tdCenter}>
+                                    {getMark(card.student?.studentId, sub.subjectId)}
+                                </td>
+                            ))}
+                            <td style={pStyles.tdTotal}><strong>{card.totalMarks}</strong></td>
+                            <td style={pStyles.tdTotal}><strong>{card.averageMarks?.toFixed(1)}%</strong></td>
+                        </tr>
+                    ))}
+                </tbody>
+            </table>
             <div style={pStyles.summaryRow}>
                 <span>Total Students: {sorted.length}</span>
                 <span>Class Average: {sorted.length > 0 ? (sorted.reduce((s, c) => s + (c.averageMarks || 0), 0) / sorted.length).toFixed(2) : 0}%</span>
-                <span>Top Student: {sorted[0] ? `${sorted[0].student?.firstName} ${sorted[0].student?.lastName} (${sorted[0].averageMarks?.toFixed(1)}%)` : '-'}</span>
+                <span>Top: {sorted[0] ? `${sorted[0].student?.firstName} ${sorted[0].student?.lastName} (${sorted[0].averageMarks?.toFixed(1)}%)` : '-'}</span>
             </div>
             <div style={pStyles.footer}>
                 <img src={logo1} alt="" style={pStyles.footerLogo} />
@@ -95,37 +85,72 @@ const PrintableMeritList = React.forwardRef(({ reportCards, results, title, subt
     );
 });
 
-// ─── Printable Section Report ─────────────────────────────────────────────────
+// ─── Printable Section Performance Report (like the cover page) ───────────────
 const PrintableSectionReport = React.forwardRef(({ report, examName, term, year }, ref) => (
     <div ref={ref} style={pStyles.page}>
         <PrintHeader
-            title="SECTION PERFORMANCE REPORT"
+            title="ACADEMIC PERFORMANCE REPORT"
             subtitle={`${examName} — Term ${term} ${year}`}
         />
         {report && Object.entries(report).map(([key, section]) => (
-            <div key={key} style={pStyles.sectionBlock}>
-                <div style={pStyles.sectionBanner}>
-                    <strong style={pStyles.sectionName}>{section.sectionName}</strong>
-                    <span style={pStyles.sectionMeta}>
-                        &nbsp;| Target: {section.meanTarget}% | Students: {section.totalStudents}
-                        | Average: {section.sectionAverage}%
+            <div key={key} style={{ marginBottom: '16px' }}>
+                {/* Section banner */}
+                <div style={{ backgroundColor: '#1F3864', color: 'white', padding: '6px 10px', marginBottom: '6px' }}>
+                    <strong style={{ fontSize: '12px' }}>{section.sectionName}</strong>
+                    <span style={{ fontSize: '10px', opacity: 0.85 }}>
+                        {' '}| Target: {section.meanTarget}% | Students: {section.totalStudents}
+                        | Section Avg: {section.sectionAverage}%
                         | {section.meetingTarget ? '✅ Above Target' : '❌ Below Target'}
                     </span>
                 </div>
+
+                {/* Class averages table — like cover page */}
+                {section.classBreakdown?.length > 0 && (
+                    <table style={{ ...pStyles.table, marginBottom: '8px' }}>
+                        <thead>
+                            <tr style={pStyles.thead}>
+                                <th style={pStyles.th}>CLASS</th>
+                                {section.classBreakdown[0]?.subjectPerformance?.map(sub => (
+                                    <th key={sub.subjectName} style={pStyles.thSubject}>{sub.subjectName.toUpperCase()}</th>
+                                ))}
+                                <th style={pStyles.thTotal}>AVG %</th>
+                                <th style={pStyles.thTotal}>STATUS</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {section.classBreakdown.map((cls, i) => (
+                                <tr key={i} style={i % 2 === 0 ? pStyles.trEven : pStyles.trOdd}>
+                                    <td style={{ ...pStyles.td, fontWeight: 'bold' }}>{cls.className}</td>
+                                    {cls.subjectPerformance?.map((sub, j) => (
+                                        <td key={j} style={{ ...pStyles.tdCenter, color: sub.meetingTarget ? '#155724' : '#721c24' }}>
+                                            {sub.average}
+                                        </td>
+                                    ))}
+                                    <td style={{ ...pStyles.tdTotal, color: cls.meetingTarget ? '#155724' : '#721c24' }}>
+                                        <strong>{cls.classAverage}%</strong>
+                                    </td>
+                                    <td style={pStyles.tdCenter}>{cls.meetingTarget ? '✅' : '❌'}</td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                )}
+
+                {/* Top performers */}
                 {section.topPerformers?.length > 0 && (
-                    <div style={pStyles.subSection}>
-                        <p style={pStyles.subSectionTitle}>🏆 Top Performers</p>
+                    <div style={{ marginBottom: '8px' }}>
+                        <p style={{ fontWeight: 'bold', fontSize: '10px', margin: '4px 0' }}>🏆 Top Performers</p>
                         <table style={pStyles.table}>
                             <thead>
                                 <tr style={pStyles.thead}>
                                     <th style={pStyles.th}>Rank</th>
-                                    <th style={pStyles.th}>Student Name</th>
+                                    <th style={pStyles.th}>Name</th>
                                     <th style={pStyles.th}>Class</th>
                                     <th style={pStyles.th}>Average (%)</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {section.topPerformers.map((p, i) => (
+                                {section.topPerformers.slice(0, 5).map((p, i) => (
                                     <tr key={i} style={i % 2 === 0 ? pStyles.trEven : pStyles.trOdd}>
                                         <td style={pStyles.tdCenter}>{i + 1}</td>
                                         <td style={pStyles.td}><strong>{p.name}</strong></td>
@@ -137,70 +162,12 @@ const PrintableSectionReport = React.forwardRef(({ report, examName, term, year 
                         </table>
                     </div>
                 )}
-                {section.classBreakdown?.map((cls, i) => (
-                    <div key={i} style={pStyles.subSection}>
-                        <p style={pStyles.subSectionTitle}>
-                            📚 Grade {cls.className} (All Streams) — Avg: {cls.classAverage}% {cls.meetingTarget ? '✅' : '❌'}
-                            {' '}— {cls.totalStudents} students | Top: {cls.topStudent} ({cls.topStudentAvg?.toFixed(1)}%)
-                        </p>
-
-                        {/* Stream Breakdown — children of this grade */}
-                        {cls.streams?.length > 0 && (
-                            <table style={pStyles.table}>
-                                <thead>
-                                    <tr style={pStyles.thead}>
-                                        <th style={pStyles.th}>Stream</th>
-                                        <th style={pStyles.th}>Students</th>
-                                        <th style={pStyles.th}>Average (%)</th>
-                                        <th style={pStyles.th}>Top Student</th>
-                                        <th style={pStyles.th}>Status</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {cls.streams.map((stream, k) => (
-                                        <tr key={k} style={k % 2 === 0 ? pStyles.trEven : pStyles.trOdd}>
-                                            <td style={pStyles.td}><strong>{stream.className}</strong></td>
-                                            <td style={pStyles.td}>{stream.totalStudents}</td>
-                                            <td style={pStyles.td}>{stream.classAverage}%</td>
-                                            <td style={pStyles.td}>{stream.topStudent} ({stream.topStudentAvg?.toFixed(1)}%)</td>
-                                            <td style={pStyles.td}>{stream.meetingTarget ? '✅ Above' : '❌ Below'}</td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        )}
-
-                        {/* Grade-wide Subject Performance (all streams combined) */}
-                        {cls.subjectPerformance?.length > 0 && (
-                            <table style={pStyles.table}>
-                                <thead>
-                                    <tr style={pStyles.thead}>
-                                        <th style={pStyles.th}>Subject (Grade {cls.className})</th>
-                                        <th style={pStyles.th}>Average (%)</th>
-                                        <th style={pStyles.th}>Target</th>
-                                        <th style={pStyles.th}>Status</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {cls.subjectPerformance.map((sub, j) => (
-                                        <tr key={j} style={j % 2 === 0 ? pStyles.trEven : pStyles.trOdd}>
-                                            <td style={pStyles.td}>{sub.subjectName}</td>
-                                            <td style={pStyles.td}>{sub.average}%</td>
-                                            <td style={pStyles.td}>{section.meanTarget}%</td>
-                                            <td style={pStyles.td}>{sub.meetingTarget ? '✅ Above' : '❌ Below'}</td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        )}
-                    </div>
-                ))}
             </div>
         ))}
         <div style={pStyles.footer}>
             <img src={logo1} alt="" style={pStyles.footerLogo} />
             <p style={{ textAlign: 'center', fontSize: '10px', color: '#333' }}>
-                Date Printed: {new Date().toLocaleDateString()} — Pipeline Adventist School Official Document
+                Printed: {new Date().toLocaleDateString()} — Pipeline Adventist School Official Document
             </p>
             <img src={logo2} alt="" style={pStyles.footerLogo} />
         </div>
@@ -226,11 +193,7 @@ function SectionReport() {
     const [calculating, setCalculating] = useState(false);
     const [error, setError] = useState('');
     const [successMsg, setSuccessMsg] = useState('');
-    const [expandedStreams, setExpandedStreams] = useState({}); // { "G1_G1R": true }
-
-    const toggleStreamExpand = (key) => {
-        setExpandedStreams(prev => ({ ...prev, [key]: !prev[key] }));
-    };
+    const [expandedStreams, setExpandedStreams] = useState({});
 
     const sectionReportRef = useRef();
     const streamMeritRef = useRef();
@@ -240,7 +203,10 @@ function SectionReport() {
     const handlePrintStreamMerit = useReactToPrint({ contentRef: streamMeritRef, documentTitle: `Merit_List_${selectedClass}` });
     const handlePrintGradeMerit = useReactToPrint({ contentRef: gradeMeritRef, documentTitle: `Grade_Merit_List` });
 
-    useEffect(() => { fetchExams(); fetchClasses(); }, []);
+    useEffect(() => {
+        fetchExams();
+        fetchClasses();
+    }, []);
 
     useEffect(() => {
         if (role === 'TEACHER' && linkedClassId) setSelectedClass(linkedClassId);
@@ -258,71 +224,64 @@ function SectionReport() {
     }, [allReportCards]);
 
     const fetchExams = async () => {
-        const response = await api.get('/api/exams');
-        setExams(response.data);
+        try { const r = await api.get('/api/exams'); setExams(r.data); } catch (e) {}
     };
 
     const fetchClasses = async () => {
-        const response = await api.get('/api/classes');
-        setClasses(response.data);
+        try { const r = await api.get('/api/classes'); setClasses(r.data); } catch (e) {}
     };
 
     const fetchAllReportCards = async () => {
         try {
-            const response = await api.get(`/api/reportCards/by-exam/${selectedExam}`);
-            setAllReportCards(response.data);
-        } catch (err) { console.error('Failed to load report cards'); }
+            const r = await api.get(`/api/reportCards/by-exam/${selectedExam}`);
+            setAllReportCards(r.data);
+        } catch (e) { console.error('Report cards failed:', e.message); }
     };
 
     const fetchResults = async () => {
         try {
-            const response = await api.get(`/api/results/by-exam/${selectedExam}`);
-            setAllResults(response.data);
-        } catch (err) { console.error('Failed to load results'); }
+            const r = await api.get(`/api/results/by-exam/${selectedExam}`);
+            setAllResults(r.data);
+        } catch (e) { console.error('Results failed:', e.message); }
     };
 
     const fetchClassSubjects = async () => {
         try {
-            const response = await api.get(`/api/class-subjects/by-class/${selectedClass}`);
-            const subs = response.data.map(cs => cs.subject).filter(Boolean);
-            setClassSubjects(subs);
-        } catch (err) { console.error('Failed to load subjects'); }
+            const r = await api.get(`/api/class-subjects/by-class/${selectedClass}`);
+            setClassSubjects(r.data.map(cs => cs.subject).filter(Boolean));
+        } catch (e) {}
     };
 
     const handleCalculateRanks = async () => {
         if (!selectedExam) return;
-        setCalculating(true);
-        setError('');
+        setCalculating(true); setError('');
         try {
             await api.post(`/api/rankings/calculate/${selectedExam}`);
-            setSuccessMsg('✅ Ranks calculated successfully!');
+            setSuccessMsg('✅ Ranks calculated!');
             fetchAllReportCards();
             setTimeout(() => setSuccessMsg(''), 3000);
-        } catch (err) { setError('Failed to calculate ranks'); }
+        } catch (e) { setError('Failed to calculate ranks'); }
         setCalculating(false);
     };
 
     const handleGetReport = async () => {
         if (!selectedExam) return;
-        setLoading(true);
-        setError('');
+        setLoading(true); setError('');
         try {
-            const response = await api.get(`/api/rankings/section-report/${selectedExam}`);
-            setReport(response.data);
-        } catch (err) { setError('Failed to load report'); }
+            const r = await api.get(`/api/rankings/section-report/${selectedExam}`);
+            setReport(r.data);
+        } catch (e) { setError('Failed to load section report. Make sure ranks are calculated first.'); }
         setLoading(false);
     };
 
-    const getSelectedExam = () => exams.find(e => String(e.examId) === String(selectedExam));
-    const getSelectedClass = () => classes.find(c => String(c.classId) === String(selectedClass));
-
-    const selectedClassObj = getSelectedClass();
-    const selectedExamObj = getSelectedExam();
+    const selectedExamObj = exams.find(e => String(e.examId) === String(selectedExam));
+    const selectedClassObj = classes.find(c => String(c.classId) === String(selectedClass));
     const gradeLevel = selectedClassObj?.gradeLevel;
     const gradeClasses = classes.filter(c => c.gradeLevel === gradeLevel);
     const gradeClassNames = gradeClasses.map(c => c.className);
 
     const streamCards = allReportCards.filter(c =>
+        String(c.student?.schoolClass?.classId) === String(selectedClass) ||
         c.student?.className === selectedClassObj?.className
     );
 
@@ -330,15 +289,32 @@ function SectionReport() {
         gradeClassNames.includes(c.student?.className)
     );
 
-    const getTargetColor = (meeting) => meeting ? '#28a745' : '#dc3545';
-    const getTargetLabel = (meeting) => meeting ? '✅ Above Target' : '❌ Below Target';
-
     const getMark = (studentId, subjectId) => {
         const r = allResults.find(res =>
             String(res.student?.studentId) === String(studentId) &&
             String(res.subject?.subjectId) === String(subjectId)
         );
         return r ? r.marksObtained : '-';
+    };
+
+    const getAvgColor = (avg, target) => {
+        if (!avg || avg === '-') return '#666';
+        const a = parseFloat(avg);
+        if (a >= target) return '#28a745';
+        if (a >= target * 0.9) return '#fd7e14';
+        return '#dc3545';
+    };
+
+    // Section stats summary
+    const getSectionSummary = () => {
+        if (!report) return null;
+        return Object.entries(report).map(([key, section]) => ({
+            name: section.sectionName,
+            avg: section.sectionAverage,
+            target: section.meanTarget,
+            meeting: section.meetingTarget,
+            students: section.totalStudents
+        }));
     };
 
     return (
@@ -355,17 +331,21 @@ function SectionReport() {
             </div>
 
             <div style={styles.content}>
-                <h2 style={styles.title}>📊 Reports & Merit Lists</h2>
-                <p style={styles.subtitle}>Section performance, stream merit list and grade merit list</p>
+                <div style={styles.pageHeader}>
+                    <div>
+                        <h2 style={styles.title}>📊 Reports & Merit Lists</h2>
+                        <p style={styles.subtitle}>Section performance, stream and grade merit lists</p>
+                    </div>
+                </div>
 
-                {error && <p style={styles.error}>{error}</p>}
-                {successMsg && <p style={styles.success}>{successMsg}</p>}
+                {error && <div style={styles.error}>{error}</div>}
+                {successMsg && <div style={styles.success}>{successMsg}</div>}
 
                 {/* Controls */}
                 <div style={styles.controlCard}>
                     <div style={styles.controlGrid}>
                         <div style={styles.formGroup}>
-                            <label style={styles.label}>📝 Select Exam</label>
+                            <label style={styles.label}>📝 Exam</label>
                             <select style={styles.select} value={selectedExam}
                                 onChange={e => { setSelectedExam(e.target.value); setReport(null); setAllReportCards([]); setAllResults([]); }}>
                                 <option value="">-- Select Exam --</option>
@@ -377,7 +357,7 @@ function SectionReport() {
                             </select>
                         </div>
                         <div style={styles.formGroup}>
-                            <label style={styles.label}>🏫 Select Class (for Merit Lists)</label>
+                            <label style={styles.label}>🏫 Class (for Merit Lists)</label>
                             {role === 'TEACHER' ? (
                                 <div style={styles.classDisplay}>🔒 {linkedClassName}</div>
                             ) : (
@@ -390,19 +370,35 @@ function SectionReport() {
                                 </select>
                             )}
                         </div>
-                        <div style={styles.btnGroupVert}>
+                        <div style={styles.btnCol}>
                             <button onClick={handleCalculateRanks} style={styles.rankBtn} disabled={!selectedExam || calculating}>
                                 {calculating ? '⏳ Calculating...' : '🔢 Calculate Ranks'}
                             </button>
                             {role === 'ADMIN' && (
                                 <button onClick={handleGetReport} style={styles.reportBtn} disabled={!selectedExam || loading}>
-                                    {loading ? '⏳ Loading...' : '📊 Generate Section Report'}
+                                    {loading ? '⏳ Loading...' : '📊 Generate Report'}
                                 </button>
                             )}
                         </div>
                     </div>
-                    <p style={styles.hint}>💡 Click <strong>Calculate Ranks</strong> first, then view merit lists or generate section report</p>
+                    <p style={styles.hint}>💡 First click <strong>Calculate Ranks</strong>, then view merit lists or generate the section report</p>
                 </div>
+
+                {/* Quick stats if report loaded */}
+                {report && getSectionSummary() && (
+                    <div style={styles.quickStats}>
+                        {getSectionSummary().map((s, i) => (
+                            <div key={i} style={{ ...styles.quickStatCard, borderTop: `4px solid ${s.meeting ? '#28a745' : '#dc3545'}` }}>
+                                <div style={styles.quickStatName}>{s.name}</div>
+                                <div style={{ ...styles.quickStatAvg, color: s.meeting ? '#28a745' : '#dc3545' }}>{s.avg}%</div>
+                                <div style={styles.quickStatMeta}>Target: {s.target}% | {s.students} students</div>
+                                <div style={{ ...styles.quickStatBadge, backgroundColor: s.meeting ? '#d4edda' : '#f8d7da', color: s.meeting ? '#155724' : '#721c24' }}>
+                                    {s.meeting ? '✅ Above Target' : '❌ Below Target'}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                )}
 
                 {/* Tabs */}
                 <div style={styles.tabs}>
@@ -427,221 +423,179 @@ function SectionReport() {
                     )}
                 </div>
 
-                {/* ── Section Report Tab ── */}
+                {/* ── SECTION REPORT TAB ── */}
                 {activeTab === 'section' && (
                     <div>
                         {report && (
                             <div style={styles.printBar}>
-                                <span style={styles.printBarInfo}>📊 Section Performance Report — {selectedExamObj?.examName}</span>
-                                <button onClick={handlePrintSectionReport} style={styles.printBtn}>🖨️ Print Section Report</button>
+                                <span style={styles.printBarInfo}>📊 {selectedExamObj?.examName} — Section Performance Report</span>
+                                <button onClick={handlePrintSectionReport} style={styles.printBtn}>🖨️ Print Report</button>
                             </div>
                         )}
-                        {report && Object.entries(report).map(([key, section]) => (
+
+                        {report ? Object.entries(report).map(([key, section]) => (
                             <div key={key} style={styles.sectionCard}>
-                                <div style={{ ...styles.sectionHeader, backgroundColor: section.meetingTarget ? '#1F3864' : '#8B0000' }}>
+                                {/* Section header */}
+                                <div style={{ ...styles.sectionHeader, backgroundColor: section.meetingTarget ? '#1F3864' : '#7b1c1c' }}>
                                     <div>
                                         <h3 style={styles.sectionTitle}>{section.sectionName}</h3>
-                                        <p style={styles.sectionSubtitle}>Grades: {section.grades?.join(', ')} | Target: {section.meanTarget}%</p>
+                                        <p style={styles.sectionSub}>
+                                            Grades: {section.grades?.join(', ')} | Target: {section.meanTarget}%
+                                        </p>
                                     </div>
                                     <div style={styles.sectionStats}>
                                         {[
-                                            { num: section.totalStudents, lbl: 'Students' },
-                                            { num: `${section.sectionAverage}%`, lbl: 'Section Avg' },
-                                            { num: section.aboveTarget, lbl: 'Above Target' },
-                                            { num: section.belowTarget, lbl: 'Below Target' },
+                                            { n: section.totalStudents, l: 'Students' },
+                                            { n: `${section.sectionAverage}%`, l: 'Section Avg' },
+                                            { n: section.aboveTarget, l: 'Above Target' },
+                                            { n: section.belowTarget, l: 'Below Target' },
                                         ].map((s, i) => (
                                             <div key={i} style={styles.statBox}>
-                                                <span style={styles.statNum}>{s.num}</span>
-                                                <span style={styles.statLbl}>{s.lbl}</span>
+                                                <span style={styles.statNum}>{s.n}</span>
+                                                <span style={styles.statLbl}>{s.l}</span>
                                             </div>
                                         ))}
                                         <div style={{ ...styles.targetBadge, backgroundColor: section.meetingTarget ? '#28a745' : '#dc3545' }}>
-                                            {getTargetLabel(section.meetingTarget)}
+                                            {section.meetingTarget ? '✅ Above Target' : '❌ Below Target'}
                                         </div>
                                     </div>
                                 </div>
+
                                 <div style={styles.sectionBody}>
-                                    {section.topPerformers?.length > 0 && (
-                                        <div style={styles.topCard}>
-                                            <h4 style={styles.subTitle}>🏆 Top 5 Performers</h4>
-                                            <table style={styles.miniTable}>
-                                                <thead><tr style={styles.miniThead}>
-                                                    <th style={styles.miniTh}>Rank</th>
-                                                    <th style={styles.miniTh}>Name</th>
-                                                    <th style={styles.miniTh}>Class</th>
-                                                    <th style={styles.miniTh}>Average</th>
-                                                </tr></thead>
+                                    {/* Class averages table — like the cover page */}
+                                    {section.classBreakdown?.length > 0 && (
+                                        <div style={{ overflowX: 'auto', marginBottom: '20px' }}>
+                                            <h4 style={styles.subTitle}>📊 Class Averages by Subject</h4>
+                                            <table style={styles.table}>
+                                                <thead>
+                                                    <tr style={styles.thead}>
+                                                        <th style={styles.th}>CLASS</th>
+                                                        {section.classBreakdown[0]?.subjectPerformance?.map(sub => (
+                                                            <th key={sub.subjectName} style={styles.thSub}>{sub.subjectName}</th>
+                                                        ))}
+                                                        <th style={styles.thTotal}>AVG %</th>
+                                                        <th style={styles.thTotal}>STATUS</th>
+                                                    </tr>
+                                                </thead>
                                                 <tbody>
-                                                    {section.topPerformers.map((p, i) => (
-                                                        <tr key={i} style={i % 2 === 0 ? styles.trEven : styles.trOdd}>
-                                                            <td style={styles.miniTd}>
-                                                                <span style={{ ...styles.rankBadge, backgroundColor: i === 0 ? '#FFD700' : i === 1 ? '#C0C0C0' : i === 2 ? '#CD7F32' : '#1F3864' }}>{i + 1}</span>
-                                                            </td>
-                                                            <td style={styles.miniTd}><strong>{p.name}</strong></td>
-                                                            <td style={styles.miniTd}>{p.class}</td>
-                                                            <td style={styles.miniTd}>
-                                                                <span style={{ color: p.average >= section.meanTarget ? '#28a745' : '#dc3545', fontWeight: 'bold' }}>{p.average?.toFixed(2)}%</span>
-                                                            </td>
-                                                        </tr>
-                                                    ))}
+                                                    {[...section.classBreakdown]
+                                                        .sort((a, b) => b.classAverage - a.classAverage)
+                                                        .map((cls, i) => (
+                                                            <tr key={i} style={i % 2 === 0 ? styles.trEven : styles.trOdd}>
+                                                                <td style={{ ...styles.td, fontWeight: 'bold' }}>
+                                                                    {i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : ''} {cls.className}
+                                                                </td>
+                                                                {cls.subjectPerformance?.map((sub, j) => (
+                                                                    <td key={j} style={{
+                                                                        ...styles.tdC,
+                                                                        color: getAvgColor(sub.average, section.meanTarget),
+                                                                        fontWeight: 'bold'
+                                                                    }}>
+                                                                        {sub.average}
+                                                                    </td>
+                                                                ))}
+                                                                <td style={{
+                                                                    ...styles.tdTotal,
+                                                                    color: cls.meetingTarget ? '#28a745' : '#dc3545'
+                                                                }}>
+                                                                    <strong>{cls.classAverage}%</strong>
+                                                                </td>
+                                                                <td style={styles.tdC}>
+                                                                    <span style={{
+                                                                        backgroundColor: cls.meetingTarget ? '#d4edda' : '#f8d7da',
+                                                                        color: cls.meetingTarget ? '#155724' : '#721c24',
+                                                                        padding: '3px 8px', borderRadius: '3px', fontSize: '11px', fontWeight: 'bold'
+                                                                    }}>
+                                                                        {cls.meetingTarget ? '✅ Above' : '❌ Below'}
+                                                                    </span>
+                                                                </td>
+                                                            </tr>
+                                                        ))}
                                                 </tbody>
                                             </table>
                                         </div>
                                     )}
 
-                                    {/* Grade League Table — quick overview ranked by average */}
-                                    {section.classBreakdown?.length > 1 && (
-                                        <div style={styles.leagueCard}>
-                                            <h4 style={styles.subTitle}>📈 Grade League — {section.sectionName}</h4>
-                                            <div style={styles.leagueRow}>
-                                                {[...section.classBreakdown]
-                                                    .sort((a, b) => b.classAverage - a.classAverage)
-                                                    .map((cls, i) => (
-                                                        <div key={i} style={{
-                                                            ...styles.leagueItem,
-                                                            borderLeft: `4px solid ${cls.meetingTarget ? '#28a745' : '#dc3545'}`
-                                                        }}>
-                                                            <span style={styles.leagueRank}>#{i + 1}</span>
-                                                            <span style={styles.leagueName}>Grade {cls.className}</span>
-                                                            <span style={{ ...styles.leagueAvg, color: cls.meetingTarget ? '#28a745' : '#dc3545' }}>
-                                                                {cls.classAverage}%
-                                                            </span>
+                                    {/* Top performers */}
+                                    {section.topPerformers?.length > 0 && (
+                                        <div style={styles.topCard}>
+                                            <h4 style={styles.subTitle}>🏆 Top 5 Performers</h4>
+                                            <div style={styles.topGrid}>
+                                                {section.topPerformers.slice(0, 5).map((p, i) => (
+                                                    <div key={i} style={styles.topItem}>
+                                                        <div style={{ ...styles.topRank, backgroundColor: i === 0 ? '#FFD700' : i === 1 ? '#C0C0C0' : i === 2 ? '#CD7F32' : '#2E75B6' }}>
+                                                            {i + 1}
                                                         </div>
-                                                    ))}
+                                                        <div>
+                                                            <div style={styles.topName}>{p.name}</div>
+                                                            <div style={styles.topMeta}>{p.class} • {p.average?.toFixed(1)}%</div>
+                                                        </div>
+                                                    </div>
+                                                ))}
                                             </div>
                                         </div>
                                     )}
 
-                                    {section.classBreakdown?.map((cls, i) => (
-                                        <div key={i} style={styles.classCard}>
-                                            <div style={styles.classHeader}>
-                                                <div>
-                                                    <h4 style={styles.className}>📚 Grade {cls.className} <span style={styles.allStreamsTag}>All Streams</span></h4>
-                                                    <p style={styles.classInfo}>{cls.totalStudents} students | Top: {cls.topStudent} ({cls.topStudentAvg?.toFixed(1)}%)</p>
-                                                </div>
-                                                <div style={styles.classRight}>
-                                                    <span style={styles.classAvg}>{cls.classAverage}%</span>
-                                                    <span style={{ ...styles.classBadge, backgroundColor: getTargetColor(cls.meetingTarget) }}>{getTargetLabel(cls.meetingTarget)}</span>
-                                                </div>
-                                            </div>
-
-                                            {/* Stream breakdown — sorted by performance, with comparison bars */}
-                                            {cls.streams?.length > 0 && (() => {
-                                                const sortedStreams = [...cls.streams].sort((a, b) => b.classAverage - a.classAverage);
-                                                const maxAvg = Math.max(...sortedStreams.map(s => s.classAverage), 1);
-                                                const gap = sortedStreams.length > 1
-                                                    ? (sortedStreams[0].classAverage - sortedStreams[sortedStreams.length - 1].classAverage).toFixed(1)
-                                                    : 0;
-                                                const medals = ['🥇', '🥈', '🥉'];
+                                    {/* Stream comparison bars */}
+                                    {section.classBreakdown?.some(c => c.streams?.length > 1) && (
+                                        <div style={{ marginTop: '15px' }}>
+                                            {section.classBreakdown.map((cls, i) => {
+                                                if (!cls.streams || cls.streams.length <= 1) return null;
+                                                const sorted = [...cls.streams].sort((a, b) => b.classAverage - a.classAverage);
+                                                const maxAvg = Math.max(...sorted.map(s => s.classAverage));
                                                 return (
-                                                    <div style={styles.streamSection}>
-                                                        <div style={styles.streamSectionHeader}>
-                                                            <span style={styles.subjectGridLabel}>📊 Stream Comparison — Grade {cls.className}</span>
-                                                            {sortedStreams.length > 1 && (
-                                                                <span style={styles.gapBadge}>
-                                                                    Gap: {gap >= 5 ? '⚠️' : '✅'} {gap} pts
-                                                                </span>
-                                                            )}
-                                                        </div>
-                                                        <div style={styles.streamBreakdownGrid}>
-                                                            {sortedStreams.map((stream, k) => {
-                                                                const streamKey = `${cls.className}_${stream.className}`;
-                                                                const isExpanded = expandedStreams[streamKey];
-                                                                return (
-                                                                    <div key={k}
-                                                                        onClick={() => toggleStreamExpand(streamKey)}
-                                                                        style={{
-                                                                            ...styles.streamBreakdownCard,
-                                                                            borderTop: `3px solid ${stream.meetingTarget ? '#28a745' : '#dc3545'}`,
-                                                                            cursor: 'pointer',
-                                                                            gridColumn: isExpanded ? '1 / -1' : 'auto'
-                                                                        }}>
-                                                                        <div style={styles.streamBreakdownTop}>
-                                                                            <strong style={styles.streamBreakdownName}>
-                                                                                {medals[k] || ''} {stream.className}
-                                                                            </strong>
-                                                                            <span style={{
-                                                                                ...styles.streamBreakdownAvg,
-                                                                                color: stream.meetingTarget ? '#28a745' : '#dc3545'
-                                                                            }}>
-                                                                                {stream.classAverage}%
-                                                                            </span>
-                                                                        </div>
-                                                                        {/* Mini comparison bar */}
-                                                                        <div style={styles.miniBarOuter}>
-                                                                            <div style={{
-                                                                                ...styles.miniBarInner,
-                                                                                width: `${(stream.classAverage / maxAvg) * 100}%`,
-                                                                                backgroundColor: stream.meetingTarget ? '#28a745' : '#dc3545'
-                                                                            }} />
-                                                                        </div>
-                                                                        <p style={styles.streamBreakdownInfo}>
-                                                                            👥 {stream.totalStudents} | 🏆 {stream.topStudent} ({stream.topStudentAvg?.toFixed(1)}%)
-                                                                        </p>
-                                                                        <p style={styles.expandHint}>
-                                                                            {isExpanded ? '▲ Click to collapse' : '▼ Click for subject breakdown'}
-                                                                        </p>
-
-                                                                        {/* Expanded — per-subject performance for this stream */}
-                                                                        {isExpanded && stream.subjectPerformance?.length > 0 && (
-                                                                            <div style={styles.expandedSubjectGrid} onClick={e => e.stopPropagation()}>
-                                                                                {stream.subjectPerformance.map((sub, j) => (
-                                                                                    <div key={j} style={{ ...styles.subjectBox, borderLeft: `4px solid ${sub.meetingTarget ? '#28a745' : '#dc3545'}` }}>
-                                                                                        <span style={styles.subjectName}>{sub.subjectName}</span>
-                                                                                        <span style={{ ...styles.subjectAvg, color: sub.meetingTarget ? '#28a745' : '#dc3545' }}>{sub.average}%</span>
-                                                                                        <span style={styles.subjectTarget}>Target: {section.meanTarget}%</span>
-                                                                                    </div>
-                                                                                ))}
-                                                                            </div>
-                                                                        )}
-                                                                    </div>
-                                                                );
-                                                            })}
-                                                        </div>
-                                                    </div>
-                                                );
-                                            })()}
-
-                                            {/* Grade-wide subject performance (all streams combined) */}
-                                            {cls.subjectPerformance?.length > 0 && (
-                                                <>
-                                                    <p style={styles.subjectGridLabel}>📊 Subject Averages — Grade {cls.className} (All Streams Combined)</p>
-                                                    <div style={styles.subjectGrid}>
-                                                        {cls.subjectPerformance.map((sub, j) => (
-                                                            <div key={j} style={{ ...styles.subjectBox, borderLeft: `4px solid ${sub.meetingTarget ? '#28a745' : '#dc3545'}` }}>
-                                                                <span style={styles.subjectName}>{sub.subjectName}</span>
-                                                                <span style={{ ...styles.subjectAvg, color: sub.meetingTarget ? '#28a745' : '#dc3545' }}>{sub.average}%</span>
-                                                                <span style={styles.subjectTarget}>Target: {section.meanTarget}%</span>
+                                                    <div key={i} style={styles.streamCompCard}>
+                                                        <h4 style={styles.subTitle}>📈 Grade {cls.className} — Stream Comparison</h4>
+                                                        {sorted.map((stream, k) => (
+                                                            <div key={k} style={styles.streamBarRow}>
+                                                                <div style={styles.streamBarLabel}>{stream.className}</div>
+                                                                <div style={styles.streamBarOuter}>
+                                                                    <div style={{
+                                                                        ...styles.streamBarInner,
+                                                                        width: `${(stream.classAverage / maxAvg) * 100}%`,
+                                                                        backgroundColor: stream.meetingTarget ? '#28a745' : '#dc3545'
+                                                                    }} />
+                                                                </div>
+                                                                <div style={{ ...styles.streamBarVal, color: stream.meetingTarget ? '#28a745' : '#dc3545' }}>
+                                                                    {stream.classAverage}%
+                                                                </div>
+                                                                <div style={styles.streamBarMeta}>
+                                                                    👥 {stream.totalStudents} | 🏆 {stream.topStudent}
+                                                                </div>
                                                             </div>
                                                         ))}
                                                     </div>
-                                                </>
-                                            )}
+                                                );
+                                            })}
                                         </div>
-                                    ))}
+                                    )}
                                 </div>
                             </div>
-                        ))}
-                        {!report && <div style={styles.emptyState}><div style={styles.emptyIcon}>📊</div><p>Select an exam and click Generate Section Report</p></div>}
+                        )) : (
+                            <div style={styles.emptyState}>
+                                <div style={styles.emptyIcon}>📊</div>
+                                <p>Select an exam, click <strong>Calculate Ranks</strong>, then click <strong>Generate Report</strong></p>
+                            </div>
+                        )}
                     </div>
                 )}
 
-                {/* ── Stream Merit List Tab ── */}
+                {/* ── STREAM MERIT LIST TAB ── */}
                 {activeTab === 'stream' && (
                     <div>
                         {selectedExam && selectedClass && streamCards.length > 0 && (
                             <div style={styles.printBar}>
-                                <span style={styles.printBarInfo}>📋 {selectedClassObj?.className} — {streamCards.length} students | {selectedExamObj?.examName}</span>
-                                <button onClick={handlePrintStreamMerit} style={styles.printBtn}>🖨️ Print Stream Merit List</button>
+                                <span style={styles.printBarInfo}>📋 {selectedClassObj?.className} — {streamCards.length} students</span>
+                                <button onClick={handlePrintStreamMerit} style={styles.printBtn}>🖨️ Print Merit List</button>
                             </div>
                         )}
                         {selectedExam && selectedClass && streamCards.length > 0 ? (
                             <div style={styles.meritCard}>
                                 <div style={styles.meritHeader}>
                                     <h3 style={styles.meritTitle}>📋 {selectedClassObj?.className} — Stream Merit List</h3>
-                                    <p style={styles.meritSubtitle}>{selectedExamObj?.examName} | Term {selectedExamObj?.term} {selectedExamObj?.academicYear}</p>
+                                    <p style={styles.meritSub}>{selectedExamObj?.examName} | Term {selectedExamObj?.term} {selectedExamObj?.academicYear}</p>
                                 </div>
-                                <div style={styles.tableWrapper}>
+                                <div style={{ overflowX: 'auto' }}>
                                     <table style={styles.table}>
                                         <thead>
                                             <tr style={styles.thead}>
@@ -649,7 +603,7 @@ function SectionReport() {
                                                 <th style={styles.th}>ADM NO</th>
                                                 <th style={styles.th}>NAME</th>
                                                 {classSubjects.map(sub => (
-                                                    <th key={sub.subjectId} style={styles.thSubject}>{sub.subjectName}</th>
+                                                    <th key={sub.subjectId} style={styles.thSub}>{sub.subjectName}</th>
                                                 ))}
                                                 <th style={styles.thTotal}>TOTAL</th>
                                                 <th style={styles.thTotal}>AVG %</th>
@@ -658,17 +612,22 @@ function SectionReport() {
                                         <tbody>
                                             {[...streamCards].sort((a, b) => (a.classRank || 999) - (b.classRank || 999)).map((card, i) => (
                                                 <tr key={card.reportId} style={i % 2 === 0 ? styles.trEven : styles.trOdd}>
-                                                    <td style={styles.tdCenter}><strong>{card.classRank || i + 1}</strong></td>
-                                                    <td style={styles.td}>{card.student?.admissionNumber || '-'}</td>
+                                                    <td style={styles.tdC}>
+                                                        <strong>{i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : card.classRank || i + 1}</strong>
+                                                    </td>
+                                                    <td style={styles.td}><span style={styles.admNo}>{card.student?.admissionNumber}</span></td>
                                                     <td style={styles.td}><strong>{card.student?.firstName} {card.student?.lastName}</strong></td>
                                                     {classSubjects.map(sub => (
-                                                        <td key={sub.subjectId} style={styles.tdCenter}>
+                                                        <td key={sub.subjectId} style={styles.tdC}>
                                                             {getMark(card.student?.studentId, sub.subjectId)}
                                                         </td>
                                                     ))}
                                                     <td style={styles.tdTotal}><strong>{card.totalMarks}</strong></td>
                                                     <td style={styles.tdTotal}>
-                                                        <span style={{ ...styles.avgBadge, backgroundColor: card.averageMarks >= 80 ? '#28a745' : card.averageMarks >= 60 ? '#2E75B6' : card.averageMarks >= 40 ? '#ffc107' : '#dc3545' }}>
+                                                        <span style={{
+                                                            backgroundColor: card.averageMarks >= 80 ? '#28a745' : card.averageMarks >= 60 ? '#2E75B6' : card.averageMarks >= 40 ? '#ffc107' : '#dc3545',
+                                                            color: 'white', padding: '3px 8px', borderRadius: '3px', fontWeight: 'bold', fontSize: '12px'
+                                                        }}>
                                                             {card.averageMarks?.toFixed(1)}%
                                                         </span>
                                                     </td>
@@ -677,22 +636,22 @@ function SectionReport() {
                                         </tbody>
                                     </table>
                                 </div>
-                                <div style={styles.meritSummaryBar}>
-                                    <span>👥 Total: {streamCards.length}</span>
-                                    <span>📊 Class Avg: {streamCards.length > 0 ? (streamCards.reduce((s, c) => s + (c.averageMarks || 0), 0) / streamCards.length).toFixed(2) : 0}%</span>
+                                <div style={styles.meritFooter}>
+                                    <span>👥 {streamCards.length} students</span>
+                                    <span>📊 Avg: {(streamCards.reduce((s, c) => s + (c.averageMarks || 0), 0) / streamCards.length).toFixed(2)}%</span>
                                     <span>🏆 Top: {[...streamCards].sort((a, b) => (a.classRank || 999) - (b.classRank || 999))[0]?.student?.firstName} {[...streamCards].sort((a, b) => (a.classRank || 999) - (b.classRank || 999))[0]?.student?.lastName}</span>
                                 </div>
                             </div>
                         ) : (
                             <div style={styles.emptyState}>
                                 <div style={styles.emptyIcon}>📋</div>
-                                <p>{!selectedExam ? 'Select an exam first' : !selectedClass ? 'Select a class' : 'No report cards found. Generate report cards first.'}</p>
+                                <p>{!selectedExam ? 'Select an exam first' : !selectedClass ? 'Select a class' : 'No report cards found. Calculate ranks first.'}</p>
                             </div>
                         )}
                     </div>
                 )}
 
-                {/* ── Grade Merit List Tab ── */}
+                {/* ── GRADE MERIT LIST TAB ── */}
                 {activeTab === 'grade' && (
                     <div>
                         {selectedExam && selectedClass && gradeCards.length > 0 && (
@@ -705,11 +664,9 @@ function SectionReport() {
                             <div style={styles.meritCard}>
                                 <div style={styles.meritHeader}>
                                     <h3 style={styles.meritTitle}>🏫 Grade {gradeLevel} — All Streams Merit List</h3>
-                                    <p style={styles.meritSubtitle}>
-                                        {selectedExamObj?.examName} | Term {selectedExamObj?.term} {selectedExamObj?.academicYear} | Streams: {gradeClassNames.join(', ')}
-                                    </p>
+                                    <p style={styles.meritSub}>{selectedExamObj?.examName} | Term {selectedExamObj?.term} {selectedExamObj?.academicYear} | {gradeClassNames.join(', ')}</p>
                                 </div>
-                                <div style={styles.tableWrapper}>
+                                <div style={{ overflowX: 'auto' }}>
                                     <table style={styles.table}>
                                         <thead>
                                             <tr style={styles.thead}>
@@ -718,7 +675,7 @@ function SectionReport() {
                                                 <th style={styles.th}>ADM NO</th>
                                                 <th style={styles.th}>NAME</th>
                                                 {classSubjects.map(sub => (
-                                                    <th key={sub.subjectId} style={styles.thSubject}>{sub.subjectName}</th>
+                                                    <th key={sub.subjectId} style={styles.thSub}>{sub.subjectName}</th>
                                                 ))}
                                                 <th style={styles.thTotal}>TOTAL</th>
                                                 <th style={styles.thTotal}>AVG %</th>
@@ -727,18 +684,23 @@ function SectionReport() {
                                         <tbody>
                                             {[...gradeCards].sort((a, b) => (a.termRank || 999) - (b.termRank || 999)).map((card, i) => (
                                                 <tr key={card.reportId} style={i % 2 === 0 ? styles.trEven : styles.trOdd}>
-                                                    <td style={styles.tdCenter}><strong>{card.termRank || i + 1}</strong></td>
-                                                    <td style={styles.tdCenter}><span style={styles.streamBadge}>{card.student?.className}</span></td>
-                                                    <td style={styles.td}>{card.student?.admissionNumber || '-'}</td>
+                                                    <td style={styles.tdC}><strong>{card.termRank || i + 1}</strong></td>
+                                                    <td style={styles.tdC}>
+                                                        <span style={styles.streamBadge}>{card.student?.className}</span>
+                                                    </td>
+                                                    <td style={styles.td}><span style={styles.admNo}>{card.student?.admissionNumber}</span></td>
                                                     <td style={styles.td}><strong>{card.student?.firstName} {card.student?.lastName}</strong></td>
                                                     {classSubjects.map(sub => (
-                                                        <td key={sub.subjectId} style={styles.tdCenter}>
+                                                        <td key={sub.subjectId} style={styles.tdC}>
                                                             {getMark(card.student?.studentId, sub.subjectId)}
                                                         </td>
                                                     ))}
                                                     <td style={styles.tdTotal}><strong>{card.totalMarks}</strong></td>
                                                     <td style={styles.tdTotal}>
-                                                        <span style={{ ...styles.avgBadge, backgroundColor: card.averageMarks >= 80 ? '#28a745' : card.averageMarks >= 60 ? '#2E75B6' : card.averageMarks >= 40 ? '#ffc107' : '#dc3545' }}>
+                                                        <span style={{
+                                                            backgroundColor: card.averageMarks >= 80 ? '#28a745' : card.averageMarks >= 60 ? '#2E75B6' : card.averageMarks >= 40 ? '#ffc107' : '#dc3545',
+                                                            color: 'white', padding: '3px 8px', borderRadius: '3px', fontWeight: 'bold', fontSize: '12px'
+                                                        }}>
                                                             {card.averageMarks?.toFixed(1)}%
                                                         </span>
                                                     </td>
@@ -747,16 +709,16 @@ function SectionReport() {
                                         </tbody>
                                     </table>
                                 </div>
-                                <div style={styles.meritSummaryBar}>
-                                    <span>👥 Total: {gradeCards.length}</span>
-                                    <span>📊 Grade Avg: {gradeCards.length > 0 ? (gradeCards.reduce((s, c) => s + (c.averageMarks || 0), 0) / gradeCards.length).toFixed(2) : 0}%</span>
-                                    <span>🏫 Streams: {gradeClassNames.length}</span>
+                                <div style={styles.meritFooter}>
+                                    <span>👥 {gradeCards.length} students</span>
+                                    <span>📊 Avg: {(gradeCards.reduce((s, c) => s + (c.averageMarks || 0), 0) / gradeCards.length).toFixed(2)}%</span>
+                                    <span>🏫 {gradeClassNames.length} streams</span>
                                 </div>
                             </div>
                         ) : (
                             <div style={styles.emptyState}>
                                 <div style={styles.emptyIcon}>🏫</div>
-                                <p>{!selectedExam ? 'Select an exam first' : !selectedClass ? 'Select a class to determine the grade' : 'No report cards found for this grade.'}</p>
+                                <p>{!selectedExam ? 'Select an exam' : !selectedClass ? 'Select a class to determine grade' : 'No report cards found for this grade.'}</p>
                             </div>
                         )}
                     </div>
@@ -787,7 +749,7 @@ function SectionReport() {
                     results={allResults}
                     subjects={classSubjects}
                     title={`GRADE ${gradeLevel || ''} MERIT LIST — ALL STREAMS`}
-                    subtitle={`${selectedExamObj?.examName || ''} | Term ${selectedExamObj?.term || ''} ${selectedExamObj?.academicYear || ''} | Streams: ${gradeClassNames.join(', ')}`}
+                    subtitle={`${selectedExamObj?.examName || ''} | Term ${selectedExamObj?.term || ''} ${selectedExamObj?.academicYear || ''} | ${gradeClassNames.join(', ')}`}
                     level="grade"
                 />
             </div>
@@ -795,7 +757,6 @@ function SectionReport() {
     );
 }
 
-// ─── Screen Styles ────────────────────────────────────────────────────────────
 const styles = {
     container: { minHeight: '100vh', backgroundColor: '#f0f2f5' },
     navbar: { backgroundColor: '#1F3864', padding: '15px 30px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
@@ -805,101 +766,91 @@ const styles = {
     navRight: { display: 'flex', gap: '10px' },
     navBtn: { backgroundColor: 'transparent', color: 'white', border: '1px solid white', padding: '8px 16px', borderRadius: '5px', cursor: 'pointer' },
     logoutBtn: { backgroundColor: 'transparent', color: 'white', border: '1px solid white', padding: '8px 16px', borderRadius: '5px', cursor: 'pointer' },
-    content: { padding: '30px' },
+    content: { padding: 'clamp(12px, 3vw, 30px)' },
+    pageHeader: { marginBottom: '20px' },
     title: { color: '#1F3864', margin: '0 0 5px 0', fontSize: '24px' },
-    subtitle: { color: '#666', marginBottom: '25px' },
-    error: { color: 'red', padding: '10px', backgroundColor: '#fff3f3', borderRadius: '5px', marginBottom: '15px' },
-    success: { color: '#155724', padding: '10px', backgroundColor: '#d4edda', borderRadius: '5px', marginBottom: '15px' },
+    subtitle: { color: '#666', margin: 0 },
+    error: { color: 'red', padding: '10px 15px', backgroundColor: '#fff3f3', borderRadius: '5px', marginBottom: '15px' },
+    success: { color: '#155724', padding: '10px 15px', backgroundColor: '#d4edda', borderRadius: '5px', marginBottom: '15px' },
+
     controlCard: { backgroundColor: 'white', padding: '20px', borderRadius: '10px', marginBottom: '20px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' },
     controlGrid: { display: 'grid', gridTemplateColumns: '1fr 1fr auto', gap: '15px', alignItems: 'end', marginBottom: '10px' },
     formGroup: { display: 'flex', flexDirection: 'column', gap: '6px' },
     label: { fontWeight: 'bold', color: '#1F3864', fontSize: '13px' },
     select: { padding: '10px', borderRadius: '5px', border: '2px solid #ddd', fontSize: '14px' },
     classDisplay: { padding: '10px', borderRadius: '5px', border: '2px solid #1F3864', backgroundColor: '#e3f2fd', color: '#1F3864', fontWeight: 'bold', fontSize: '14px' },
-    btnGroupVert: { display: 'flex', flexDirection: 'column', gap: '8px' },
+    btnCol: { display: 'flex', flexDirection: 'column', gap: '8px' },
     rankBtn: { backgroundColor: '#2E75B6', color: 'white', border: 'none', padding: '10px 20px', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold', whiteSpace: 'nowrap' },
     reportBtn: { backgroundColor: '#1F3864', color: 'white', border: 'none', padding: '10px 20px', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold', whiteSpace: 'nowrap' },
     hint: { color: '#666', fontSize: '13px', fontStyle: 'italic', margin: 0 },
+
+    quickStats: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '12px', marginBottom: '20px' },
+    quickStatCard: { backgroundColor: 'white', borderRadius: '10px', padding: '15px', boxShadow: '0 2px 4px rgba(0,0,0,0.08)' },
+    quickStatName: { fontSize: '12px', fontWeight: 'bold', color: '#666', marginBottom: '4px' },
+    quickStatAvg: { fontSize: '28px', fontWeight: 'bold', lineHeight: 1 },
+    quickStatMeta: { fontSize: '11px', color: '#999', margin: '4px 0' },
+    quickStatBadge: { fontSize: '11px', fontWeight: 'bold', padding: '3px 8px', borderRadius: '3px', display: 'inline-block', marginTop: '4px' },
+
     tabs: { display: 'flex', gap: '10px', marginBottom: '20px', flexWrap: 'wrap' },
     tab: { padding: '10px 20px', borderRadius: '5px', border: '2px solid #1F3864', cursor: 'pointer', fontWeight: 'bold', fontSize: '14px' },
+
     printBar: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: 'white', padding: '12px 20px', borderRadius: '8px', marginBottom: '15px', boxShadow: '0 2px 4px rgba(0,0,0,0.08)', flexWrap: 'wrap', gap: '10px' },
     printBarInfo: { color: '#1F3864', fontWeight: 'bold', fontSize: '14px' },
-    printBtn: { backgroundColor: '#28a745', color: 'white', border: 'none', padding: '10px 20px', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold', fontSize: '14px' },
+    printBtn: { backgroundColor: '#28a745', color: 'white', border: 'none', padding: '10px 20px', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold' },
+
     sectionCard: { backgroundColor: 'white', borderRadius: '10px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)', marginBottom: '25px', overflow: 'hidden' },
     sectionHeader: { padding: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '15px' },
     sectionTitle: { color: 'white', margin: '0 0 5px 0', fontSize: '20px' },
-    sectionSubtitle: { color: 'rgba(255,255,255,0.8)', margin: 0, fontSize: '13px' },
-    sectionStats: { display: 'flex', gap: '15px', alignItems: 'center', flexWrap: 'wrap' },
-    statBox: { textAlign: 'center', backgroundColor: 'rgba(255,255,255,0.15)', padding: '8px 15px', borderRadius: '8px' },
+    sectionSub: { color: 'rgba(255,255,255,0.8)', margin: 0, fontSize: '13px' },
+    sectionStats: { display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' },
+    statBox: { textAlign: 'center', backgroundColor: 'rgba(255,255,255,0.15)', padding: '8px 14px', borderRadius: '8px' },
     statNum: { color: 'white', fontSize: '22px', fontWeight: 'bold', display: 'block' },
     statLbl: { color: 'rgba(255,255,255,0.8)', fontSize: '11px', display: 'block' },
-    targetBadge: { color: 'white', padding: '8px 15px', borderRadius: '5px', fontWeight: 'bold', fontSize: '13px' },
+    targetBadge: { color: 'white', padding: '8px 14px', borderRadius: '5px', fontWeight: 'bold', fontSize: '13px' },
     sectionBody: { padding: '20px' },
+
+    subTitle: { color: '#1F3864', margin: '0 0 12px 0', fontSize: '15px' },
+
     topCard: { backgroundColor: '#f8f9fa', padding: '15px', borderRadius: '8px', marginBottom: '20px' },
-    subTitle: { color: '#1F3864', marginBottom: '10px' },
-    miniTable: { width: '100%', borderCollapse: 'collapse' },
-    miniThead: { backgroundColor: '#1F3864' },
-    miniTh: { color: 'white', padding: '8px 12px', textAlign: 'left', fontSize: '13px' },
-    miniTd: { padding: '8px 12px', borderBottom: '1px solid #eee', fontSize: '13px' },
-    trEven: { backgroundColor: 'white' },
-    trOdd: { backgroundColor: '#f9f9f9' },
-    rankBadge: { color: 'white', padding: '3px 8px', borderRadius: '3px', fontWeight: 'bold', fontSize: '12px' },
-    classCard: { border: '1px solid #ddd', borderRadius: '8px', marginBottom: '15px', overflow: 'hidden' },
-    classHeader: { backgroundColor: '#f8f9fa', padding: '12px 15px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' },
-    className: { color: '#1F3864', margin: '0 0 3px 0' },
-    classInfo: { color: '#666', margin: 0, fontSize: '12px' },
-    classRight: { display: 'flex', alignItems: 'center', gap: '10px' },
-    classAvg: { fontSize: '24px', fontWeight: 'bold', color: '#1F3864' },
-    classBadge: { color: 'white', padding: '4px 10px', borderRadius: '3px', fontSize: '12px', fontWeight: 'bold' },
-    subjectGrid: { display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px', padding: '15px' },
-    subjectGridLabel: { padding: '10px 15px 0 15px', margin: 0, fontSize: '12px', fontWeight: 'bold', color: '#666' },
-    allStreamsTag: { backgroundColor: '#e3f2fd', color: '#1F3864', padding: '2px 8px', borderRadius: '10px', fontSize: '11px', marginLeft: '8px', fontWeight: 'bold' },
-    streamBreakdownGrid: { display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px', padding: '15px', borderBottom: '1px solid #eee' },
-    streamBreakdownCard: { backgroundColor: '#f8f9fa', borderRadius: '6px', padding: '10px', display: 'flex', flexDirection: 'column', gap: '4px' },
-    streamBreakdownTop: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
-    streamBreakdownName: { fontSize: '14px', color: '#1F3864' },
-    streamBreakdownAvg: { fontSize: '16px', fontWeight: 'bold' },
-    streamBreakdownInfo: { fontSize: '11px', color: '#666', margin: 0 },
-    streamSection: { padding: '0 15px 10px 15px', borderBottom: '1px solid #eee' },
-    streamSectionHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px', paddingTop: '10px' },
-    gapBadge: { backgroundColor: '#fff3cd', color: '#856404', padding: '3px 10px', borderRadius: '12px', fontSize: '11px', fontWeight: 'bold' },
-    miniBarOuter: { height: '6px', backgroundColor: '#e9ecef', borderRadius: '3px', overflow: 'hidden', margin: '6px 0' },
-    miniBarInner: { height: '100%', borderRadius: '3px', transition: 'width 0.3s' },
-    expandHint: { fontSize: '10px', color: '#999', margin: '4px 0 0 0', textAlign: 'center', fontStyle: 'italic' },
-    expandedSubjectGrid: { display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px', marginTop: '10px', cursor: 'default' },
-    leagueCard: { backgroundColor: '#f8f9fa', padding: '15px', borderRadius: '8px', marginBottom: '20px' },
-    leagueRow: { display: 'flex', gap: '10px', flexWrap: 'wrap' },
-    leagueItem: { backgroundColor: 'white', padding: '8px 15px', borderRadius: '6px', display: 'flex', alignItems: 'center', gap: '10px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)' },
-    leagueRank: { fontSize: '11px', color: '#999', fontWeight: 'bold' },
-    leagueName: { fontSize: '13px', fontWeight: 'bold', color: '#1F3864' },
-    leagueAvg: { fontSize: '14px', fontWeight: 'bold' },
-    subjectBox: { backgroundColor: '#f8f9fa', padding: '10px', borderRadius: '5px', display: 'flex', flexDirection: 'column', gap: '3px' },
-    subjectName: { fontSize: '12px', fontWeight: 'bold', color: '#333' },
-    subjectAvg: { fontSize: '18px', fontWeight: 'bold' },
-    subjectTarget: { fontSize: '11px', color: '#999' },
+    topGrid: { display: 'flex', gap: '10px', flexWrap: 'wrap' },
+    topItem: { display: 'flex', alignItems: 'center', gap: '10px', backgroundColor: 'white', padding: '8px 14px', borderRadius: '6px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)' },
+    topRank: { width: '28px', height: '28px', borderRadius: '50%', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '13px', flexShrink: 0 },
+    topName: { fontWeight: 'bold', color: '#1F3864', fontSize: '13px' },
+    topMeta: { fontSize: '12px', color: '#666' },
+
+    streamCompCard: { backgroundColor: '#f8f9fa', padding: '15px', borderRadius: '8px', marginBottom: '15px' },
+    streamBarRow: { display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' },
+    streamBarLabel: { width: '60px', fontSize: '12px', fontWeight: 'bold', color: '#1F3864', flexShrink: 0 },
+    streamBarOuter: { flex: 1, height: '18px', backgroundColor: '#e9ecef', borderRadius: '9px', overflow: 'hidden' },
+    streamBarInner: { height: '100%', borderRadius: '9px', transition: 'width 0.5s ease' },
+    streamBarVal: { width: '50px', fontSize: '13px', fontWeight: 'bold', textAlign: 'right', flexShrink: 0 },
+    streamBarMeta: { fontSize: '11px', color: '#666', flexShrink: 0 },
+
+    table: { width: '100%', borderCollapse: 'collapse' },
+    thead: { backgroundColor: '#1F3864' },
+    th: { color: 'white', padding: '10px 12px', textAlign: 'left', fontSize: '12px', fontWeight: 'bold', whiteSpace: 'nowrap' },
+    thSub: { color: 'white', padding: '10px 8px', textAlign: 'center', fontSize: '11px', fontWeight: 'bold', whiteSpace: 'nowrap' },
+    thTotal: { color: '#FFD700', padding: '10px 12px', textAlign: 'center', fontSize: '12px', fontWeight: 'bold' },
+    td: { padding: '9px 12px', borderBottom: '1px solid #eee', fontSize: '13px' },
+    tdC: { padding: '9px 8px', borderBottom: '1px solid #eee', fontSize: '13px', textAlign: 'center' },
+    tdTotal: { padding: '9px 12px', borderBottom: '1px solid #eee', fontSize: '13px', textAlign: 'center', backgroundColor: '#f0f4ff' },
+    trEven: { backgroundColor: '#fafafa' },
+    trOdd: { backgroundColor: 'white' },
+    admNo: { fontFamily: 'monospace', fontSize: '11px', backgroundColor: '#e3f2fd', color: '#1F3864', padding: '2px 5px', borderRadius: '3px' },
+    streamBadge: { backgroundColor: '#e3f2fd', color: '#1F3864', padding: '2px 8px', borderRadius: '3px', fontSize: '12px', fontWeight: 'bold' },
+
     meritCard: { backgroundColor: 'white', borderRadius: '10px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)', overflow: 'hidden', marginBottom: '20px' },
     meritHeader: { backgroundColor: '#1F3864', padding: '15px 20px' },
     meritTitle: { color: 'white', margin: '0 0 5px 0', fontSize: '18px' },
-    meritSubtitle: { color: '#BDD7EE', margin: 0, fontSize: '13px' },
-    tableWrapper: { overflowX: 'auto' },
-    table: { width: '100%', borderCollapse: 'collapse' },
-    thead: { backgroundColor: '#1F3864' },
-    th: { color: 'white', padding: '10px 12px', textAlign: 'left', fontWeight: 'bold', fontSize: '12px', whiteSpace: 'nowrap' },
-    thSubject: { color: 'white', padding: '10px 8px', textAlign: 'center', fontWeight: 'bold', fontSize: '11px', whiteSpace: 'nowrap' },
-    thTotal: { color: '#FFD700', padding: '10px 12px', textAlign: 'center', fontWeight: 'bold', fontSize: '12px', whiteSpace: 'nowrap' },
-    td: { padding: '8px 12px', borderBottom: '1px solid #eee', fontSize: '13px' },
-    tdCenter: { padding: '8px 8px', borderBottom: '1px solid #eee', fontSize: '13px', textAlign: 'center' },
-    tdTotal: { padding: '8px 12px', borderBottom: '1px solid #eee', fontSize: '13px', textAlign: 'center', backgroundColor: '#f0f4ff' },
-    avgBadge: { color: 'white', padding: '3px 8px', borderRadius: '3px', fontWeight: 'bold', fontSize: '12px' },
-    streamBadge: { backgroundColor: '#e3f2fd', color: '#1F3864', padding: '2px 8px', borderRadius: '3px', fontSize: '12px', fontWeight: 'bold' },
-    meritSummaryBar: { display: 'flex', gap: '30px', padding: '12px 20px', backgroundColor: '#f8f9fa', borderTop: '1px solid #eee', fontWeight: 'bold', color: '#1F3864', fontSize: '13px', flexWrap: 'wrap' },
+    meritSub: { color: '#BDD7EE', margin: 0, fontSize: '13px' },
+    meritFooter: { display: 'flex', gap: '30px', padding: '12px 20px', backgroundColor: '#f8f9fa', borderTop: '1px solid #eee', fontWeight: 'bold', color: '#1F3864', fontSize: '13px', flexWrap: 'wrap' },
+
     emptyState: { backgroundColor: 'white', padding: '60px', borderRadius: '10px', textAlign: 'center', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' },
     emptyIcon: { fontSize: '48px', marginBottom: '15px' },
 };
 
-// ─── Print Styles ─────────────────────────────────────────────────────────────
 const pStyles = {
-    page: { padding: '15px', fontFamily: 'Arial, sans-serif', maxWidth: '100%', margin: '0 auto', color: '#000', fontSize: '11px' },
+    page: { padding: '15px', fontFamily: 'Arial, sans-serif', maxWidth: '100%', color: '#000', fontSize: '11px' },
     header: { borderBottom: '3px solid #1F3864', paddingBottom: '10px', marginBottom: '12px' },
     headerRow: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' },
     logo: { width: '70px', height: '70px', objectFit: 'contain' },
@@ -907,20 +858,15 @@ const pStyles = {
     schoolName: { color: '#1F3864', fontSize: '13px', margin: '0 0 3px 0', textTransform: 'uppercase' },
     motto: { color: '#2E75B6', fontStyle: 'italic', margin: '0 0 3px 0', fontSize: '11px' },
     contact: { fontSize: '10px', color: '#666', margin: 0 },
-    reportBanner: { backgroundColor: '#1F3864', padding: '6px 12px', borderRadius: '4px', textAlign: 'center' },
+    reportBanner: { backgroundColor: '#1F3864', padding: '6px 12px', textAlign: 'center' },
     reportTitle: { color: 'white', margin: '0 0 2px 0', fontSize: '13px' },
     reportSubtitle: { color: '#BDD7EE', margin: 0, fontSize: '11px' },
-    sectionBlock: { marginBottom: '12px', border: '1px solid #ddd', borderRadius: '4px', overflow: 'hidden' },
-    sectionBanner: { backgroundColor: '#1F3864', color: 'white', padding: '6px 10px' },
-    sectionName: { fontSize: '12px' },
-    sectionMeta: { fontSize: '10px', opacity: 0.85 },
-    subSection: { padding: '8px' },
-    subSectionTitle: { fontWeight: 'bold', color: '#1F3864', margin: '0 0 6px 0', fontSize: '11px' },
-    meritTable: { width: '100%', borderCollapse: 'collapse' },
+    meritTable: { width: '100%', borderCollapse: 'collapse', marginBottom: '8px' },
     table: { width: '100%', borderCollapse: 'collapse', marginBottom: '6px' },
     thead: { backgroundColor: '#1F3864' },
     th: { color: 'white', padding: '5px 8px', textAlign: 'left', fontSize: '10px', whiteSpace: 'nowrap' },
     thSubject: { color: 'white', padding: '5px 4px', textAlign: 'center', fontSize: '9px', whiteSpace: 'nowrap' },
+    thTotal: { color: '#FFD700', padding: '5px 8px', textAlign: 'center', fontSize: '10px', fontWeight: 'bold' },
     td: { padding: '4px 8px', borderBottom: '1px solid #eee', fontSize: '10px' },
     tdCenter: { padding: '4px 4px', borderBottom: '1px solid #eee', fontSize: '10px', textAlign: 'center' },
     tdName: { padding: '4px 8px', borderBottom: '1px solid #eee', fontSize: '10px', whiteSpace: 'nowrap' },
