@@ -199,10 +199,6 @@ const PrintableResultsReport = React.forwardRef(({ students, subjects, pivotData
 
 function Results() {
     const printRef = useRef();
-    const handlePrint = useReactToPrint({
-        contentRef: printRef,
-        documentTitle: `Results_${filterClass}_${filterExam}`
-    });
 
     const [results, setResults] = useState([]);
     const [loading, setLoading] = useState(false);
@@ -219,6 +215,11 @@ function Results() {
     const [pivotStudents, setPivotStudents] = useState([]);
     const [pivotSubjects, setPivotSubjects] = useState([]);
     const [pivotData, setPivotData] = useState({});
+
+    const handlePrint = useReactToPrint({
+        contentRef: printRef,
+        documentTitle: `Results_${filterClass}_${filterExam}`
+    });
 
     useEffect(() => {
         fetchExams();
@@ -646,7 +647,7 @@ function Results() {
                                                     <td colSpan="3" style={{ ...styles.td, fontWeight: 'bold', color: '#6f42c1', fontSize: '12px' }}>🏆 Subject Rank</td>
                                                     {pivotSubjects.map(sub => {
                                                         const rank = subjectRanks[sub.id];
-                                                        return <td key={sub.id} style={{ ...styles.td, textAlign: 'center', fontSize: '14px' }}>{emoji}</td>;
+                                                        return <td key={sub.id} style={{ ...styles.td, textAlign: 'center', fontWeight: 'bold', color: '#6f42c1' }}>#{rank}</td>;
                                                     })}
                                                     <td colSpan="3" style={styles.td} />
                                                 </tr>;
@@ -683,9 +684,7 @@ function Results() {
                     </div>
                 )}
             </div>
-        </div>
-
-            {/* Hidden printable area */}
+        {/* Hidden printable area */}
             <div style={{ display: 'none' }}>
                 <PrintableResultsReport
                     ref={printRef}
