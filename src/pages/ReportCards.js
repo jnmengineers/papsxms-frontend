@@ -5,6 +5,14 @@ import logo1 from '../assets/logo1.png';
 import logo2 from '../assets/logo2.png';
 import { classDisplayName, gradeLabel, streamLabel } from '../utils/classUtils';
 
+// Grade helpers
+const getGrade = (marks) => {
+    if (marks >= 75) return { label: 'EE', color: '#28a745', remarks: 'Exceeding Expectations' };
+    if (marks >= 55) return { label: 'ME', color: '#2E75B6', remarks: 'Meeting Expectations' };
+    if (marks >= 40) return { label: 'AE', color: '#ffc107', remarks: 'Approaching Expectations' };
+    return { label: 'BE', color: '#dc3545', remarks: 'Below Expectations' };
+};
+
 // ── Printable Report Card ─────────────────────────────────────────────────────
 const PrintableReportCard = React.forwardRef(({ card, results }, ref) => (
     <div ref={ref} style={pStyles.page}>
@@ -30,13 +38,9 @@ const PrintableReportCard = React.forwardRef(({ card, results }, ref) => (
             </div>
             <div style={pStyles.infoRow}>
                 <span style={pStyles.infoLabel}>Class:</span>
-                <span style={pStyles.infoValue}>
-                    {gradeLabel(card.student?.schoolClass?.gradeLevel) || card.student?.className}
-                </span>
+                <span style={pStyles.infoValue}>{gradeLabel(card.student?.schoolClass?.gradeLevel) || card.student?.className}</span>
                 <span style={pStyles.infoLabel}>Stream:</span>
-                <span style={pStyles.infoValue}>
-                    {streamLabel(card.student?.stream) || '-'}
-                </span>
+                <span style={pStyles.infoValue}>{streamLabel(card.student?.stream) || '-'}</span>
             </div>
             <div style={pStyles.infoRow}>
                 <span style={pStyles.infoLabel}>Exam:</span>
@@ -47,8 +51,8 @@ const PrintableReportCard = React.forwardRef(({ card, results }, ref) => (
             <div style={pStyles.infoRow}>
                 <span style={pStyles.infoLabel}>Term:</span>
                 <span style={pStyles.infoValue}>Term {card.exam?.term}</span>
-                <span style={pStyles.infoLabel}>Class Level:</span>
-                <span style={pStyles.infoValue}>{card.exam?.classLevel}</span>
+                <span style={pStyles.infoLabel}>Class Rank:</span>
+                <span style={pStyles.infoValue}>{card.classRank || '-'} / {card.totalInClass || '-'}</span>
             </div>
         </div>
 
@@ -57,23 +61,30 @@ const PrintableReportCard = React.forwardRef(({ card, results }, ref) => (
                 <tr style={pStyles.tableHeader}>
                     <th style={pStyles.th}>#</th>
                     <th style={pStyles.th}>Subject</th>
-                    <th style={pStyles.th}>Marks Obtained</th>
-                    <th style={pStyles.th}>Max Marks</th>
+                    <th style={pStyles.th}>Marks</th>
+                    <th style={pStyles.th}>Max</th>
                     <th style={pStyles.th}>Grade</th>
                     <th style={pStyles.th}>Remarks</th>
                 </tr>
             </thead>
             <tbody>
-                {results.map((result, index) => (
-                    <tr key={result.resultId} style={index % 2 === 0 ? pStyles.trEven : pStyles.trOdd}>
-                        <td style={pStyles.td}>{index + 1}</td>
-                        <td style={pStyles.td}>{result.subject?.subjectName}</td>
-                        <td style={pStyles.td}>{result.marksObtained}</td>
-                        <td style={pStyles.td}>{result.maxMarks}</td>
-                        <td style={pStyles.td}><strong>{result.grade}</strong></td>
-                        <td style={pStyles.td}>{result.remarks}</td>
-                    </tr>
-                ))}
+                {results.map((result, index) => {
+                    const g = getGrade(result.marksObtained);
+                    return (
+                        <tr key={result.resultId} style={index % 2 === 0 ? pStyles.trEven : pStyles.trOdd}>
+                            <td style={pStyles.td}>{index + 1}</td>
+                            <td style={pStyles.td}>{result.subject?.subjectName}</td>
+                            <td style={{ ...pStyles.td, textAlign: 'center', fontWeight: 'bold' }}>{result.marksObtained}</td>
+                            <td style={{ ...pStyles.td, textAlign: 'center' }}>{result.maxMarks}</td>
+                            <td style={{ ...pStyles.td, textAlign: 'center' }}>
+                                <span style={{ backgroundColor: g.color, color: 'white', padding: '2px 8px', borderRadius: '3px', fontWeight: 'bold', fontSize: '12px' }}>
+                                    {g.label}
+                                </span>
+                            </td>
+                            <td style={pStyles.td}>{g.remarks}</td>
+                        </tr>
+                    );
+                })}
             </tbody>
         </table>
 
@@ -87,13 +98,23 @@ const PrintableReportCard = React.forwardRef(({ card, results }, ref) => (
                 <span style={pStyles.summaryValue}>{card.averageMarks?.toFixed(1)}%</span>
             </div>
             <div style={pStyles.summaryItem}>
-                <span style={pStyles.summaryLabel}>Term Rank</span>
-                <span style={pStyles.summaryValue}>{card.termRank || '-'}</span>
+                <span style={pStyles.summaryLabel}>Grade</span>
+                <span style={{ ...pStyles.summaryValue, color: getGrade(card.averageMarks || 0).color === '#28a745' ? '#90EE90' : 'white' }}>
+                    {getGrade(card.averageMarks || 0).label}
+                </span>
             </div>
             <div style={pStyles.summaryItem}>
                 <span style={pStyles.summaryLabel}>Class Rank</span>
                 <span style={pStyles.summaryValue}>{card.classRank || '-'}</span>
             </div>
+        </div>
+
+        <div style={pStyles.gradeKey}>
+            <strong>Grade Key: </strong>
+            <span style={{ color: '#28a745' }}>EE = 75-100 (Exceeding Expectations)</span> &nbsp;|&nbsp;
+            <span style={{ color: '#2E75B6' }}>ME = 55-74 (Meeting Expectations)</span> &nbsp;|&nbsp;
+            <span style={{ color: '#ffc107' }}>AE = 40-54 (Approaching Expectations)</span> &nbsp;|&nbsp;
+            <span style={{ color: '#dc3545' }}>BE = 0-39 (Below Expectations)</span>
         </div>
 
         <div style={pStyles.comments}>
@@ -136,14 +157,11 @@ function ReportCards() {
     const [filterClass, setFilterClass] = useState('');
     const [filterExam, setFilterExam] = useState('');
     const [filtered, setFiltered] = useState([]);
-
-    // Generate mode: 'student' | 'class'
     const [genMode, setGenMode] = useState('class');
     const [genExam, setGenExam] = useState('');
     const [genClassId, setGenClassId] = useState('');
     const [genStudent, setGenStudent] = useState('');
     const [bulkProgress, setBulkProgress] = useState(null);
-
     const [editForm, setEditForm] = useState({
         termRank: '', classRank: '', Remarks: '', teacherComment: '', principalComment: ''
     });
@@ -170,8 +188,10 @@ function ReportCards() {
             c.student?.lastName?.toLowerCase().includes(search.toLowerCase()) ||
             c.student?.admissionNumber?.toLowerCase().includes(search.toLowerCase())
         );
-        if (filterClass) data = data.filter(c => String(c.student?.className) === String(filterClass) ||
-            String(c.student?.schoolClass?.classId) === String(filterClass));
+        if (filterClass) data = data.filter(c =>
+            String(c.student?.className) === String(filterClass) ||
+            String(c.student?.schoolClass?.classId) === String(filterClass)
+        );
         if (filterExam) data = data.filter(c => String(c.exam?.examId) === String(filterExam));
         setFiltered(data);
     }, [search, filterClass, filterExam, reportCards]);
@@ -187,22 +207,10 @@ function ReportCards() {
         } catch (e) { setError('Failed to load report cards'); setLoading(false); }
     };
 
-    const fetchStudents = async () => {
-        const r = await api.get('/api/students');
-        setStudents(r.data);
-    };
+    const fetchStudents = async () => { try { const r = await api.get('/api/students'); setStudents(r.data); } catch(e){} };
+    const fetchClasses = async () => { try { const r = await api.get('/api/classes'); setClasses(r.data); } catch(e){} };
+    const fetchExams = async () => { try { const r = await api.get('/api/exams'); setExams(r.data); } catch(e){} };
 
-    const fetchClasses = async () => {
-        const r = await api.get('/api/classes');
-        setClasses(r.data);
-    };
-
-    const fetchExams = async () => {
-        const r = await api.get('/api/exams');
-        setExams(r.data);
-    };
-
-    // ── Generate per student ──────────────────────────────────────────────────
     const handleGenerateStudent = async (e) => {
         e.preventDefault();
         if (!genStudent || !genExam) { setError('Select both student and exam'); return; }
@@ -210,24 +218,19 @@ function ReportCards() {
         try {
             await api.post(`/api/reportCards/generate/student/${genStudent}/exam/${genExam}`);
             setSuccessMsg('✅ Report card generated!');
-            setGenStudent('');
-            fetchReportCards();
+            setGenStudent(''); fetchReportCards();
             setTimeout(() => setSuccessMsg(''), 3000);
         } catch (e) { setError('Failed. Make sure results exist for this student.'); }
         setGenerating(false);
     };
 
-    // ── Generate per class (bulk) ─────────────────────────────────────────────
     const handleGenerateClass = async () => {
         if (!genClassId || !genExam) { setError('Select both class and exam'); return; }
-        const classStudents = students.filter(s =>
-            String(s.schoolClass?.classId) === String(genClassId)
-        );
+        const classStudents = students.filter(s => String(s.schoolClass?.classId) === String(genClassId));
         if (classStudents.length === 0) { setError('No students found in this class'); return; }
         setGenerating(true); setError(''); setSuccessMsg('');
         let success = 0, failed = 0;
         setBulkProgress({ done: 0, total: classStudents.length, success: 0, failed: 0 });
-
         for (let i = 0; i < classStudents.length; i++) {
             try {
                 await api.post(`/api/reportCards/generate/student/${classStudents[i].studentId}/exam/${genExam}`);
@@ -235,11 +238,9 @@ function ReportCards() {
             } catch (e) { failed++; }
             setBulkProgress({ done: i + 1, total: classStudents.length, success, failed });
         }
-
         setGenerating(false);
         setSuccessMsg(`✅ Generated ${success} report card(s).${failed > 0 ? ` ${failed} failed.` : ''}`);
-        setBulkProgress(null);
-        fetchReportCards();
+        setBulkProgress(null); fetchReportCards();
         setTimeout(() => setSuccessMsg(''), 5000);
     };
 
@@ -275,7 +276,7 @@ function ReportCards() {
     };
 
     const handleDelete = async (id) => {
-        if (window.confirm('Are you sure?')) {
+        if (window.confirm('Delete this report card?')) {
             try { await api.delete(`/api/reportCards/${id}`); fetchReportCards(); }
             catch (e) { setError('Failed to delete'); }
         }
@@ -304,7 +305,7 @@ function ReportCards() {
                 {error && <p style={styles.error}>{error}</p>}
                 {successMsg && <p style={styles.success}>{successMsg}</p>}
 
-                {/* ── Generate Section ── */}
+                {/* Generate Section */}
                 <div style={styles.genCard}>
                     <div style={styles.genTabs}>
                         <button onClick={() => setGenMode('class')} style={{
@@ -319,7 +320,6 @@ function ReportCards() {
                         }}>👤 Generate Per Student</button>
                     </div>
 
-                    {/* Shared exam selector */}
                     <div style={styles.formGroup}>
                         <label style={styles.label}>📝 Exam</label>
                         <select style={styles.input} value={genExam} onChange={e => setGenExam(e.target.value)}>
@@ -332,7 +332,6 @@ function ReportCards() {
                         </select>
                     </div>
 
-                    {/* Per class mode */}
                     {genMode === 'class' && (
                         <div>
                             <div style={styles.formGroup}>
@@ -342,9 +341,7 @@ function ReportCards() {
                                     {sections.map(section => (
                                         <optgroup key={section.value} label={section.label}>
                                             {classes.filter(c => c.section === section.value).map(cls => (
-                                                <option key={cls.classId} value={cls.classId}>
-                                                    {classDisplayName(cls)}
-                                                </option>
+                                                <option key={cls.classId} value={cls.classId}>{classDisplayName(cls)}</option>
                                             ))}
                                         </optgroup>
                                     ))}
@@ -361,10 +358,7 @@ function ReportCards() {
                                     <div style={styles.progressOuter}>
                                         <div style={{ ...styles.progressInner, width: `${(bulkProgress.done / bulkProgress.total) * 100}%` }} />
                                     </div>
-                                    <p style={styles.progressText}>
-                                        {bulkProgress.done}/{bulkProgress.total} — ✅ {bulkProgress.success}
-                                        {bulkProgress.failed > 0 && ` ❌ ${bulkProgress.failed}`}
-                                    </p>
+                                    <p style={styles.progressText}>{bulkProgress.done}/{bulkProgress.total} — ✅ {bulkProgress.success}{bulkProgress.failed > 0 && ` ❌ ${bulkProgress.failed}`}</p>
                                 </div>
                             )}
                             <button onClick={handleGenerateClass} style={styles.generateBtn}
@@ -374,7 +368,6 @@ function ReportCards() {
                         </div>
                     )}
 
-                    {/* Per student mode */}
                     {genMode === 'student' && (
                         <form onSubmit={handleGenerateStudent}>
                             <div style={styles.formGroup}>
@@ -462,39 +455,46 @@ function ReportCards() {
                                     <th style={styles.th}>Student</th>
                                     <th style={styles.th}>Adm No</th>
                                     <th style={styles.th}>Class</th>
-                                    <th style={styles.th}>Stream</th>
                                     <th style={styles.th}>Exam</th>
                                     <th style={styles.th}>Total</th>
                                     <th style={styles.th}>Average</th>
+                                    <th style={styles.th}>Grade</th>
                                     <th style={styles.th}>Term Rank</th>
                                     <th style={styles.th}>Class Rank</th>
                                     <th style={styles.th}>Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {filtered.map((card, index) => (
-                                    <tr key={card.reportId} style={index % 2 === 0 ? styles.trEven : styles.trOdd}>
-                                        <td style={styles.td}>{index + 1}</td>
-                                        <td style={styles.td}><strong>{card.student?.firstName} {card.student?.lastName}</strong></td>
-                                        <td style={styles.td}><span style={styles.admNo}>{card.student?.admissionNumber || '-'}</span></td>
-                                        <td style={styles.td}>{gradeLabel(card.student?.schoolClass?.gradeLevel) || card.student?.className}</td>
-                                        <td style={styles.td}>{streamLabel(card.student?.stream) || '-'}</td>
-                                        <td style={styles.td}>{card.exam?.examName}</td>
-                                        <td style={styles.td}><strong>{card.totalMarks}</strong></td>
-                                        <td style={styles.td}>
-                                            <span style={{ ...styles.avgBadge, backgroundColor: card.averageMarks >= 80 ? '#28a745' : card.averageMarks >= 60 ? '#2E75B6' : card.averageMarks >= 40 ? '#ffc107' : '#dc3545' }}>
-                                                {card.averageMarks?.toFixed(1)}%
-                                            </span>
-                                        </td>
-                                        <td style={styles.td}>{card.termRank || '-'}</td>
-                                        <td style={styles.td}>{card.classRank || '-'}</td>
-                                        <td style={styles.td}>
-                                            <button onClick={() => handleEdit(card)} style={styles.editBtn}>Edit</button>
-                                            <button onClick={() => handlePrintCard(card)} style={styles.printBtn}>🖨️</button>
-                                            <button onClick={() => handleDelete(card.reportId)} style={styles.deleteBtn}>Delete</button>
-                                        </td>
-                                    </tr>
-                                ))}
+                                {filtered.map((card, index) => {
+                                    const g = getGrade(card.averageMarks || 0);
+                                    return (
+                                        <tr key={card.reportId} style={index % 2 === 0 ? styles.trEven : styles.trOdd}>
+                                            <td style={styles.td}>{index + 1}</td>
+                                            <td style={styles.td}><strong>{card.student?.firstName} {card.student?.lastName}</strong></td>
+                                            <td style={styles.td}><span style={styles.admNo}>{card.student?.admissionNumber || '-'}</span></td>
+                                            <td style={styles.td}>{gradeLabel(card.student?.schoolClass?.gradeLevel) || card.student?.className}</td>
+                                            <td style={styles.td}>{card.exam?.examName}</td>
+                                            <td style={styles.td}><strong>{card.totalMarks}</strong></td>
+                                            <td style={styles.td}>
+                                                <span style={{ color: g.color, fontWeight: 'bold' }}>
+                                                    {card.averageMarks?.toFixed(1)}%
+                                                </span>
+                                            </td>
+                                            <td style={styles.td}>
+                                                <span style={{ backgroundColor: g.color, color: 'white', padding: '3px 8px', borderRadius: '3px', fontWeight: 'bold', fontSize: '12px' }}>
+                                                    {g.label}
+                                                </span>
+                                            </td>
+                                            <td style={styles.td}>{card.termRank || '-'}</td>
+                                            <td style={styles.td}>{card.classRank || '-'}</td>
+                                            <td style={styles.td}>
+                                                <button onClick={() => handleEdit(card)} style={styles.editBtn}>✏️ Edit</button>
+                                                <button onClick={() => handlePrintCard(card)} style={styles.printBtn}>🖨️</button>
+                                                <button onClick={() => handleDelete(card.reportId)} style={styles.deleteBtn}>🗑️</button>
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
                                 {filtered.length === 0 && (
                                     <tr><td colSpan="11" style={{ textAlign: 'center', padding: '20px', color: '#666' }}>No report cards found</td></tr>
                                 )}
@@ -504,7 +504,6 @@ function ReportCards() {
                 )}
             </div>
 
-            {/* Hidden print */}
             <div style={{ display: 'none' }}>
                 {printCard && <PrintableReportCard ref={printRef} card={printCard} results={printResults} />}
             </div>
@@ -527,7 +526,6 @@ const styles = {
     error: { color: 'red', padding: '10px', backgroundColor: '#fff3f3', borderRadius: '5px', marginBottom: '15px' },
     success: { color: '#155724', padding: '10px', backgroundColor: '#d4edda', borderRadius: '5px', marginBottom: '15px' },
     centerMsg: { textAlign: 'center', padding: '40px', color: '#666' },
-
     genCard: { backgroundColor: 'white', padding: '20px', borderRadius: '10px', marginBottom: '20px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' },
     genTabs: { display: 'flex', gap: '10px', marginBottom: '15px', flexWrap: 'wrap' },
     genTab: { padding: '10px 20px', borderRadius: '5px', border: '2px solid #1F3864', cursor: 'pointer', fontWeight: 'bold', fontSize: '14px' },
@@ -541,19 +539,16 @@ const styles = {
     progressInner: { height: '100%', backgroundColor: '#28a745', transition: 'width 0.3s' },
     progressText: { fontSize: '12px', color: '#666', margin: 0 },
     generateBtn: { backgroundColor: '#1F3864', color: 'white', border: 'none', padding: '12px 25px', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold', fontSize: '14px', width: '100%' },
-
     editCard: { backgroundColor: 'white', padding: '20px', borderRadius: '10px', marginBottom: '20px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)', border: '2px solid #2E75B6' },
     editTitle: { color: '#2E75B6', margin: '0 0 15px 0' },
     formGrid: { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', marginBottom: '12px' },
     btnGroup: { display: 'flex', gap: '10px' },
     submitBtn: { backgroundColor: '#2E75B6', color: 'white', border: 'none', padding: '10px 20px', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold' },
     cancelBtn: { backgroundColor: '#6c757d', color: 'white', border: 'none', padding: '10px 20px', borderRadius: '5px', cursor: 'pointer' },
-
     filterRow: { display: 'flex', gap: '10px', marginBottom: '20px', flexWrap: 'wrap' },
     searchInput: { flex: 2, padding: '10px', borderRadius: '5px', border: '1px solid #ddd', fontSize: '14px', minWidth: '200px' },
     filterSelect: { flex: 1, padding: '10px', borderRadius: '5px', border: '1px solid #ddd', fontSize: '14px', minWidth: '150px' },
     clearBtn: { backgroundColor: '#6c757d', color: 'white', border: 'none', padding: '10px 15px', borderRadius: '5px', cursor: 'pointer' },
-
     tableWrapper: { overflowX: 'auto', borderRadius: '10px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' },
     table: { width: '100%', borderCollapse: 'collapse', backgroundColor: 'white', minWidth: '900px' },
     tableHeader: { backgroundColor: '#1F3864' },
@@ -564,7 +559,6 @@ const styles = {
     editBtn: { backgroundColor: '#2E75B6', color: 'white', border: 'none', padding: '5px 8px', borderRadius: '3px', cursor: 'pointer', marginRight: '4px', fontSize: '12px' },
     printBtn: { backgroundColor: '#28a745', color: 'white', border: 'none', padding: '5px 8px', borderRadius: '3px', cursor: 'pointer', marginRight: '4px', fontSize: '12px' },
     deleteBtn: { backgroundColor: '#dc3545', color: 'white', border: 'none', padding: '5px 8px', borderRadius: '3px', cursor: 'pointer', fontSize: '12px' },
-    avgBadge: { color: 'white', padding: '3px 8px', borderRadius: '3px', fontSize: '12px', fontWeight: 'bold' },
     admNo: { backgroundColor: '#e3f2fd', color: '#1F3864', padding: '2px 6px', borderRadius: '3px', fontSize: '11px', fontFamily: 'monospace' },
 };
 
@@ -582,16 +576,17 @@ const pStyles = {
     infoRow: { display: 'flex', gap: '20px', marginBottom: '8px' },
     infoLabel: { fontWeight: 'bold', color: '#1F3864', minWidth: '130px', fontSize: '13px' },
     infoValue: { flex: 1, borderBottom: '1px solid #ddd', paddingBottom: '2px', fontSize: '13px' },
-    table: { width: '100%', borderCollapse: 'collapse', marginBottom: '20px' },
+    table: { width: '100%', borderCollapse: 'collapse', marginBottom: '15px' },
     tableHeader: { backgroundColor: '#1F3864' },
     th: { color: 'white', padding: '8px 12px', textAlign: 'left', fontSize: '13px' },
     td: { padding: '8px 12px', borderBottom: '1px solid #ddd', fontSize: '13px' },
     trEven: { backgroundColor: '#f8f9fa' },
     trOdd: { backgroundColor: 'white' },
-    summary: { display: 'flex', gap: '20px', backgroundColor: '#1F3864', padding: '15px', borderRadius: '5px', marginBottom: '20px' },
+    summary: { display: 'flex', gap: '20px', backgroundColor: '#1F3864', padding: '15px', borderRadius: '5px', marginBottom: '10px' },
     summaryItem: { flex: 1, textAlign: 'center' },
     summaryLabel: { color: '#FFD700', fontSize: '12px', display: 'block' },
     summaryValue: { color: 'white', fontSize: '20px', fontWeight: 'bold', display: 'block' },
+    gradeKey: { fontSize: '10px', backgroundColor: '#f8f9fa', padding: '6px 10px', borderRadius: '4px', marginBottom: '15px' },
     comments: { display: 'flex', gap: '20px', marginBottom: '20px' },
     commentBox: { flex: 1, border: '1px solid #ddd', padding: '15px', borderRadius: '5px' },
     commentLabel: { fontWeight: 'bold', color: '#1F3864', margin: '0 0 8px 0', fontSize: '13px' },
