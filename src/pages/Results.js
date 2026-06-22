@@ -246,10 +246,13 @@ function Results() {
         setSearched(false);
         setResults([]);
         setPivotStudents([]); setPivotSubjects([]); setPivotData({});
-        if (!examId) { setStep(1); setPopulatedClasses([]); return; }
+        setPopulatedClasses([]);
+        if (!examId) { setStep(1); return; }
 
-        // Fetch results once — reused for class tiles and results table
+        // Move to step 2 IMMEDIATELY — don't wait for data
+        setStep(2);
         setLoadingClasses(true);
+
         try {
             const response = await api.get('/api/results');
             const data = response.data.filter(r => String(r.exam?.examId) === String(examId));
@@ -283,7 +286,6 @@ function Results() {
             })).sort((a, b) => a.className.localeCompare(b.className));
 
             setPopulatedClasses(populated);
-            setStep(2);
         } catch (e) { setError('Failed to load classes'); }
         setLoadingClasses(false);
     };
@@ -483,6 +485,13 @@ function Results() {
 
     return (
         <div style={styles.container}>
+            <style>{`
+                @keyframes pulse {
+                    0%, 100% { opacity: 1; }
+                    50% { opacity: 0.4; }
+                }
+                .skeleton-pulse { animation: pulse 1.5s ease-in-out infinite; }
+            `}</style>
             {/* Navbar */}
             <div style={styles.navbar}>
                 <div style={styles.navLeft}>
@@ -536,7 +545,15 @@ function Results() {
                         </div>
 
                         {loadingClasses ? (
-                            <div style={styles.loadingBox}>⏳ Loading classes...</div>
+                            <div style={styles.classGrid}>
+                                {[1,2,3,4,5,6].map(i => (
+                                    <div key={i} style={styles.skeletonTile}>
+                                        <div style={styles.skeletonTitle} />
+                                        <div style={styles.skeletonStats} />
+                                        <div style={styles.skeletonAction} />
+                                    </div>
+                                ))}
+                            </div>
                         ) : populatedClasses.length === 0 ? (
                             <div style={styles.emptyCard}>
                                 <p>📭 No results found for this exam yet.</p>
@@ -897,7 +914,13 @@ const styles = {
     classStatNum: { fontSize: '20px', fontWeight: 'bold', color: '#1F3864' },
     classStatLbl: { fontSize: '10px', color: '#888' },
     classDivider: { width: '1px', height: '30px', backgroundColor: '#eee' },
-    classTileAction: { color: 'white', textAlign: 'center', padding: '7px', fontSize: '12px', marginTop: '8px' }
+    classTileAction: { color: 'white', textAlign: 'center', padding: '7px', fontSize: '12px', marginTop: '8px' },
+
+    // Skeleton loading tiles
+    skeletonTile: { backgroundColor: 'white', borderRadius: '10px', overflow: 'hidden', boxShadow: '0 2px 6px rgba(0,0,0,0.08)', padding: '16px 10px', borderTop: '4px solid #e0e0e0' },
+    skeletonTitle: { height: '22px', backgroundColor: '#f0f0f0', borderRadius: '4px', margin: '0 auto 12px', width: '60%', animation: 'pulse 1.5s ease-in-out infinite' },
+    skeletonStats: { height: '40px', backgroundColor: '#f5f5f5', borderRadius: '4px', marginBottom: '12px' },
+    skeletonAction: { height: '28px', backgroundColor: '#e8e8e8', borderRadius: '4px' }
 };
 
 // ── Print Styles ─────────────────────────────────────────────────────────────
