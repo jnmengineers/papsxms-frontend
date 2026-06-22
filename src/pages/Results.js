@@ -4,6 +4,35 @@ import api from '../services/api';
 import logo1 from '../assets/logo1.png';
 import logo2 from '../assets/logo2.png';
 
+// ── Full Page Loading Overlay ────────────────────────────────────────────────
+const LoadingOverlay = ({ message = 'Loading...' }) => (
+    <div style={{
+        position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+        backgroundColor: 'rgba(31, 56, 100, 0.92)',
+        display: 'flex', flexDirection: 'column',
+        alignItems: 'center', justifyContent: 'center',
+        zIndex: 9999
+    }}>
+        <div style={{ textAlign: 'center' }}>
+            {/* Spinning ring */}
+            <div style={{
+                width: '64px', height: '64px', borderRadius: '50%',
+                border: '5px solid rgba(255,255,255,0.2)',
+                borderTopColor: '#FFD700',
+                animation: 'spin 0.8s linear infinite',
+                margin: '0 auto 20px'
+            }} />
+            <p style={{ color: 'white', fontSize: '16px', fontWeight: 'bold', margin: '0 0 6px' }}>
+                {message}
+            </p>
+            <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '12px', margin: 0 }}>
+                Pipeline Adventist School
+            </p>
+        </div>
+        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+    </div>
+);
+
 // ── Printable Results Report ──────────────────────────────────────────────────
 const PrintableResultsReport = React.forwardRef(({ students, subjects, pivotData, className, examName, academicYear, term, getGradeLabel, getMarkColor, getGradeColor }, ref) => {
     const rankedStudents = [...students].sort((a, b) => {
@@ -486,12 +515,11 @@ function Results() {
     return (
         <div style={styles.container}>
             <style>{`
-                @keyframes pulse {
-                    0%, 100% { opacity: 1; }
-                    50% { opacity: 0.4; }
-                }
-                .skeleton-pulse { animation: pulse 1.5s ease-in-out infinite; }
+                @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+                @keyframes spin { to { transform: rotate(360deg); } }
             `}</style>
+            {loadingClasses && <LoadingOverlay message="Loading class results..." />}
+            {loading && <LoadingOverlay message="Loading results table..." />}
             {/* Navbar */}
             <div style={styles.navbar}>
                 <div style={styles.navLeft}>
@@ -899,7 +927,7 @@ const styles = {
 
     // Exam tiles
     examGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '15px', marginBottom: '20px' },
-    examTile: { backgroundColor: 'white', borderRadius: '10px', overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.1)', cursor: 'pointer', transition: 'transform 0.15s', border: '2px solid transparent' },
+    examTile: { backgroundColor: 'white', borderRadius: '10px', overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.1)', cursor: 'pointer', transition: 'transform 0.15s', border: '2px solid transparent', userSelect: 'none', WebkitUserSelect: 'none' },
     examTileIcon: { fontSize: '36px', textAlign: 'center', padding: '20px 20px 8px 20px' },
     examTileName: { color: '#1F3864', fontWeight: 'bold', fontSize: '16px', textAlign: 'center', padding: '0 15px 5px' },
     examTileMeta: { color: '#888', fontSize: '12px', textAlign: 'center', padding: '0 15px 12px' },
@@ -907,7 +935,7 @@ const styles = {
 
     // Class tiles
     classGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '12px', marginBottom: '20px' },
-    classTile: { backgroundColor: 'white', borderRadius: '10px', overflow: 'hidden', boxShadow: '0 2px 6px rgba(0,0,0,0.08)', cursor: 'pointer', transition: 'transform 0.15s, box-shadow 0.15s' },
+    classTile: { backgroundColor: 'white', borderRadius: '10px', overflow: 'hidden', boxShadow: '0 2px 6px rgba(0,0,0,0.08)', cursor: 'pointer', transition: 'transform 0.15s, box-shadow 0.15s', userSelect: 'none', WebkitUserSelect: 'none' },
     classTileHeader: { fontSize: '18px', fontWeight: 'bold', textAlign: 'center', padding: '16px 10px 8px' },
     classTileStats: { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', padding: '8px 10px' },
     classStat: { display: 'flex', flexDirection: 'column', alignItems: 'center' },
