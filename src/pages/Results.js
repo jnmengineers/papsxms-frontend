@@ -210,6 +210,9 @@ function Results() {
     const [filterExam, setFilterExam] = useState('');
     const [filterClass, setFilterClass] = useState('');
     const [search, setSearch] = useState('');
+    const [step, setStep] = useState(1); // 1=select exam, 2=select class tiles, 3=view results
+    const [populatedClasses, setPopulatedClasses] = useState([]); // classes with results for selected exam
+    const [loadingClasses, setLoadingClasses] = useState(false);
 
     // Pivot data
     const [pivotStudents, setPivotStudents] = useState([]);
@@ -234,6 +237,75 @@ function Results() {
     const fetchClasses = async () => {
         const response = await api.get('/api/classes');
         setClasses(response.data);
+    };
+
+    const handleSelectExam = async (examId) => {
+        setFilterExam(examId);
+        setFilterClass('');
+        setSearched(false);
+        setResults([]);
+        setPivotStudents([]); setPivotSubjects([]); setPivotData({});
+        if (!examId) { setStep(1); setPopulatedClasses([]); return; }
+
+        // Find which classes have results for this exam
+        setLoadingClasses(true);
+        try {
+            const response = await api.get('/api/results');
+            const data = response.data.filter(r => String(r.exam?.examId) === String(examId));
+
+            // Count students per class
+            const classMap = {};
+            data.forEach(r => {
+                const cls = r.student?.className;
+                const classId = r.student?.schoolClass?.classId;
+                if (cls) {
+                    const key = classId || cls;
+                    if (!classMap[key]) {
+                        classMap[key] = {
+                            className: cls,
+                            classId: classId,
+                            studentIds: new Set(),
+                            subjectIds: new Set(),
+                            section: r.student?.schoolClass?.section || ''
+                        };
+                    }
+                    if (r.student?.studentId) classMap[key].studentIds.add(r.student.studentId);
+                    if (r.subject?.subjectId) classMap[key].subjectIds.add(r.subject.subjectId);
+                }
+            });
+
+            const populated = Object.values(classMap).map(c => ({
+                ...c,
+                studentCount: c.studentIds.size,
+                subjectCount: c.subjectIds.size,
+            })).sort((a, b) => a.className.localeCompare(b.className));
+
+            setPopulatedClasses(populated);
+            setStep(2);
+        } catch (e) { setError('Failed to load classes'); }
+        setLoadingClasses(false);
+    };
+
+    const handleSelectClass = (cls) => {
+        setFilterClass(cls.className);
+        setStep(3);
+        setTimeout(() => handleSearchWithClass(cls.className), 100);
+    };
+
+    const handleSearchWithClass = async (className) => {
+        const examId = filterExam;
+        if (!examId || !className) return;
+        setLoading(true); setError(''); setSearched(true);
+        try {
+            const response = await api.get('/api/results');
+            let data = response.data.filter(r =>
+                String(r.exam?.examId) === String(examId) &&
+                r.student?.className === className
+            );
+            setResults(data);
+            buildPivotTable(data);
+        } catch (err) { setError('Failed to load results'); }
+        setLoading(false);
     };
 
     const handleSearch = async () => {
@@ -437,56 +509,95 @@ function Results() {
 
                 {error && <p style={styles.error}>{error}</p>}
 
-                {/* Filter Card */}
-                <div style={styles.filterCard}>
-                    <div style={styles.filterGrid}>
-                        <div style={styles.filterGroup}>
-                            <label style={styles.filterLabel}>📝 Exam *</label>
-                            <select style={styles.filterSelect} value={filterExam}
-                                onChange={e => setFilterExam(e.target.value)}>
-                                <option value="">-- Select Exam --</option>
-                                {exams.map(exam => (
-                                    <option key={exam.examId} value={exam.examId}>
-                                        {exam.examName} — Term {exam.term} {exam.academicYear}
-                                    </option>
-                                ))}
-                            </select>
-                        </div>
-                        <div style={styles.filterGroup}>
-                            <label style={styles.filterLabel}>🏫 Class *</label>
-                            <select style={styles.filterSelect} value={filterClass}
-                                onChange={e => setFilterClass(e.target.value)}>
-                                <option value="">-- Select Class --</option>
-                                {classes.map(cls => (
-                                    <option key={cls.classId} value={cls.className}>
-                                        {cls.className} — {cls.stream}
-                                    </option>
-                                ))}
-                            </select>
-                        </div>
-                        <div style={styles.filterGroup}>
-                            <label style={styles.filterLabel}>🔍 Search Student</label>
-                            <input style={styles.filterSelect}
-                                placeholder="Name or admission no..."
-                                value={search}
-                                onChange={e => setSearch(e.target.value)}
-                                onKeyDown={e => e.key === 'Enter' && handleSearch()}
-                            />
-                        </div>
-                        <div style={styles.filterGroup}>
-                            <label style={styles.filterLabel}>&nbsp;</label>
-                            <div style={styles.btnRow}>
-                                <button onClick={handleSearch} style={styles.searchBtn}
-                                    disabled={loading}>
-                                    {loading ? '⏳' : '🔍'} View Results
-                                </button>
-                                <button onClick={clearFilters} style={styles.clearBtn}>
-                                    ✕ Clear
-                                </button>
-                            </div>
+                {/* ── STEP 1: Select Exam ── */}
+                {step === 1 && (
+                    <div>
+                        <h3 style={styles.stepTitle}>📝 Select an Exam</h3>
+                        <div style={styles.examGrid}>
+                            {exams.map(exam => (
+                                <div key={exam.examId}
+                                    onClick={() => handleSelectExam(exam.examId)}
+                                    style={styles.examTile}>
+                                    <div style={styles.examTileIcon}>📝</div>
+                                    <div style={styles.examTileName}>{exam.examName}</div>
+                                    <div style={styles.examTileMeta}>Term {exam.term} · {exam.academicYear}</div>
+                                    <div style={styles.examTileAction}>Click to view classes →</div>
+                                </div>
+                            ))}
                         </div>
                     </div>
-                </div>
+                )}
+
+                {/* ── STEP 2: Class Tiles ── */}
+                {step === 2 && (
+                    <div>
+                        <div style={styles.stepHeader}>
+                            <button onClick={() => { setStep(1); setPopulatedClasses([]); }} style={styles.backBtn}>← Back</button>
+                            <div>
+                                <h3 style={styles.stepTitle}>🏫 Select a Class</h3>
+                                <p style={styles.stepSub}>
+                                    {exams.find(e => String(e.examId) === String(filterExam))?.examName} — {populatedClasses.length} class{populatedClasses.length !== 1 ? 'es' : ''} with results
+                                </p>
+                            </div>
+                        </div>
+
+                        {loadingClasses ? (
+                            <div style={styles.loadingBox}>⏳ Loading classes...</div>
+                        ) : populatedClasses.length === 0 ? (
+                            <div style={styles.emptyCard}>
+                                <p>📭 No results found for this exam yet.</p>
+                                <p style={{ color: '#666', fontSize: '13px' }}>Use Mark Entry to add marks first.</p>
+                            </div>
+                        ) : (
+                            <div style={styles.classGrid}>
+                                {populatedClasses.map((cls, i) => {
+                                    const sectionColors = {
+                                        'PRE_SCHOOL': '#6f42c1', 'LOWER_PRIMARY': '#2E75B6',
+                                        'UPPER_PRIMARY': '#fd7e14', 'JUNIOR_SCHOOL': '#20c997'
+                                    };
+                                    const color = sectionColors[cls.section] || '#1F3864';
+                                    return (
+                                        <div key={i} onClick={() => handleSelectClass(cls)}
+                                            style={{ ...styles.classTile, borderTop: `4px solid ${color}` }}>
+                                            <div style={{ ...styles.classTileHeader, color }}>
+                                                {cls.className}
+                                            </div>
+                                            <div style={styles.classTileStats}>
+                                                <div style={styles.classStat}>
+                                                    <span style={styles.classStatNum}>{cls.studentCount}</span>
+                                                    <span style={styles.classStatLbl}>Students</span>
+                                                </div>
+                                                <div style={styles.classDivider} />
+                                                <div style={styles.classStat}>
+                                                    <span style={styles.classStatNum}>{cls.subjectCount}</span>
+                                                    <span style={styles.classStatLbl}>Subjects</span>
+                                                </div>
+                                            </div>
+                                            <div style={{ ...styles.classTileAction, backgroundColor: color }}>
+                                                View Results →
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                {/* ── STEP 3: Results Table ── */}
+                {step === 3 && (
+                    <div>
+                        <div style={styles.stepHeader}>
+                            <button onClick={() => { setStep(2); setSearched(false); }} style={styles.backBtn}>← Back to Classes</button>
+                            <div>
+                                <h3 style={styles.stepTitle}>📊 {filterClass} — {selectedExamName}</h3>
+                            </div>
+                            <input style={styles.searchInput}
+                                placeholder="🔍 Search student..."
+                                value={search}
+                                onChange={e => setSearch(e.target.value)}
+                            />
+                        </div>
 
                 {/* Results Pivot Table */}
                 {searched && !loading && (
@@ -667,18 +778,6 @@ function Results() {
                     </>
                 )}
 
-                {/* Instructions when nothing selected */}
-                {!searched && (
-                    <div style={styles.instructionCard}>
-                        <h3 style={{ color: '#1F3864', marginBottom: '15px' }}>📋 How to View Results</h3>
-                        <ol style={{ paddingLeft: '20px', lineHeight: '2.2', color: '#555' }}>
-                            <li>Select an <strong>Exam</strong> from the dropdown</li>
-                            <li>Select a <strong>Class</strong> from the dropdown</li>
-                            <li>Click <strong>🔍 View Results</strong></li>
-                            <li>Results show as a table with students as rows and subjects as columns</li>
-                            <li>Subject averages appear at the bottom</li>
-                            <li>Use <strong>Mark Entry</strong> to add or edit marks</li>
-                        </ol>
                     </div>
                 )}
             </div>
@@ -775,7 +874,34 @@ const styles = {
 
     // Empty and instruction cards
     emptyCard: { backgroundColor: 'white', padding: '40px', borderRadius: '10px', textAlign: 'center', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' },
-    instructionCard: { backgroundColor: 'white', padding: '25px', borderRadius: '10px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }
+    instructionCard: { backgroundColor: 'white', padding: '25px', borderRadius: '10px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' },
+
+    // Step navigation
+    stepHeader: { display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '20px', flexWrap: 'wrap' },
+    stepTitle: { color: '#1F3864', margin: '0 0 3px 0', fontSize: '20px' },
+    stepSub: { color: '#666', margin: 0, fontSize: '13px' },
+    backBtn: { backgroundColor: '#6c757d', color: 'white', border: 'none', padding: '9px 16px', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold', whiteSpace: 'nowrap' },
+    searchInput: { padding: '9px 14px', borderRadius: '5px', border: '2px solid #ddd', fontSize: '14px', minWidth: '220px' },
+    loadingBox: { backgroundColor: 'white', padding: '40px', borderRadius: '10px', textAlign: 'center', color: '#666', boxShadow: '0 2px 4px rgba(0,0,0,0.08)' },
+
+    // Exam tiles
+    examGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '15px', marginBottom: '20px' },
+    examTile: { backgroundColor: 'white', borderRadius: '10px', overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.1)', cursor: 'pointer', transition: 'transform 0.15s', border: '2px solid transparent' },
+    examTileIcon: { fontSize: '36px', textAlign: 'center', padding: '20px 20px 8px 20px' },
+    examTileName: { color: '#1F3864', fontWeight: 'bold', fontSize: '16px', textAlign: 'center', padding: '0 15px 5px' },
+    examTileMeta: { color: '#888', fontSize: '12px', textAlign: 'center', padding: '0 15px 12px' },
+    examTileAction: { backgroundColor: '#1F3864', color: 'white', textAlign: 'center', padding: '8px', fontSize: '12px' },
+
+    // Class tiles
+    classGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '12px', marginBottom: '20px' },
+    classTile: { backgroundColor: 'white', borderRadius: '10px', overflow: 'hidden', boxShadow: '0 2px 6px rgba(0,0,0,0.08)', cursor: 'pointer', transition: 'transform 0.15s, box-shadow 0.15s' },
+    classTileHeader: { fontSize: '18px', fontWeight: 'bold', textAlign: 'center', padding: '16px 10px 8px' },
+    classTileStats: { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', padding: '8px 10px' },
+    classStat: { display: 'flex', flexDirection: 'column', alignItems: 'center' },
+    classStatNum: { fontSize: '20px', fontWeight: 'bold', color: '#1F3864' },
+    classStatLbl: { fontSize: '10px', color: '#888' },
+    classDivider: { width: '1px', height: '30px', backgroundColor: '#eee' },
+    classTileAction: { color: 'white', textAlign: 'center', padding: '7px', fontSize: '12px', marginTop: '8px' }
 };
 
 // ── Print Styles ─────────────────────────────────────────────────────────────
