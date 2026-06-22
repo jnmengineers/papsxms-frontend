@@ -517,6 +517,11 @@ function Results() {
             <style>{`
                 @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
                 @keyframes spin { to { transform: rotate(360deg); } }
+                @media print {
+                    body > * { display: none !important; }
+                    #print-area { display: block !important; }
+                    #print-area * { display: revert !important; }
+                }
             `}</style>
             {loadingClasses && <LoadingOverlay message="Loading class results..." />}
             {loading && <LoadingOverlay message="Loading results table..." />}
@@ -823,7 +828,7 @@ function Results() {
                 )}
             </div>
         {/* Hidden printable area */}
-            <div style={{ display: 'none' }}>
+            <div id="print-area" style={{ display: 'none' }}>
                 <PrintableResultsReport
                     ref={printRef}
                     students={pivotStudents}
@@ -953,40 +958,40 @@ const styles = {
 
 // ── Print Styles ─────────────────────────────────────────────────────────────
 const pStyles = {
-    page: { padding: '12px', fontFamily: 'Arial, sans-serif', color: '#000', fontSize: '10px' },
-    header: { borderBottom: '3px solid #1F3864', paddingBottom: '8px', marginBottom: '10px' },
-    headerRow: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' },
-    logo: { width: '65px', height: '65px', objectFit: 'contain' },
-    schoolInfo: { textAlign: 'center', flex: 1, padding: '0 8px' },
-    schoolName: { color: '#1F3864', fontSize: '12px', margin: '0 0 3px 0', textTransform: 'uppercase', fontWeight: 'bold' },
-    motto: { color: '#2E75B6', fontStyle: 'italic', margin: '0 0 2px 0', fontSize: '10px' },
-    contact: { fontSize: '9px', color: '#666', margin: 0 },
-    banner: { backgroundColor: '#1F3864', padding: '5px 10px', textAlign: 'center' },
-    bannerTitle: { color: 'white', margin: '0 0 2px 0', fontSize: '12px' },
-    bannerSub: { color: '#BDD7EE', margin: 0, fontSize: '10px' },
-    table: { width: '100%', borderCollapse: 'collapse', fontSize: '9px' },
+    page: { padding: '10px 14px', fontFamily: "'Times New Roman', Times, serif", color: '#000', fontSize: '12px' },
+    header: { borderBottom: '3px solid #1F3864', paddingBottom: '6px', marginBottom: '8px' },
+    headerRow: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '5px' },
+    logo: { width: '60px', height: '60px', objectFit: 'contain' },
+    schoolInfo: { textAlign: 'center', flex: 1, padding: '0 6px' },
+    schoolName: { color: '#1F3864', fontSize: '12px', margin: '0 0 2px 0', textTransform: 'uppercase', fontWeight: 'bold' },
+    motto: { color: '#2E75B6', fontStyle: 'italic', margin: '0 0 2px 0', fontSize: '11px' },
+    contact: { fontSize: '10px', color: '#666', margin: 0 },
+    banner: { backgroundColor: '#1F3864', padding: '4px 10px', textAlign: 'center' },
+    bannerTitle: { color: 'white', margin: '0 0 2px 0', fontSize: '12px', fontFamily: "'Times New Roman', Times, serif" },
+    bannerSub: { color: '#BDD7EE', margin: 0, fontSize: '11px', fontFamily: "'Times New Roman', Times, serif" },
+    table: { width: '100%', borderCollapse: 'collapse', fontSize: '12px', fontFamily: "'Times New Roman', Times, serif" },
     thead: { backgroundColor: '#1F3864' },
-    thRank: { color: 'white', padding: '4px 5px', textAlign: 'center', fontSize: '9px', width: '30px' },
-    thAdm: { color: 'white', padding: '4px 5px', textAlign: 'left', fontSize: '9px', minWidth: '60px' },
-    thName: { color: 'white', padding: '4px 5px', textAlign: 'left', fontSize: '9px', minWidth: '120px' },
-    thSub: { color: 'white', padding: '2px', textAlign: 'center', fontSize: '8px', width: '45px', verticalAlign: 'bottom' },
-    thTotal: { color: '#FFD700', padding: '4px 5px', textAlign: 'center', fontSize: '9px', fontWeight: 'bold', minWidth: '35px' },
-    rotated: { writingMode: 'vertical-rl', transform: 'rotate(180deg)', whiteSpace: 'nowrap', fontSize: '8px', padding: '3px 1px', minHeight: '55px', display: 'flex', alignItems: 'center', justifyContent: 'center' },
-    td: { padding: '3px 5px', borderBottom: '1px solid #ddd', fontSize: '9px' },
-    tdC: { padding: '3px 3px', borderBottom: '1px solid #ddd', fontSize: '9px', textAlign: 'center' },
-    tdName: { padding: '3px 5px', borderBottom: '1px solid #ddd', fontSize: '9px', whiteSpace: 'nowrap' },
-    tdTotal: { padding: '3px 5px', borderBottom: '1px solid #ddd', fontSize: '9px', textAlign: 'center', backgroundColor: '#f0f4ff', fontWeight: 'bold' },
+    thRank: { color: 'white', padding: '3px 4px', textAlign: 'center', fontSize: '11px', width: '25px', whiteSpace: 'nowrap' },
+    thAdm: { color: 'white', padding: '3px 4px', textAlign: 'left', fontSize: '11px', width: '70px', whiteSpace: 'nowrap' },
+    thName: { color: 'white', padding: '3px 4px', textAlign: 'left', fontSize: '11px', width: '130px', whiteSpace: 'nowrap' },
+    thSub: { color: 'white', padding: '1px', textAlign: 'center', fontSize: '10px', width: '35px', verticalAlign: 'bottom' },
+    thTotal: { color: '#FFD700', padding: '3px 4px', textAlign: 'center', fontSize: '11px', fontWeight: 'bold', width: '35px', whiteSpace: 'nowrap' },
+    rotated: { writingMode: 'vertical-rl', transform: 'rotate(180deg)', whiteSpace: 'nowrap', fontSize: '10px', padding: '2px 1px', minHeight: '50px', display: 'flex', alignItems: 'center', justifyContent: 'center' },
+    td: { padding: '2px 4px', borderBottom: '1px solid #ddd', fontSize: '12px' },
+    tdC: { padding: '2px 2px', borderBottom: '1px solid #ddd', fontSize: '12px', textAlign: 'center' },
+    tdName: { padding: '2px 4px', borderBottom: '1px solid #ddd', fontSize: '12px', whiteSpace: 'nowrap', maxWidth: '130px', overflow: 'hidden', textOverflow: 'ellipsis' },
+    tdTotal: { padding: '2px 4px', borderBottom: '1px solid #ddd', fontSize: '12px', textAlign: 'center', backgroundColor: '#f0f4ff', fontWeight: 'bold' },
     trEven: { backgroundColor: '#f8f9fa' },
     trOdd: { backgroundColor: 'white' },
     totalRow: { backgroundColor: '#e8f4f8', borderTop: '2px solid #2E75B6' },
     meanRow: { backgroundColor: '#e3f2fd' },
     rankRow: { backgroundColor: '#f3e5f5', borderBottom: '2px solid #6f42c1' },
-    summary: { display: 'flex', gap: '15px', flexWrap: 'wrap', padding: '6px 0', borderTop: '1px solid #ddd', marginTop: '6px', fontSize: '9px' },
-    summaryItem: { fontSize: '9px' },
-    footer: { display: 'flex', gap: '30px', marginTop: '12px', borderTop: '2px solid #1F3864', paddingTop: '8px' },
+    summary: { display: 'flex', gap: '12px', flexWrap: 'wrap', padding: '5px 0', borderTop: '1px solid #ddd', marginTop: '5px', fontSize: '11px', fontFamily: "'Times New Roman', Times, serif" },
+    summaryItem: { fontSize: '11px' },
+    footer: { display: 'flex', gap: '20px', marginTop: '10px', borderTop: '2px solid #1F3864', paddingTop: '6px' },
     sigBox: { flex: 1 },
-    sig: { fontSize: '9px', margin: '0 0 6px 0', color: '#333' },
-    footerNote: { textAlign: 'center', fontSize: '8px', color: '#999', marginTop: '8px' },
+    sig: { fontSize: '11px', margin: '0 0 5px 0', color: '#333', fontFamily: "'Times New Roman', Times, serif" },
+    footerNote: { textAlign: 'center', fontSize: '10px', color: '#999', marginTop: '6px', fontFamily: "'Times New Roman', Times, serif" },
 };
 
 export default Results;
