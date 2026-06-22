@@ -199,9 +199,9 @@ function SectionReport() {
     const streamMeritRef = useRef();
     const gradeMeritRef = useRef();
 
-    const handlePrintSectionReport = useReactToPrint({ contentRef: sectionReportRef, documentTitle: 'Section_Performance_Report' });
-    const handlePrintStreamMerit = useReactToPrint({ contentRef: streamMeritRef, documentTitle: `Merit_List_${selectedClass}` });
-    const handlePrintGradeMerit = useReactToPrint({ contentRef: gradeMeritRef, documentTitle: `Grade_Merit_List` });
+    const handlePrintSectionReport = useReactToPrint({ contentRef: sectionReportRef, documentTitle: 'Section_Performance_Report', pageStyle: '@page { size: A4 portrait; margin: 10mm; } @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }' });
+    const handlePrintStreamMerit = useReactToPrint({ contentRef: streamMeritRef, documentTitle: `Merit_List_${selectedClass}`, pageStyle: '@page { size: A4 landscape; margin: 10mm; } @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }' });
+    const handlePrintGradeMerit = useReactToPrint({ contentRef: gradeMeritRef, documentTitle: `Grade_Merit_List`, pageStyle: '@page { size: A4 landscape; margin: 10mm; } @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }' });
 
     useEffect(() => {
         fetchExams();
@@ -725,8 +725,8 @@ function SectionReport() {
                 )}
             </div>
 
-            {/* Hidden Print Areas */}
-            <div style={{ display: 'none' }}>
+            {/* Hidden Print Areas — offscreen not display:none so react-to-print can read them */}
+            <div style={{ overflow: 'hidden', height: 0, position: 'fixed', top: 0, left: 0 }}>
                 <PrintableSectionReport
                     ref={sectionReportRef}
                     report={report}
@@ -850,7 +850,7 @@ const styles = {
 };
 
 const pStyles = {
-    page: { padding: '15px', fontFamily: 'Arial, sans-serif', maxWidth: '100%', color: '#000', fontSize: '11px' },
+    page: { padding: '12px 15px', fontFamily: "'Times New Roman', Times, serif", maxWidth: '100%', color: '#000', fontSize: '11px' },
     header: { borderBottom: '3px solid #1F3864', paddingBottom: '10px', marginBottom: '12px' },
     headerRow: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' },
     logo: { width: '70px', height: '70px', objectFit: 'contain' },
