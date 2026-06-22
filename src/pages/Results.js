@@ -213,6 +213,7 @@ function Results() {
     const [step, setStep] = useState(1); // 1=select exam, 2=select class tiles, 3=view results
     const [populatedClasses, setPopulatedClasses] = useState([]); // classes with results for selected exam
     const [loadingClasses, setLoadingClasses] = useState(false);
+    const [allExamResults, setAllExamResults] = useState([]); // cached results for selected exam
 
     // Pivot data
     const [pivotStudents, setPivotStudents] = useState([]);
@@ -247,11 +248,12 @@ function Results() {
         setPivotStudents([]); setPivotSubjects([]); setPivotData({});
         if (!examId) { setStep(1); setPopulatedClasses([]); return; }
 
-        // Find which classes have results for this exam
+        // Fetch results once — reused for class tiles and results table
         setLoadingClasses(true);
         try {
             const response = await api.get('/api/results');
             const data = response.data.filter(r => String(r.exam?.examId) === String(examId));
+            setAllExamResults(data); // cache for reuse
 
             // Count students per class
             const classMap = {};
@@ -289,19 +291,15 @@ function Results() {
     const handleSelectClass = (cls) => {
         setFilterClass(cls.className);
         setStep(3);
-        setTimeout(() => handleSearchWithClass(cls.className), 100);
+        handleSearchWithClass(cls.className, filterExam);
     };
 
-    const handleSearchWithClass = async (className) => {
-        const examId = filterExam;
+    const handleSearchWithClass = (className, examId) => {
         if (!examId || !className) return;
         setLoading(true); setError(''); setSearched(true);
         try {
-            const response = await api.get('/api/results');
-            let data = response.data.filter(r =>
-                String(r.exam?.examId) === String(examId) &&
-                r.student?.className === className
-            );
+            // Reuse already-fetched results — no second API call
+            const data = allExamResults.filter(r => r.student?.className === className);
             setResults(data);
             buildPivotTable(data);
         } catch (err) { setError('Failed to load results'); }
@@ -313,21 +311,15 @@ function Results() {
             setError('Please select both an Exam and a Class to view results');
             return;
         }
-        setLoading(true);
-        setError('');
-        setSearched(true);
-
+        setLoading(true); setError(''); setSearched(true);
         try {
-            const response = await api.get('/api/results');
-            let data = response.data;
+            // Use cached results if available, else fetch
+            let source = allExamResults.length > 0
+                ? allExamResults
+                : (await api.get('/api/results')).data.filter(r => String(r.exam?.examId) === String(filterExam));
 
-            // Filter by exam and class
-            data = data.filter(r =>
-                String(r.exam?.examId) === String(filterExam) &&
-                r.student?.className === filterClass
-            );
+            let data = source.filter(r => r.student?.className === filterClass);
 
-            // Apply search
             if (search) {
                 data = data.filter(r =>
                     r.student?.firstName?.toLowerCase().includes(search.toLowerCase()) ||
@@ -335,12 +327,9 @@ function Results() {
                     r.student?.admissionNumber?.toLowerCase().includes(search.toLowerCase())
                 );
             }
-
             setResults(data);
             buildPivotTable(data);
-        } catch (err) {
-            setError('Failed to load results');
-        }
+        } catch (err) { setError('Failed to load results'); }
         setLoading(false);
     };
 
@@ -392,6 +381,9 @@ function Results() {
         setPivotStudents([]);
         setPivotSubjects([]);
         setPivotData({});
+        setAllExamResults([]);
+        setPopulatedClasses([]);
+        setStep(1);
         setError('');
     };
 
@@ -517,6 +509,8 @@ function Results() {
                             {exams.map(exam => (
                                 <div key={exam.examId}
                                     onClick={() => handleSelectExam(exam.examId)}
+                                    onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-3px)'; e.currentTarget.style.boxShadow = '0 6px 16px rgba(0,0,0,0.15)'; }}
+                                    onMouseLeave={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.1)'; }}
                                     style={styles.examTile}>
                                     <div style={styles.examTileIcon}>📝</div>
                                     <div style={styles.examTileName}>{exam.examName}</div>
@@ -558,6 +552,8 @@ function Results() {
                                     const color = sectionColors[cls.section] || '#1F3864';
                                     return (
                                         <div key={i} onClick={() => handleSelectClass(cls)}
+                                            onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-3px)'; e.currentTarget.style.boxShadow = '0 6px 16px rgba(0,0,0,0.15)'; }}
+                                            onMouseLeave={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = '0 2px 6px rgba(0,0,0,0.08)'; }}
                                             style={{ ...styles.classTile, borderTop: `4px solid ${color}` }}>
                                             <div style={{ ...styles.classTileHeader, color }}>
                                                 {cls.className}
