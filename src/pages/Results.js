@@ -251,7 +251,15 @@ function Results() {
 
     const handlePrint = useReactToPrint({
         contentRef: printRef,
-        documentTitle: `Results_${filterClass}_${filterExam}`
+        documentTitle: `Results_${filterClass}_${filterExam}`,
+        onBeforePrint: () => Promise.resolve(),
+        onAfterPrint: () => console.log('Print complete'),
+        pageStyle: `
+            @page { size: A4 landscape; margin: 10mm; }
+            @media print {
+                body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            }
+        `
     });
 
     useEffect(() => {
@@ -825,8 +833,8 @@ function Results() {
                     </div>
                 )}
             </div>
-        {/* Hidden printable area */}
-            <div id="print-area" style={{ position: 'absolute', left: '-9999px', top: 0 }}>
+        {/* Hidden printable area — must be rendered but not visible */}
+            <div style={{ overflow: 'hidden', height: 0, width: 0, position: 'fixed' }}>
                 <PrintableResultsReport
                     ref={printRef}
                     students={pivotStudents}
