@@ -518,9 +518,7 @@ function Results() {
                 @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
                 @keyframes spin { to { transform: rotate(360deg); } }
                 @media print {
-                    body > * { display: none !important; }
                     #print-area { display: block !important; }
-                    #print-area * { display: revert !important; }
                 }
             `}</style>
             {loadingClasses && <LoadingOverlay message="Loading class results..." />}
@@ -828,7 +826,7 @@ function Results() {
                 )}
             </div>
         {/* Hidden printable area */}
-            <div id="print-area" style={{ display: 'none' }}>
+            <div id="print-area" style={{ position: 'absolute', left: '-9999px', top: 0 }}>
                 <PrintableResultsReport
                     ref={printRef}
                     students={pivotStudents}
