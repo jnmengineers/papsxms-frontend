@@ -1,234 +1,8 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { useReactToPrint } from 'react-to-print';
+import React, { useState, useEffect } from 'react';
 import api from '../services/api';
 import logo1 from '../assets/logo1.png';
-import logo2 from '../assets/logo2.png';
-
-// ── Full Page Loading Overlay ────────────────────────────────────────────────
-const LoadingOverlay = ({ message = 'Loading...' }) => (
-    <div style={{
-        position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-        backgroundColor: 'rgba(31, 56, 100, 0.92)',
-        display: 'flex', flexDirection: 'column',
-        alignItems: 'center', justifyContent: 'center',
-        zIndex: 9999
-    }}>
-        <div style={{ textAlign: 'center' }}>
-            {/* Spinning ring */}
-            <div style={{
-                width: '64px', height: '64px', borderRadius: '50%',
-                border: '5px solid rgba(255,255,255,0.2)',
-                borderTopColor: '#FFD700',
-                animation: 'spin 0.8s linear infinite',
-                margin: '0 auto 20px'
-            }} />
-            <p style={{ color: 'white', fontSize: '16px', fontWeight: 'bold', margin: '0 0 6px' }}>
-                {message}
-            </p>
-            <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '12px', margin: 0 }}>
-                Pipeline Adventist School
-            </p>
-        </div>
-        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-    </div>
-);
-
-// ── Printable Results Report ──────────────────────────────────────────────────
-const PrintableResultsReport = React.forwardRef(({ students, subjects, pivotData, className, examName, academicYear, term, getGradeLabel, getMarkColor, getGradeColor }, ref) => {
-    const rankedStudents = [...students].sort((a, b) => {
-        const totalA = subjects.reduce((sum, sub) => sum + (pivotData[a.studentId]?.[sub.id]?.marksObtained || 0), 0);
-        const totalB = subjects.reduce((sum, sub) => sum + (pivotData[b.studentId]?.[sub.id]?.marksObtained || 0), 0);
-        return totalB - totalA;
-    });
-
-    const getStudentTotal = (studentId) =>
-        subjects.reduce((sum, sub) => sum + (pivotData[studentId]?.[sub.id]?.marksObtained || 0), 0);
-
-    const getStudentAvg = (studentId) => {
-        const results = subjects.map(sub => pivotData[studentId]?.[sub.id]).filter(Boolean);
-        if (!results.length) return 0;
-        return results.reduce((sum, r) => sum + r.marksObtained, 0) / results.length;
-    };
-
-    const getSubjectTotal = (subjectId) =>
-        students.reduce((sum, s) => sum + (pivotData[s.studentId]?.[subjectId]?.marksObtained || 0), 0);
-
-    const getSubjectMean = (subjectId) => {
-        const results = students.map(s => pivotData[s.studentId]?.[subjectId]).filter(Boolean);
-        if (!results.length) return '-';
-        return (results.reduce((sum, r) => sum + r.marksObtained, 0) / results.length).toFixed(1);
-    };
-
-    // Short code for subject headers
-    const getSubjectCode = (name) => {
-        const codes = {
-            'mathematics': 'MTH', 'maths': 'MTH', 'math': 'MTH',
-            'english': 'ENG', 'kiswahili': 'KSW', 'swahili': 'KSW',
-            'science': 'SCI', 'science & technology': 'S&T',
-            'integrated science': 'I.SCI',
-            'social studies': 'SST', 'social': 'SST',
-            'creative activities': 'CRE.A', 'creative arts': 'CRE.A',
-            'creative': 'CRE',
-            'environmental': 'ENV',
-            'religious': 'CRE', 'cre': 'CRE',
-            'agriculture': 'AGRI', 'agric': 'AGRI',
-            'agric & nutrition': 'AGR', 'agriculture & nutrition': 'AGR',
-            'literacy': 'LIT', 'language': 'LANG',
-            'number work': 'NUM', 'integrated': 'INT',
-            'pre-technical': 'P.TEC', 'pre technical': 'P.TEC',
-        };
-        const lower = name.toLowerCase().trim();
-        if (codes[lower]) return codes[lower];
-        // Auto-shorten: take first 3 chars of each word
-        const words = name.split(/[\s&]+/).filter(Boolean);
-        if (words.length === 1) return name.substring(0, 4).toUpperCase();
-        return words.map(w => w.substring(0, 3).toUpperCase()).join('.');
-    };
-
-    // Subject rank by mean descending
-    const subjectMeans = subjects.map(sub => ({
-        id: sub.id,
-        mean: parseFloat(getSubjectMean(sub.id)) || 0
-    }));
-    const sortedByMean = [...subjectMeans].sort((a, b) => b.mean - a.mean);
-    const subjectRanks = {};
-    sortedByMean.forEach((s, i) => { subjectRanks[s.id] = i + 1; });
-
-    return (
-        <div ref={ref} style={pStyles.page}>
-            {/* School Header */}
-            <div style={pStyles.header}>
-                <div style={pStyles.headerRow}>
-                    <img src={logo1} alt="Logo" style={pStyles.logo} />
-                    <div style={pStyles.schoolInfo}>
-                        <h1 style={pStyles.schoolName}>PIPELINE ADVENTIST PRIMARY & JUNIOR SECONDARY SCHOOL</h1>
-                        <p style={pStyles.motto}>Abreast with the Best in Holistic Education</p>
-                        <p style={pStyles.contact}>P.O. BOX 61774-00200, NAIROBI | Tel: 0713 301 521 / 0721 885 996</p>
-                    </div>
-                    <img src={logo2} alt="Logo" style={pStyles.logo} />
-                </div>
-                <div style={pStyles.banner}>
-                    <h2 style={pStyles.bannerTitle}>CLASS RESULTS REPORT</h2>
-                    <p style={pStyles.bannerSub}>{className} | {examName} | Term {term} {academicYear}</p>
-                </div>
-            </div>
-
-            {/* Results Table */}
-            <div style={{ overflowX: 'auto' }}>
-                <table style={pStyles.table}>
-                    <thead>
-                        <tr style={pStyles.thead}>
-                            <th style={pStyles.thRank}>RANK</th>
-                            <th style={pStyles.thAdm}>ADM NO</th>
-                            <th style={pStyles.thName}>STUDENT NAME</th>
-                            {subjects.map(sub => (
-                                <th key={sub.id} style={pStyles.thSub}>
-                                    <div style={pStyles.rotated}>{getSubjectCode(sub.name)}</div>
-                                </th>
-                            ))}
-                            <th style={pStyles.thTotal}>TOTAL</th>
-                            <th style={pStyles.thTotal}>AVG%</th>
-                            <th style={pStyles.thTotal}>GRD</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {rankedStudents.map((student, index) => {
-                            const total = getStudentTotal(student.studentId);
-                            const avg = getStudentAvg(student.studentId);
-                            const grade = getGradeLabel(avg);
-                            return (
-                                <tr key={student.studentId} style={index % 2 === 0 ? pStyles.trEven : pStyles.trOdd}>
-                                    <td style={pStyles.tdC}>
-                                        <strong>{index === 0 ? '1' : index === 1 ? '2' : index === 2 ? '3' : index + 1}</strong>
-                                    </td>
-                                    <td style={pStyles.td}>{student.admissionNumber}</td>
-                                    <td style={pStyles.tdName}><strong>{student.firstName} {student.lastName}</strong></td>
-                                    {subjects.map(sub => {
-                                        const result = pivotData[student.studentId]?.[sub.id];
-                                        return (
-                                            <td key={sub.id} style={pStyles.tdC}>
-                                                {result ? result.marksObtained : '—'}
-                                            </td>
-                                        );
-                                    })}
-                                    <td style={pStyles.tdTotal}><strong>{total.toFixed(0)}</strong></td>
-                                    <td style={pStyles.tdTotal}><strong>{avg.toFixed(1)}%</strong></td>
-                                    <td style={pStyles.tdTotal}><strong>{grade}</strong></td>
-                                </tr>
-                            );
-                        })}
-                        {/* Subject totals row */}
-                        <tr style={pStyles.totalRow}>
-                            <td colSpan="3" style={{ ...pStyles.td, fontWeight: 'bold', fontSize: '9px' }}>📊 SUBJECT TOTAL</td>
-                            {subjects.map(sub => (
-                                <td key={sub.id} style={{ ...pStyles.tdC, fontWeight: 'bold' }}>
-                                    {getSubjectTotal(sub.id)}
-                                </td>
-                            ))}
-                            <td colSpan="3" style={pStyles.td} />
-                        </tr>
-                        {/* Subject mean row */}
-                        <tr style={pStyles.meanRow}>
-                            <td colSpan="3" style={{ ...pStyles.td, fontWeight: 'bold', fontSize: '9px' }}>📈 SUBJECT MEAN</td>
-                            {subjects.map(sub => (
-                                <td key={sub.id} style={{ ...pStyles.tdC, fontWeight: 'bold' }}>
-                                    {getSubjectMean(sub.id)}
-                                </td>
-                            ))}
-                            <td colSpan="3" style={pStyles.td} />
-                        </tr>
-                        {/* Subject rank row */}
-                        <tr style={pStyles.rankRow}>
-                            <td colSpan="3" style={{ ...pStyles.td, fontWeight: 'bold', fontSize: '9px', color: '#6f42c1' }}>🏆 SUBJECT RANK</td>
-                            {subjects.map(sub => {
-                                const rank = subjectRanks[sub.id];
-                                return (
-                                    <td key={sub.id} style={{ ...pStyles.tdC, fontWeight: 'bold' }}>
-                                        #{rank}
-                                    </td>
-                                );
-                            })}
-                            <td colSpan="3" style={pStyles.td} />
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-
-            {/* Summary */}
-            <div style={pStyles.summary}>
-                <div style={pStyles.summaryItem}>
-                    <strong>Total Students:</strong> {students.length}
-                </div>
-                <div style={pStyles.summaryItem}>
-                    <strong>Class Average:</strong> {students.length > 0 ? (students.reduce((sum, s) => sum + getStudentAvg(s.studentId), 0) / students.length).toFixed(2) : 0}%
-                </div>
-                <div style={pStyles.summaryItem}>
-                    <strong>Top Student:</strong> {rankedStudents[0] ? `${rankedStudents[0].firstName} ${rankedStudents[0].lastName} (${getStudentAvg(rankedStudents[0].studentId).toFixed(1)}%)` : '-'}
-                </div>
-                <div style={pStyles.summaryItem}>
-                    <strong>Date Printed:</strong> {new Date().toLocaleDateString()}
-                </div>
-            </div>
-
-            {/* Footer */}
-            <div style={pStyles.footer}>
-                <div style={pStyles.sigBox}>
-                    <p style={pStyles.sig}>Class Teacher: _________________________</p>
-                    <p style={pStyles.sig}>Signature: _____________ Date: __________</p>
-                </div>
-                <div style={pStyles.sigBox}>
-                    <p style={pStyles.sig}>Principal: _________________________</p>
-                    <p style={pStyles.sig}>Signature: _____________ Date: __________</p>
-                </div>
-            </div>
-            <p style={pStyles.footerNote}>Pipeline Adventist School — Official Class Results Report — {new Date().toLocaleDateString()}</p>
-        </div>
-    );
-});
 
 function Results() {
-    const printRef = useRef();
-
     const [results, setResults] = useState([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
@@ -239,33 +13,23 @@ function Results() {
     const [filterExam, setFilterExam] = useState('');
     const [filterClass, setFilterClass] = useState('');
     const [search, setSearch] = useState('');
-    const [step, setStep] = useState(1); // 1=select exam, 2=select class tiles, 3=view results
-    const [populatedClasses, setPopulatedClasses] = useState([]); // classes with results for selected exam
-    const [loadingClasses, setLoadingClasses] = useState(false);
-    const [allExamResults, setAllExamResults] = useState([]); // cached results for selected exam
 
     // Pivot data
     const [pivotStudents, setPivotStudents] = useState([]);
     const [pivotSubjects, setPivotSubjects] = useState([]);
     const [pivotData, setPivotData] = useState({});
 
-    const handlePrint = useReactToPrint({
-        contentRef: printRef,
-        documentTitle: `Results_${filterClass}_${filterExam}`,
-        onBeforePrint: () => Promise.resolve(),
-        onAfterPrint: () => console.log('Print complete'),
-        pageStyle: `
-            @page { size: A4 landscape; margin: 10mm; }
-            @media print {
-                body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-            }
-        `
-    });
-
     useEffect(() => {
         fetchExams();
         fetchClasses();
     }, []);
+
+    useEffect(() => {
+        if (editingCell && editInputRef.current) {
+            editInputRef.current.focus();
+            editInputRef.current.select();
+        }
+    }, [editingCell]);
 
     const fetchExams = async () => {
         const response = await api.get('/api/exams');
@@ -277,88 +41,26 @@ function Results() {
         setClasses(response.data);
     };
 
-    const handleSelectExam = async (examId) => {
-        setFilterExam(examId);
-        setFilterClass('');
-        setSearched(false);
-        setResults([]);
-        setPivotStudents([]); setPivotSubjects([]); setPivotData({});
-        setPopulatedClasses([]);
-        if (!examId) { setStep(1); return; }
-
-        // Move to step 2 IMMEDIATELY — don't wait for data
-        setStep(2);
-        setLoadingClasses(true);
-
-        try {
-            const response = await api.get('/api/results');
-            const data = response.data.filter(r => String(r.exam?.examId) === String(examId));
-            setAllExamResults(data); // cache for reuse
-
-            // Count students per class
-            const classMap = {};
-            data.forEach(r => {
-                const cls = r.student?.className;
-                const classId = r.student?.schoolClass?.classId;
-                if (cls) {
-                    const key = classId || cls;
-                    if (!classMap[key]) {
-                        classMap[key] = {
-                            className: cls,
-                            classId: classId,
-                            studentIds: new Set(),
-                            subjectIds: new Set(),
-                            section: r.student?.schoolClass?.section || ''
-                        };
-                    }
-                    if (r.student?.studentId) classMap[key].studentIds.add(r.student.studentId);
-                    if (r.subject?.subjectId) classMap[key].subjectIds.add(r.subject.subjectId);
-                }
-            });
-
-            const populated = Object.values(classMap).map(c => ({
-                ...c,
-                studentCount: c.studentIds.size,
-                subjectCount: c.subjectIds.size,
-            })).sort((a, b) => a.className.localeCompare(b.className));
-
-            setPopulatedClasses(populated);
-        } catch (e) { setError('Failed to load classes'); }
-        setLoadingClasses(false);
-    };
-
-    const handleSelectClass = (cls) => {
-        setFilterClass(cls.className);
-        setStep(3);
-        handleSearchWithClass(cls.className, filterExam);
-    };
-
-    const handleSearchWithClass = (className, examId) => {
-        if (!examId || !className) return;
-        setLoading(true); setError(''); setSearched(true);
-        try {
-            // Reuse already-fetched results — no second API call
-            const data = allExamResults.filter(r => r.student?.className === className);
-            setResults(data);
-            buildPivotTable(data);
-        } catch (err) { setError('Failed to load results'); }
-        setLoading(false);
-    };
-
     const handleSearch = async () => {
         if (!filterExam || !filterClass) {
             setError('Please select both an Exam and a Class to view results');
             return;
         }
-        setLoading(true); setError(''); setSearched(true);
+        setLoading(true);
+        setError('');
+        setSearched(true);
+
         try {
-            // Use cached results if available, else fetch
-            let source = allExamResults.length > 0
-                ? allExamResults
-                : (await api.get('/api/results')).data.filter(r => String(r.exam?.examId) === String(filterExam));
+            const response = await api.get('/api/results');
+            let data = response.data;
 
-            let data = source.filter(r => r.student?.className === filterClass);
+            // Filter by exam and class
+            data = data.filter(r =>
+                String(r.exam?.examId) === String(filterExam) &&
+                r.student?.className === filterClass
+            );
 
+            // Apply search
             if (search) {
                 data = data.filter(r =>
                     r.student?.firstName?.toLowerCase().includes(search.toLowerCase()) ||
@@ -366,9 +68,12 @@ function Results() {
                     r.student?.admissionNumber?.toLowerCase().includes(search.toLowerCase())
                 );
             }
+
             setResults(data);
             buildPivotTable(data);
-        } catch (err) { setError('Failed to load results'); }
+        } catch (err) {
+            setError('Failed to load results');
+        }
         setLoading(false);
     };
 
@@ -411,6 +116,69 @@ function Results() {
         setPivotData(pivot);
     };
 
+    const startEdit = (studentId, subjectId, currentValue) => {
+        setEditingCell({ studentId, subjectId });
+        setEditingValue(currentValue !== undefined && currentValue !== null ? String(currentValue) : '');
+    };
+
+    const commitEdit = (studentId, subjectId) => {
+        const key = `${studentId}_${subjectId}`;
+        const result = pivotData[studentId]?.[subjectId];
+        const newVal = editingValue.trim();
+        if (newVal === '' || newVal === String(result?.marksObtained)) {
+            setEditingCell(null); return;
+        }
+        const parsed = parseFloat(newVal);
+        if (isNaN(parsed) || parsed < 0 || parsed > 100) {
+            setError('Marks must be between 0 and 100');
+            setTimeout(() => setError(''), 3000);
+            setEditingCell(null); return;
+        }
+        setPendingChanges(prev => ({
+            ...prev,
+            [key]: { marks: parsed, resultId: result?.resultId, studentId, subjectId, examId: filterExam }
+        }));
+        setPivotData(prev => ({
+            ...prev,
+            [studentId]: {
+                ...prev[studentId],
+                [subjectId]: { ...(prev[studentId]?.[subjectId] || {}), marksObtained: parsed }
+            }
+        }));
+        setEditingCell(null);
+    };
+
+    const cancelEdit = () => setEditingCell(null);
+
+    const handleSaveChanges = async () => {
+        const changes = Object.values(pendingChanges);
+        if (changes.length === 0) return;
+        setSaving(true); setError('');
+        const bulkPayload = {
+            examId: parseInt(filterExam),
+            results: changes.map(c => ({
+                studentId: c.studentId, subjectId: c.subjectId,
+                marksObtained: c.marks, maxMarks: 100, resultId: c.resultId || null
+            }))
+        };
+        try {
+            const r = await api.post('/api/results/bulk-save', bulkPayload);
+            const d = r.data;
+            setSuccessMsg(`✅ ${d.updated || 0} updated, ${d.saved || 0} new marks saved!`);
+            setPendingChanges({});
+            setTimeout(() => setSuccessMsg(''), 3000);
+            handleSearchWithClass(filterClass, filterExam);
+        } catch (e) {
+            setError('Failed to save changes');
+        }
+        setSaving(false);
+    };
+
+    const handleDiscardChanges = () => {
+        setPendingChanges({});
+        handleSearchWithClass(filterClass, filterExam);
+    };
+
     const clearFilters = () => {
         setFilterExam('');
         setFilterClass('');
@@ -420,60 +188,25 @@ function Results() {
         setPivotStudents([]);
         setPivotSubjects([]);
         setPivotData({});
-        setAllExamResults([]);
-        setPopulatedClasses([]);
-        setStep(1);
         setError('');
     };
 
-    const getGradeLabel = (marks) => {
-        if (marks >= 75) return 'EE';
-        if (marks >= 55) return 'ME';
-        if (marks >= 40) return 'AE';
-        return 'BE';
-    };
-
     const getGradeColor = (grade) => {
-        if (grade === 'EE') return '#28a745';
-        if (grade === 'ME') return '#2E75B6';
-        if (grade === 'AE') return '#ffc107';
-        return '#dc3545'; // BE
+        if (grade === 'A') return '#28a745';
+        if (grade === 'B') return '#2E75B6';
+        if (grade === 'C') return '#ffc107';
+        return '#dc3545';
     };
 
     const getMarkColor = (marks) => {
         if (!marks && marks !== 0) return '#999';
-        if (marks >= 75) return '#28a745';  // EE
-        if (marks >= 55) return '#2E75B6';  // ME
-        if (marks >= 40) return '#ffc107';  // AE
-        return '#dc3545';                    // BE
+        if (marks >= 80) return '#28a745';
+        if (marks >= 60) return '#2E75B6';
+        if (marks >= 40) return '#ffc107';
+        return '#dc3545';
     };
 
     // Calculate student total and average
-    // ── Subject summary stats (excludes blanks) ──────────────────────────────
-    const getSubjectStats = (subjectId) => {
-        const subjectResults = pivotStudents
-            .map(s => pivotData[s.studentId]?.[subjectId])
-            .filter(r => r && r.marksObtained !== null && r.marksObtained !== undefined);
-        if (subjectResults.length === 0) return { total: '-', mean: '-', count: 0 };
-        const total = subjectResults.reduce((sum, r) => sum + r.marksObtained, 0);
-        return {
-            total: total.toFixed(0),
-            mean: (total / subjectResults.length).toFixed(1),
-            count: subjectResults.length
-        };
-    };
-
-    const getSubjectRanks = () => {
-        const means = pivotSubjects.map(sub => ({
-            id: sub.id,
-            mean: parseFloat(getSubjectStats(sub.id).mean) || 0
-        }));
-        const sorted = [...means].sort((a, b) => b.mean - a.mean);
-        const ranks = {};
-        sorted.forEach((sub, i) => { ranks[sub.id] = i + 1; });
-        return ranks;
-    };
-
     const getStudentStats = (studentId) => {
         const studentResults = pivotSubjects.map(sub =>
             pivotData[studentId]?.[sub.id]
@@ -484,10 +217,10 @@ function Results() {
         const total = studentResults.reduce((sum, r) => sum + r.marksObtained, 0);
         const average = total / studentResults.length;
 
-        let grade = 'BE';
-        if (average >= 75) grade = 'EE';
-        else if (average >= 55) grade = 'ME';
-        else if (average >= 40) grade = 'AE';
+        let grade = 'D';
+        if (average >= 80) grade = 'A';
+        else if (average >= 60) grade = 'B';
+        else if (average >= 40) grade = 'C';
 
         return {
             total: total.toFixed(1),
@@ -509,28 +242,8 @@ function Results() {
 
     const selectedExamName = exams.find(e => String(e.examId) === String(filterExam))?.examName || '';
 
-    // ✅ Sort students by total marks descending for correct ranking
-    const rankedStudents = [...pivotStudents].sort((a, b) => {
-        const statsA = getStudentStats(a.studentId);
-        const statsB = getStudentStats(b.studentId);
-        const totalA = parseFloat(statsA.total) || 0;
-        const totalB = parseFloat(statsB.total) || 0;
-        if (totalB !== totalA) return totalB - totalA;
-        // Tiebreak by average
-        return parseFloat(statsB.average) - parseFloat(statsA.average);
-    });
-
     return (
         <div style={styles.container}>
-            <style>{`
-                @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
-                @keyframes spin { to { transform: rotate(360deg); } }
-                @media print {
-                    #print-area { display: block !important; }
-                }
-            `}</style>
-            {loadingClasses && <LoadingOverlay message="Loading class results..." />}
-            {loading && <LoadingOverlay message="Loading results table..." />}
             {/* Navbar */}
             <div style={styles.navbar}>
                 <div style={styles.navLeft}>
@@ -548,108 +261,77 @@ function Results() {
                 <p style={styles.subtitle}>Select exam and class to view results</p>
 
                 {error && <p style={styles.error}>{error}</p>}
+                {successMsg && <p style={styles.success}>{successMsg}</p>}
 
-                {/* ── STEP 1: Select Exam ── */}
-                {step === 1 && (
-                    <div>
-                        <h3 style={styles.stepTitle}>📝 Select an Exam</h3>
-                        <div style={styles.examGrid}>
-                            {exams.map(exam => (
-                                <div key={exam.examId}
-                                    onClick={() => handleSelectExam(exam.examId)}
-                                    onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-3px)'; e.currentTarget.style.boxShadow = '0 6px 16px rgba(0,0,0,0.15)'; }}
-                                    onMouseLeave={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.1)'; }}
-                                    style={styles.examTile}>
-                                    <div style={styles.examTileIcon}>📝</div>
-                                    <div style={styles.examTileName}>{exam.examName}</div>
-                                    <div style={styles.examTileMeta}>Term {exam.term} · {exam.academicYear}</div>
-                                    <div style={styles.examTileAction}>Click to view classes →</div>
-                                </div>
-                            ))}
+                {/* Pending changes banner */}
+                {Object.keys(pendingChanges).length > 0 && (
+                    <div style={styles.pendingBanner}>
+                        <span style={{ color: '#856404', fontWeight: 'bold' }}>
+                            ✏️ {Object.keys(pendingChanges).length} unsaved change{Object.keys(pendingChanges).length > 1 ? 's' : ''}
+                        </span>
+                        <div style={{ display: 'flex', gap: '8px' }}>
+                            <button onClick={handleSaveChanges} disabled={saving}
+                                style={{ backgroundColor: '#28a745', color: 'white', border: 'none', padding: '7px 18px', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold' }}>
+                                {saving ? '⏳ Saving...' : '💾 Save Changes'}
+                            </button>
+                            <button onClick={handleDiscardChanges}
+                                style={{ backgroundColor: '#dc3545', color: 'white', border: 'none', padding: '7px 12px', borderRadius: '5px', cursor: 'pointer' }}>
+                                ✕ Discard
+                            </button>
                         </div>
                     </div>
                 )}
 
-                {/* ── STEP 2: Class Tiles ── */}
-                {step === 2 && (
-                    <div>
-                        <div style={styles.stepHeader}>
-                            <button onClick={() => { setStep(1); setPopulatedClasses([]); }} style={styles.backBtn}>← Back</button>
-                            <div>
-                                <h3 style={styles.stepTitle}>🏫 Select a Class</h3>
-                                <p style={styles.stepSub}>
-                                    {exams.find(e => String(e.examId) === String(filterExam))?.examName} — {populatedClasses.length} class{populatedClasses.length !== 1 ? 'es' : ''} with results
-                                </p>
-                            </div>
-                        </div>
-
-                        {loadingClasses ? (
-                            <div style={styles.classGrid}>
-                                {[1,2,3,4,5,6].map(i => (
-                                    <div key={i} style={styles.skeletonTile}>
-                                        <div style={styles.skeletonTitle} />
-                                        <div style={styles.skeletonStats} />
-                                        <div style={styles.skeletonAction} />
-                                    </div>
+                {/* Filter Card */}
+                <div style={styles.filterCard}>
+                    <div style={styles.filterGrid}>
+                        <div style={styles.filterGroup}>
+                            <label style={styles.filterLabel}>📝 Exam *</label>
+                            <select style={styles.filterSelect} value={filterExam}
+                                onChange={e => setFilterExam(e.target.value)}>
+                                <option value="">-- Select Exam --</option>
+                                {exams.map(exam => (
+                                    <option key={exam.examId} value={exam.examId}>
+                                        {exam.examName} — Term {exam.term} {exam.academicYear}
+                                    </option>
                                 ))}
-                            </div>
-                        ) : populatedClasses.length === 0 ? (
-                            <div style={styles.emptyCard}>
-                                <p>📭 No results found for this exam yet.</p>
-                                <p style={{ color: '#666', fontSize: '13px' }}>Use Mark Entry to add marks first.</p>
-                            </div>
-                        ) : (
-                            <div style={styles.classGrid}>
-                                {populatedClasses.map((cls, i) => {
-                                    const sectionColors = {
-                                        'PRE_SCHOOL': '#6f42c1', 'LOWER_PRIMARY': '#2E75B6',
-                                        'UPPER_PRIMARY': '#fd7e14', 'JUNIOR_SCHOOL': '#20c997'
-                                    };
-                                    const color = sectionColors[cls.section] || '#1F3864';
-                                    return (
-                                        <div key={i} onClick={() => handleSelectClass(cls)}
-                                            onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-3px)'; e.currentTarget.style.boxShadow = '0 6px 16px rgba(0,0,0,0.15)'; }}
-                                            onMouseLeave={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = '0 2px 6px rgba(0,0,0,0.08)'; }}
-                                            style={{ ...styles.classTile, borderTop: `4px solid ${color}` }}>
-                                            <div style={{ ...styles.classTileHeader, color }}>
-                                                {cls.className}
-                                            </div>
-                                            <div style={styles.classTileStats}>
-                                                <div style={styles.classStat}>
-                                                    <span style={styles.classStatNum}>{cls.studentCount}</span>
-                                                    <span style={styles.classStatLbl}>Students</span>
-                                                </div>
-                                                <div style={styles.classDivider} />
-                                                <div style={styles.classStat}>
-                                                    <span style={styles.classStatNum}>{cls.subjectCount}</span>
-                                                    <span style={styles.classStatLbl}>Subjects</span>
-                                                </div>
-                                            </div>
-                                            <div style={{ ...styles.classTileAction, backgroundColor: color }}>
-                                                View Results →
-                                            </div>
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        )}
-                    </div>
-                )}
-
-                {/* ── STEP 3: Results Table ── */}
-                {step === 3 && (
-                    <div>
-                        <div style={styles.stepHeader}>
-                            <button onClick={() => { setStep(2); setSearched(false); }} style={styles.backBtn}>← Back to Classes</button>
-                            <div>
-                                <h3 style={styles.stepTitle}>📊 {filterClass} — {selectedExamName}</h3>
-                            </div>
-                            <input style={styles.searchInput}
-                                placeholder="🔍 Search student..."
+                            </select>
+                        </div>
+                        <div style={styles.filterGroup}>
+                            <label style={styles.filterLabel}>🏫 Class *</label>
+                            <select style={styles.filterSelect} value={filterClass}
+                                onChange={e => setFilterClass(e.target.value)}>
+                                <option value="">-- Select Class --</option>
+                                {classes.map(cls => (
+                                    <option key={cls.classId} value={cls.className}>
+                                        {cls.className} — {cls.stream}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+                        <div style={styles.filterGroup}>
+                            <label style={styles.filterLabel}>🔍 Search Student</label>
+                            <input style={styles.filterSelect}
+                                placeholder="Name or admission no..."
                                 value={search}
                                 onChange={e => setSearch(e.target.value)}
+                                onKeyDown={e => e.key === 'Enter' && handleSearch()}
                             />
                         </div>
+                        <div style={styles.filterGroup}>
+                            <label style={styles.filterLabel}>&nbsp;</label>
+                            <div style={styles.btnRow}>
+                                <button onClick={handleSearch} style={styles.searchBtn}
+                                    disabled={loading}>
+                                    {loading ? '⏳' : '🔍'} View Results
+                                </button>
+                                <button onClick={clearFilters} style={styles.clearBtn}>
+                                    ✕ Clear
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
 
                 {/* Results Pivot Table */}
                 {searched && !loading && (
@@ -672,11 +354,6 @@ function Results() {
                                         <p style={styles.tableSubtitle}>
                                             {pivotStudents.length} students | {pivotSubjects.length} subjects
                                         </p>
-                                    </div>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-                                        <button onClick={handlePrint} style={styles.printBtn}>
-                                            🖨️ Print Results
-                                        </button>
                                     </div>
                                     <div style={styles.tableBadges}>
                                         <span style={styles.badge}>👥 {pivotStudents.length} Students</span>
@@ -706,7 +383,7 @@ function Results() {
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            {rankedStudents.map((student, index) => {
+                                            {pivotStudents.map((student, index) => {
                                                 const stats = getStudentStats(student.studentId);
                                                 return (
                                                     <tr key={student.studentId}
@@ -726,23 +403,49 @@ function Results() {
                                                             const result = pivotData[student.studentId]?.[sub.id];
                                                             return (
                                                                 <td key={sub.id} style={{...styles.td, textAlign: 'center'}}>
-                                                                    {result ? (
-                                                                        <div style={styles.markCell}>
-                                                                            <span style={{
-                                                                                ...styles.markValue,
-                                                                                color: getMarkColor(result.marksObtained)
+                                                                    {editingCell?.studentId === student.studentId && editingCell?.subjectId === sub.id ? (
+                                                                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px' }}>
+                                                                            <input
+                                                                                ref={editInputRef}
+                                                                                type="number" min="0" max="100"
+                                                                                value={editingValue}
+                                                                                onChange={e => setEditingValue(e.target.value)}
+                                                                                onKeyDown={e => {
+                                                                                    if (e.key === 'Enter' || e.key === 'Tab') { e.preventDefault(); commitEdit(student.studentId, sub.id); }
+                                                                                    if (e.key === 'Escape') cancelEdit();
+                                                                                }}
+                                                                                onBlur={() => commitEdit(student.studentId, sub.id)}
+                                                                                style={{ width: '55px', padding: '4px', border: '2px solid #2E75B6', borderRadius: '4px', fontSize: '16px', textAlign: 'center', outline: 'none', backgroundColor: '#e3f2fd' }}
+                                                                            />
+                                                                            <div style={{ display: 'flex', gap: '3px' }}>
+                                                                                <button onMouseDown={() => commitEdit(student.studentId, sub.id)} style={{ backgroundColor: '#28a745', color: 'white', border: 'none', borderRadius: '3px', padding: '2px 6px', cursor: 'pointer', fontSize: '11px' }}>✓</button>
+                                                                                <button onMouseDown={cancelEdit} style={{ backgroundColor: '#dc3545', color: 'white', border: 'none', borderRadius: '3px', padding: '2px 6px', cursor: 'pointer', fontSize: '11px' }}>✕</button>
+                                                                            </div>
+                                                                        </div>
+                                                                    ) : result ? (
+                                                                        <div
+                                                                            onClick={() => startEdit(student.studentId, sub.id, result.marksObtained)}
+                                                                            title="Click to edit"
+                                                                            style={{
+                                                                                ...styles.markCell, cursor: 'pointer', padding: '4px', borderRadius: '4px',
+                                                                                outline: pendingChanges[`${student.studentId}_${sub.id}`] ? '2px solid #fd7e14' : 'none',
+                                                                                minHeight: '44px', justifyContent: 'center'
                                                                             }}>
+                                                                            <span style={{ ...styles.markValue, color: getMarkColor(result.marksObtained) }}>
                                                                                 {result.marksObtained}
                                                                             </span>
-                                                                            <span style={{
-                                                                                    ...styles.gradeSmall,
-                                                                                    backgroundColor: getGradeColor(getGradeLabel(result.marksObtained))
-                                                                                }}>
-                                                                                    {getGradeLabel(result.marksObtained)}
-                                                                                </span>
+                                                                            <span style={{ ...styles.gradeSmall, backgroundColor: getGradeColor(getGradeLabel(result.marksObtained)) }}>
+                                                                                {getGradeLabel(result.marksObtained)}
+                                                                            </span>
+                                                                            {pendingChanges[`${student.studentId}_${sub.id}`] && (
+                                                                                <span style={{ fontSize: '8px', color: '#fd7e14' }}>●</span>
+                                                                            )}
                                                                         </div>
                                                                     ) : (
-                                                                        <span style={styles.noMark}>—</span>
+                                                                        <span
+                                                                            onClick={() => startEdit(student.studentId, sub.id, null)}
+                                                                            style={{ ...styles.noMark, cursor: 'pointer', fontSize: '20px' }}
+                                                                            title="Click to add mark">+</span>
                                                                     )}
                                                                 </td>
                                                             );
@@ -780,74 +483,50 @@ function Results() {
                                             })}
 
                                             {/* Average Row */}
-                                            <tr style={{ backgroundColor: '#e8f4f8', borderTop: '2px solid #2E75B6' }}>
-                                                <td colSpan="3" style={{ ...styles.td, fontWeight: 'bold', color: '#1F3864', fontSize: '12px' }}>📊 Total Marks</td>
-                                                {pivotSubjects.map(sub => {
-                                                    const s = getSubjectStats(sub.id);
-                                                    return <td key={sub.id} style={{ ...styles.td, textAlign: 'center' }}>
-                                                        <strong style={{ color: '#1F3864', fontSize: '12px' }}>{s.total}</strong>
-                                                    </td>;
-                                                })}
-                                                <td colSpan="3" style={styles.td} />
+                                            <tr style={styles.averageRow}>
+                                                <td colSpan="3" style={{...styles.td, ...styles.avgLabel}}>
+                                                    📊 Subject Average
+                                                </td>
+                                                {pivotSubjects.map(sub => (
+                                                    <td key={sub.id} style={{...styles.td, textAlign: 'center'}}>
+                                                        <strong style={{ color: '#1F3864' }}>
+                                                            {getSubjectAverage(sub.id)}
+                                                        </strong>
+                                                    </td>
+                                                ))}
+                                                <td colSpan="4" style={styles.td}></td>
                                             </tr>
-                                            <tr style={{ backgroundColor: '#e3f2fd' }}>
-                                                <td colSpan="3" style={{ ...styles.td, fontWeight: 'bold', color: '#2E75B6', fontSize: '12px' }}>📈 Mean (excl. blanks)</td>
-                                                {pivotSubjects.map(sub => {
-                                                    const s = getSubjectStats(sub.id);
-                                                    const mean = parseFloat(s.mean);
-                                                    return <td key={sub.id} style={{ ...styles.td, textAlign: 'center' }}>
-                                                        <span style={{ fontWeight: 'bold', fontSize: '12px', color: getMarkColor(mean) }}>{s.mean}</span>
-                                                        <div style={{ fontSize: '9px', color: '#999' }}>{s.count} pupil{s.count !== 1 ? 's' : ''}</div>
-                                                    </td>;
-                                                })}
-                                                <td colSpan="3" style={styles.td} />
-                                            </tr>
-                                            {(() => {
-                                                const subjectRanks = getSubjectRanks();
-                                                return <tr style={{ backgroundColor: '#f3e5f5', borderBottom: '3px solid #6f42c1' }}>
-                                                    <td colSpan="3" style={{ ...styles.td, fontWeight: 'bold', color: '#6f42c1', fontSize: '12px' }}>🏆 Subject Rank</td>
-                                                    {pivotSubjects.map(sub => {
-                                                        const rank = subjectRanks[sub.id];
-                                                        return <td key={sub.id} style={{ ...styles.td, textAlign: 'center', fontWeight: 'bold', color: '#6f42c1' }}>#{rank}</td>;
-                                                    })}
-                                                    <td colSpan="3" style={styles.td} />
-                                                </tr>;
-                                            })()}
                                         </tbody>
                                     </table>
                                 </div>
 
                                 {/* Legend */}
                                 <div style={styles.legend}>
-                                    <span style={styles.legendTitle}>Grade Legend:</span>
-                                    <span style={{...styles.legendItem, color: '#28a745'}}>● EE (75-100) Exceeding Expectations</span>
-                                    <span style={{...styles.legendItem, color: '#2E75B6'}}>● ME (55-74) Meeting Expectations</span>
-                                    <span style={{...styles.legendItem, color: '#ffc107'}}>● AE (40-54) Approaching Expectations</span>
-                                    <span style={{...styles.legendItem, color: '#dc3545'}}>● BE (0-39) Below Expectations</span>
+                                    <span style={styles.legendTitle}>💡 Click any mark to edit · Grade Legend:</span>
+                                    <span style={{...styles.legendItem, color: '#28a745'}}>● A (80-100) Excellent</span>
+                                    <span style={{...styles.legendItem, color: '#2E75B6'}}>● B (60-79) Good</span>
+                                    <span style={{...styles.legendItem, color: '#ffc107'}}>● C (40-59) Average</span>
+                                    <span style={{...styles.legendItem, color: '#dc3545'}}>● D (0-39) Below Average</span>
                                 </div>
                             </div>
                         )}
                     </>
                 )}
 
+                {/* Instructions when nothing selected */}
+                {!searched && (
+                    <div style={styles.instructionCard}>
+                        <h3 style={{ color: '#1F3864', marginBottom: '15px' }}>📋 How to View Results</h3>
+                        <ol style={{ paddingLeft: '20px', lineHeight: '2.2', color: '#555' }}>
+                            <li>Select an <strong>Exam</strong> from the dropdown</li>
+                            <li>Select a <strong>Class</strong> from the dropdown</li>
+                            <li>Click <strong>🔍 View Results</strong></li>
+                            <li>Results show as a table with students as rows and subjects as columns</li>
+                            <li>Subject averages appear at the bottom</li>
+                            <li>Use <strong>Mark Entry</strong> to add or edit marks</li>
+                        </ol>
                     </div>
                 )}
-            </div>
-        {/* Hidden printable area — must be rendered but not visible */}
-            <div style={{ overflow: 'hidden', height: 0, width: 0, position: 'fixed' }}>
-                <PrintableResultsReport
-                    ref={printRef}
-                    students={pivotStudents}
-                    subjects={pivotSubjects}
-                    pivotData={pivotData}
-                    className={filterClass || ''}
-                    examName={selectedExamName}
-                    academicYear={exams.find(e => String(e.examId) === String(filterExam))?.academicYear || ''}
-                    term={exams.find(e => String(e.examId) === String(filterExam))?.term || ''}
-                    getGradeLabel={getGradeLabel}
-                    getMarkColor={getMarkColor}
-                    getGradeColor={getGradeColor}
-                />
             </div>
         </div>
     );
@@ -926,78 +605,7 @@ const styles = {
 
     // Empty and instruction cards
     emptyCard: { backgroundColor: 'white', padding: '40px', borderRadius: '10px', textAlign: 'center', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' },
-    instructionCard: { backgroundColor: 'white', padding: '25px', borderRadius: '10px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' },
-
-    // Step navigation
-    stepHeader: { display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '20px', flexWrap: 'wrap' },
-    stepTitle: { color: '#1F3864', margin: '0 0 3px 0', fontSize: '20px' },
-    stepSub: { color: '#666', margin: 0, fontSize: '13px' },
-    backBtn: { backgroundColor: '#6c757d', color: 'white', border: 'none', padding: '9px 16px', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold', whiteSpace: 'nowrap' },
-    searchInput: { padding: '9px 14px', borderRadius: '5px', border: '2px solid #ddd', fontSize: '14px', minWidth: '220px' },
-    loadingBox: { backgroundColor: 'white', padding: '40px', borderRadius: '10px', textAlign: 'center', color: '#666', boxShadow: '0 2px 4px rgba(0,0,0,0.08)' },
-
-    // Exam tiles
-    examGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '15px', marginBottom: '20px' },
-    examTile: { backgroundColor: 'white', borderRadius: '10px', overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.1)', cursor: 'pointer', transition: 'transform 0.15s', border: '2px solid transparent', userSelect: 'none', WebkitUserSelect: 'none' },
-    examTileIcon: { fontSize: '36px', textAlign: 'center', padding: '20px 20px 8px 20px' },
-    examTileName: { color: '#1F3864', fontWeight: 'bold', fontSize: '16px', textAlign: 'center', padding: '0 15px 5px' },
-    examTileMeta: { color: '#888', fontSize: '12px', textAlign: 'center', padding: '0 15px 12px' },
-    examTileAction: { backgroundColor: '#1F3864', color: 'white', textAlign: 'center', padding: '8px', fontSize: '12px' },
-
-    // Class tiles
-    classGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '12px', marginBottom: '20px' },
-    classTile: { backgroundColor: 'white', borderRadius: '10px', overflow: 'hidden', boxShadow: '0 2px 6px rgba(0,0,0,0.08)', cursor: 'pointer', transition: 'transform 0.15s, box-shadow 0.15s', userSelect: 'none', WebkitUserSelect: 'none' },
-    classTileHeader: { fontSize: '18px', fontWeight: 'bold', textAlign: 'center', padding: '16px 10px 8px' },
-    classTileStats: { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', padding: '8px 10px' },
-    classStat: { display: 'flex', flexDirection: 'column', alignItems: 'center' },
-    classStatNum: { fontSize: '20px', fontWeight: 'bold', color: '#1F3864' },
-    classStatLbl: { fontSize: '10px', color: '#888' },
-    classDivider: { width: '1px', height: '30px', backgroundColor: '#eee' },
-    classTileAction: { color: 'white', textAlign: 'center', padding: '7px', fontSize: '12px', marginTop: '8px' },
-
-    // Skeleton loading tiles
-    skeletonTile: { backgroundColor: 'white', borderRadius: '10px', overflow: 'hidden', boxShadow: '0 2px 6px rgba(0,0,0,0.08)', padding: '16px 10px', borderTop: '4px solid #e0e0e0' },
-    skeletonTitle: { height: '22px', backgroundColor: '#f0f0f0', borderRadius: '4px', margin: '0 auto 12px', width: '60%', animation: 'pulse 1.5s ease-in-out infinite' },
-    skeletonStats: { height: '40px', backgroundColor: '#f5f5f5', borderRadius: '4px', marginBottom: '12px' },
-    skeletonAction: { height: '28px', backgroundColor: '#e8e8e8', borderRadius: '4px' }
-};
-
-// ── Print Styles ─────────────────────────────────────────────────────────────
-const pStyles = {
-    page: { padding: '10px 14px', fontFamily: "'Times New Roman', Times, serif", color: '#000', fontSize: '12px' },
-    header: { borderBottom: '3px solid #1F3864', paddingBottom: '6px', marginBottom: '8px' },
-    headerRow: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '5px' },
-    logo: { width: '60px', height: '60px', objectFit: 'contain' },
-    schoolInfo: { textAlign: 'center', flex: 1, padding: '0 6px' },
-    schoolName: { color: '#1F3864', fontSize: '12px', margin: '0 0 2px 0', textTransform: 'uppercase', fontWeight: 'bold' },
-    motto: { color: '#2E75B6', fontStyle: 'italic', margin: '0 0 2px 0', fontSize: '11px' },
-    contact: { fontSize: '10px', color: '#666', margin: 0 },
-    banner: { backgroundColor: '#1F3864', padding: '4px 10px', textAlign: 'center' },
-    bannerTitle: { color: 'white', margin: '0 0 2px 0', fontSize: '12px', fontFamily: "'Times New Roman', Times, serif" },
-    bannerSub: { color: '#BDD7EE', margin: 0, fontSize: '11px', fontFamily: "'Times New Roman', Times, serif" },
-    table: { width: '100%', borderCollapse: 'collapse', fontSize: '12px', fontFamily: "'Times New Roman', Times, serif" },
-    thead: { backgroundColor: '#1F3864' },
-    thRank: { color: 'white', padding: '3px 4px', textAlign: 'center', fontSize: '11px', width: '25px', whiteSpace: 'nowrap' },
-    thAdm: { color: 'white', padding: '3px 4px', textAlign: 'left', fontSize: '11px', width: '70px', whiteSpace: 'nowrap' },
-    thName: { color: 'white', padding: '3px 4px', textAlign: 'left', fontSize: '11px', width: '130px', whiteSpace: 'nowrap' },
-    thSub: { color: 'white', padding: '1px', textAlign: 'center', fontSize: '10px', width: '35px', verticalAlign: 'bottom' },
-    thTotal: { color: '#FFD700', padding: '3px 4px', textAlign: 'center', fontSize: '11px', fontWeight: 'bold', width: '35px', whiteSpace: 'nowrap' },
-    rotated: { writingMode: 'vertical-rl', transform: 'rotate(180deg)', whiteSpace: 'nowrap', fontSize: '10px', padding: '2px 1px', minHeight: '50px', display: 'flex', alignItems: 'center', justifyContent: 'center' },
-    td: { padding: '2px 4px', borderBottom: '1px solid #ddd', fontSize: '12px' },
-    tdC: { padding: '2px 2px', borderBottom: '1px solid #ddd', fontSize: '12px', textAlign: 'center' },
-    tdName: { padding: '2px 4px', borderBottom: '1px solid #ddd', fontSize: '12px', whiteSpace: 'nowrap', maxWidth: '130px', overflow: 'hidden', textOverflow: 'ellipsis' },
-    tdTotal: { padding: '2px 4px', borderBottom: '1px solid #ddd', fontSize: '12px', textAlign: 'center', backgroundColor: '#f0f4ff', fontWeight: 'bold' },
-    trEven: { backgroundColor: '#f8f9fa' },
-    trOdd: { backgroundColor: 'white' },
-    totalRow: { backgroundColor: '#e8f4f8', borderTop: '2px solid #2E75B6' },
-    meanRow: { backgroundColor: '#e3f2fd' },
-    rankRow: { backgroundColor: '#f3e5f5', borderBottom: '2px solid #6f42c1' },
-    summary: { display: 'flex', gap: '12px', flexWrap: 'wrap', padding: '5px 0', borderTop: '1px solid #ddd', marginTop: '5px', fontSize: '11px', fontFamily: "'Times New Roman', Times, serif" },
-    summaryItem: { fontSize: '11px' },
-    footer: { display: 'flex', gap: '20px', marginTop: '10px', borderTop: '2px solid #1F3864', paddingTop: '6px' },
-    sigBox: { flex: 1 },
-    sig: { fontSize: '11px', margin: '0 0 5px 0', color: '#333', fontFamily: "'Times New Roman', Times, serif" },
-    footerNote: { textAlign: 'center', fontSize: '10px', color: '#999', marginTop: '6px', fontFamily: "'Times New Roman', Times, serif" },
+    instructionCard: { backgroundColor: 'white', padding: '25px', borderRadius: '10px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }
 };
 
 export default Results;
