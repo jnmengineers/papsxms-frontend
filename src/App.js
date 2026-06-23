@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import PrivateRoute from './components/PrivateRoute';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
@@ -21,9 +21,7 @@ import SectionReport from './pages/SectionReport';
 import StudentProfile from './pages/StudentProfile';
 import ChangePassword from './pages/ChangePassword';
 import Import from './pages/Import';
-import PrivateRoute from './components/PrivateRoute';
-
-
+import ProgressiveReport from './pages/ProgressiveReport';
 
 function App() {
     return (
@@ -49,6 +47,21 @@ function App() {
                 <Route path="/reportcards" element={
                     <PrivateRoute allowedRoles={['ADMIN', 'TEACHER']}>
                         <ReportCards />
+                    </PrivateRoute>
+                } />
+                <Route path="/mark-entry" element={
+                    <PrivateRoute allowedRoles={['ADMIN', 'TEACHER', 'CLERK']}>
+                        <MarkEntry />
+                    </PrivateRoute>
+                } />
+                <Route path="/progressive-report" element={
+                    <PrivateRoute allowedRoles={['ADMIN', 'TEACHER']}>
+                        <ProgressiveReport />
+                    </PrivateRoute>
+                } />
+                <Route path="/student/:studentId" element={
+                    <PrivateRoute allowedRoles={['ADMIN', 'TEACHER']}>
+                        <StudentProfile />
                     </PrivateRoute>
                 } />
 
@@ -95,9 +108,14 @@ function App() {
                         <ExamSchedules />
                     </PrivateRoute>
                 } />
-                <Route path="/progressive-report" element={
-                    <PrivateRoute allowedRoles={['ADMIN', 'TEACHER']}>
-                        <ProgressiveReport />
+                <Route path="/class-subjects" element={
+                    <PrivateRoute allowedRoles={['ADMIN']}>
+                        <ClassSubjects />
+                    </PrivateRoute>
+                } />
+                <Route path="/section-report" element={
+                    <PrivateRoute allowedRoles={['ADMIN']}>
+                        <SectionReport />
                     </PrivateRoute>
                 } />
                 <Route path="/users" element={
@@ -105,55 +123,18 @@ function App() {
                         <Users />
                     </PrivateRoute>
                 } />
-
-                    
-
-                    <Route path="/mark-entry" element={
-                        <PrivateRoute allowedRoles={['ADMIN', 'TEACHER', 'CLERK']}>
-                            <MarkEntry />
-                        </PrivateRoute>
-                    } />
-
-                    <Route path="/class-subjects" element={
+                <Route path="/import" element={
                     <PrivateRoute allowedRoles={['ADMIN']}>
-                        <ClassSubjects />
+                        <Import />
                     </PrivateRoute>
                 } />
 
-
-                   
-
-                    <Route path="/section-report" element={
-                        <PrivateRoute allowedRoles={['ADMIN']}>
-                            <SectionReport />
-                        </PrivateRoute>
-                    } />
-
-                   
-                
-                    <Route path="/student/:studentId" element={
-                        <PrivateRoute allowedRoles={['ADMIN', 'TEACHER']}>
-                            <StudentProfile />
-                        </PrivateRoute>
-                    } />
-
-                    <Route path="/change-password" element={
-                        <PrivateRoute allowedRoles={['ADMIN', 'TEACHER', 'CLERK']}>
-                            <ChangePassword />
-                        </PrivateRoute>
-                    } />
-
-                    
-
-                    <Route path="/import" element={
-                        <PrivateRoute allowedRoles={['ADMIN']}>
-                            <Import />
-                        </PrivateRoute>
-                    } />
-
-                    <Route path="/progressive-report" element={<Navigate to="/" />} />
-                
-
+                {/* All roles */}
+                <Route path="/change-password" element={
+                    <PrivateRoute allowedRoles={['ADMIN', 'TEACHER', 'CLERK']}>
+                        <ChangePassword />
+                    </PrivateRoute>
+                } />
             </Routes>
         </Router>
     );
