@@ -41,7 +41,6 @@ function Dashboard() {
                 users: users.data.length
             });
 
-            // Subject performance chart
             if (results.data.length > 0) {
                 const subjectMap = {};
                 results.data.forEach(r => {
@@ -59,7 +58,6 @@ function Dashboard() {
                 setSubjectPerformance(perfData);
             }
 
-            // Section stats
             const sections = [
                 { label: 'Pre-School', key: 'PRE_SCHOOL', color: '#6f42c1' },
                 { label: 'Lower Primary', key: 'LOWER_PRIMARY', color: '#2E75B6' },
@@ -82,21 +80,22 @@ function Dashboard() {
 
     const handleLogout = () => { localStorage.clear(); navigate('/'); };
     const getBarColor = (avg) => {
-        if (avg >= 80) return '#28a745';
-        if (avg >= 60) return '#2E75B6';
+        if (avg >= 75) return '#28a745';
+        if (avg >= 55) return '#2E75B6';
         if (avg >= 40) return '#ffc107';
         return '#dc3545';
     };
 
     const allMenuItems = [
         { icon: '🎓', label: 'Students', path: '/students', count: stats.students, color: '#2E75B6', roles: ['ADMIN', 'TEACHER'] },
-        { icon: '👨‍🏫', label: 'Teachers', path: '/teachers', count: stats.teachers, color: '#1F3864', roles: ['ADMIN'] },
+        { icon: '👨\u200d🏫', label: 'Teachers', path: '/teachers', count: stats.teachers, color: '#1F3864', roles: ['ADMIN'] },
         { icon: '🏫', label: 'Classes', path: '/classes', count: stats.classes, color: '#28a745', roles: ['ADMIN'] },
         { icon: '📚', label: 'Subjects', path: '/subjects', count: stats.subjects, color: '#fd7e14', roles: ['ADMIN'] },
         { icon: '📝', label: 'Exams', path: '/exams', count: stats.exams, color: '#6f42c1', roles: ['ADMIN'] },
         { icon: '📊', label: 'Results', path: '/results', count: stats.results, color: '#e83e8c', roles: ['ADMIN', 'TEACHER', 'CLERK'] },
         { icon: '📋', label: 'Report Cards', path: '/reportcards', count: stats.reportCards, color: '#20c997', roles: ['ADMIN', 'TEACHER'] },
         { icon: '✏️', label: 'Mark Entry', path: '/mark-entry', count: null, color: '#28a745', roles: ['ADMIN', 'TEACHER'] },
+        { icon: '📈', label: 'Progressive Report', path: '/progressive-report', count: null, color: '#e07a2f', roles: ['ADMIN', 'TEACHER'] },
         { icon: '🔗', label: 'Class Subjects', path: '/class-subjects', count: null, color: '#17a2b8', roles: ['ADMIN'] },
         { icon: '📈', label: 'Section Report', path: '/section-report', count: null, color: '#6f42c1', roles: ['ADMIN'] },
         { icon: '📅', label: 'Academic Years', path: '/academic-years', count: null, color: '#17a2b8', roles: ['ADMIN'] },
@@ -131,7 +130,7 @@ function Dashboard() {
                     <div style={styles.statsRow}>
                         {[
                             { label: 'Students', value: stats.students, color: '#2E75B6', icon: '🎓' },
-                            { label: 'Teachers', value: stats.teachers, color: '#1F3864', icon: '👨‍🏫' },
+                            { label: 'Teachers', value: stats.teachers, color: '#1F3864', icon: '👨\u200d🏫' },
                             { label: 'Classes', value: stats.classes, color: '#28a745', icon: '🏫' },
                             { label: 'Exams', value: stats.exams, color: '#6f42c1', icon: '📝' },
                             { label: 'Results Entered', value: stats.results, color: '#e83e8c', icon: '📊' },
@@ -192,7 +191,9 @@ function Dashboard() {
                     {menuItems.map((item, index) => (
                         <div key={index}
                             style={{...styles.card, borderTop: `4px solid ${item.color}`}}
-                            onClick={() => navigate(item.path)}>
+                            onClick={() => navigate(item.path)}
+                            onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-3px)'}
+                            onMouseLeave={e => e.currentTarget.style.transform = 'none'}>
                             <div style={styles.cardIcon}>{item.icon}</div>
                             <h3 style={styles.cardTitle}>{item.label}</h3>
                             {item.count !== null && (

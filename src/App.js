@@ -21,6 +21,7 @@ import SectionReport from './pages/SectionReport';
 import StudentProfile from './pages/StudentProfile';
 import ChangePassword from './pages/ChangePassword';
 import Import from './pages/Import';
+import PrivateRoute from './components/PrivateRoute';
 
 
 
@@ -94,6 +95,11 @@ function App() {
                         <ExamSchedules />
                     </PrivateRoute>
                 } />
+                <Route path="/progressive-report" element={
+                    <PrivateRoute allowedRoles={['ADMIN', 'TEACHER']}>
+                        <ProgressiveReport />
+                    </PrivateRoute>
+                } />
                 <Route path="/users" element={
                     <PrivateRoute allowedRoles={['ADMIN']}>
                         <Users />
@@ -144,6 +150,8 @@ function App() {
                             <Import />
                         </PrivateRoute>
                     } />
+
+                    <Route path="/progressive-report" element={<Navigate to="/" />} />
                 
 
             </Routes>
