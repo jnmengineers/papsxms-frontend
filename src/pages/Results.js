@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import api from '../services/api';
 import logo1 from '../assets/logo1.png';
 
@@ -18,6 +18,19 @@ function Results() {
     const [pivotStudents, setPivotStudents] = useState([]);
     const [pivotSubjects, setPivotSubjects] = useState([]);
     const [pivotData, setPivotData] = useState({});
+    const [step, setStep] = useState(1);
+    const [allExamResults, setAllExamResults] = useState([]);
+    const [populatedClasses, setPopulatedClasses] = useState([]);
+    const [loadingClasses, setLoadingClasses] = useState(false);
+
+    // Inline editing
+    const [editingCell, setEditingCell] = useState(null);
+    const [editingValue, setEditingValue] = useState('');
+    const [pendingChanges, setPendingChanges] = useState({});
+    const [saving, setSaving] = useState(false);
+    const [successMsg, setSuccessMsg] = useState('');
+    const editInputRef = useRef(null);
+    const printRef = useRef(null);
 
     useEffect(() => {
         fetchExams();
