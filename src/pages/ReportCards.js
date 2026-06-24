@@ -16,8 +16,18 @@ const printReportCard = (card, singleResults, progressiveData, exams) => {
     const academicYear = exam?.academicYear;
 
     // Check if progressive data has multiple exams
-    const termExams = progressiveData?.exams || [];
-    const isProgressive = termExams.length > 1 && progressiveData?.subjects?.length > 0;
+    // Only include exams that actually have marks for this student
+    const allTermExams = progressiveData?.exams || [];
+    const subjects = progressiveData?.subjects || [];
+    const termExams = allTermExams.filter(e => {
+        const type = e.examType;
+        return subjects.some(sub =>
+            (type === 'OPENING' && sub.opening != null) ||
+            (type === 'MID_TERM' && sub.midTerm != null) ||
+            (type === 'END_TERM' && sub.endTerm != null)
+        );
+    });
+    const isProgressive = termExams.length > 1 && subjects.length > 0;
 
     const gc = (m) => m >= 75 ? '#28a745' : m >= 55 ? '#2E75B6' : m >= 40 ? '#ffc107' : '#dc3545';
     const gl = (m) => m >= 75 ? 'EE' : m >= 55 ? 'ME' : m >= 40 ? 'AE' : 'BE';
@@ -32,7 +42,7 @@ const printReportCard = (card, singleResults, progressiveData, exams) => {
 
     if (isProgressive) {
         // Progressive — columns for each exam type
-        const subjects = progressiveData.subjects || [];
+        // subjects already defined above
         const examCols = termExams.map(e => e.examType).filter(Boolean);
 
         subjectRows = subjects.map((sub, i) => {
@@ -552,15 +562,23 @@ function ReportCards() {
                     </div>
                 )}
 
-                {/* Filters */}
+                {/* Filters + Table — only shown when a class tile is selected */}
+                {selectedClassFilter ? (
+                <>
                 <div style={styles.filterRow}>
-                    <input style={styles.searchInput} placeholder="🔍 Search by name or adm no..."
+                    <div style={{ display:'flex', alignItems:'center', gap:'8px', flex:1 }}>
+                        <span style={{ backgroundColor: sectionColor(classTiles.find(c=>c.className===selectedClassFilter)?.section), color:'white', padding:'5px 12px', borderRadius:'20px', fontWeight:'bold', fontSize:'13px' }}>
+                            🏫 {selectedClassFilter}
+                        </span>
+                        <button onClick={() => setSelectedClassFilter('')} style={{ backgroundColor:'#6c757d', color:'white', border:'none', padding:'5px 10px', borderRadius:'5px', cursor:'pointer', fontSize:'12px' }}>✕ Close</button>
+                    </div>
+                    <input style={styles.searchInput} placeholder="🔍 Search student..."
                         value={search} onChange={e => setSearch(e.target.value)} />
                     <select style={styles.filterSelect} value={filterExam} onChange={e => setFilterExam(e.target.value)}>
                         <option value="">All Exams</option>
                         {exams.map(ex => <option key={ex.examId} value={ex.examId}>{ex.examName}</option>)}
                     </select>
-                    <button onClick={() => { setSearch(''); setFilterClass(''); setFilterExam(''); setSelectedClassFilter(''); }} style={styles.clearBtn}>✕ Clear</button>
+                    <button onClick={() => { setSearch(''); setFilterExam(''); }} style={styles.clearBtn}>✕ Clear</button>
                     <span style={{ color:'#666', fontSize:'13px', alignSelf:'center' }}>{filtered.length} card(s)</span>
                 </div>
 
@@ -622,6 +640,16 @@ function ReportCards() {
                     </div>
                 )}
             </div>
+
+                </>
+                ) : !loading && classTiles.length > 0 ? (
+                    <div style={{ backgroundColor:'white', padding:'30px', borderRadius:'10px', textAlign:'center', boxShadow:'0 2px 4px rgba(0,0,0,0.08)', color:'#888' }}>
+                        <div style={{ fontSize:'36px', marginBottom:'10px' }}>👆</div>
+                        <p style={{ fontSize:'14px', margin:0 }}>Click a class tile above to view its report cards</p>
+                    </div>
+                ) : loading ? (
+                    <p style={{ textAlign:'center', padding:'40px', color:'#666' }}>⏳ Loading...</p>
+                ) : null}
 
             {/* Delete Confirmation Modal */}
             {deleteConfirm && (
