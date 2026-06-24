@@ -149,6 +149,7 @@ function Results() {
     const [pendingChanges, setPendingChanges] = useState({});
     const [saving, setSaving] = useState(false);
     const editInputRef = useRef(null);
+    const [confirmDelete, setConfirmDelete] = useState(null); // {type:'mark'|'subject', studentId, subjectId, subjectName}
 
     useEffect(() => { fetchExams(); fetchClasses(); }, []);
 
@@ -272,6 +273,44 @@ function Results() {
     };
 
     const handleDiscardChanges = () => { setPendingChanges({}); handleSearchWithClass(filterClass, filterExam); };
+
+    // ── Delete functions ─────────────────────────────────────────────────────
+    const handleDeleteMark = async (studentId, subjectId) => {
+        const result = pivotData[studentId]?.[subjectId];
+        if (!result?.resultId) {
+            // Only pending — just remove from pending
+            const key = `${studentId}_${subjectId}`;
+            setPendingChanges(prev => { const n={...prev}; delete n[key]; return n; });
+            setPivotData(prev => { const n={...prev}; if(n[studentId]) { n[studentId]={...n[studentId]}; delete n[studentId][subjectId]; } return n; });
+            setConfirmDelete(null); return;
+        }
+        try {
+            await api.delete(`/api/results/${result.resultId}`);
+            setPivotData(prev => { const n={...prev}; if(n[studentId]){n[studentId]={...n[studentId]};delete n[studentId][subjectId];} return n; });
+            const key=`${studentId}_${subjectId}`;
+            setPendingChanges(prev=>{const n={...prev};delete n[key];return n;});
+            setSuccessMsg('✅ Mark deleted successfully');
+            setTimeout(()=>setSuccessMsg(''),3000);
+        } catch(e) { setError('Failed to delete mark'); }
+        setConfirmDelete(null);
+    };
+
+    const handleDeleteSubject = async (subjectId, subjectName) => {
+        // Delete all marks for this subject in this class
+        const toDelete = pivotStudents.map(s => pivotData[s.studentId]?.[subjectId]).filter(r => r?.resultId);
+        try {
+            await Promise.all(toDelete.map(r => api.delete(`/api/results/${r.resultId}`)));
+            setPivotData(prev => {
+                const n={...prev};
+                pivotStudents.forEach(s => { if(n[s.studentId]){n[s.studentId]={...n[s.studentId]};delete n[s.studentId][subjectId];} });
+                return n;
+            });
+            setPivotSubjects(prev => prev.filter(s => s.id !== subjectId));
+            setSuccessMsg(`✅ All marks for ${subjectName} deleted`);
+            setTimeout(()=>setSuccessMsg(''),3000);
+        } catch(e) { setError('Failed to delete subject marks'); }
+        setConfirmDelete(null);
+    };
 
     const clearFilters = () => {
         setFilterExam(''); setFilterClass(''); setSearch(''); setSearched(false);
@@ -492,7 +531,19 @@ function Results() {
                                                     <th style={{...styles.th, ...styles.stickyCol}}>#</th>
                                                     <th style={{...styles.th, ...styles.stickyCol2}}>Adm No</th>
                                                     <th style={{...styles.th, ...styles.stickyCol3}}>Student Name</th>
-                                                    {pivotSubjects.map(sub => <th key={sub.id} style={{...styles.th, ...styles.subjectTh}}>{sub.name}</th>)}
+                                                    {pivotSubjects.map(sub => (
+                                                        <th key={sub.id} style={{...styles.th, ...styles.subjectTh}}>
+                                                            <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:'3px' }}>
+                                                                <span>{sub.name}</span>
+                                                                <button
+                                                                    onClick={() => setConfirmDelete({ type:'subject', subjectId:sub.id, subjectName:sub.name })}
+                                                                    title={`Delete all ${sub.name} marks`}
+                                                                    style={{ backgroundColor:'rgba(220,53,69,0.8)', color:'white', border:'none', borderRadius:'3px', padding:'1px 6px', cursor:'pointer', fontSize:'10px', lineHeight:'1.4' }}>
+                                                                    🗑️ Del All
+                                                                </button>
+                                                            </div>
+                                                        </th>
+                                                    ))}
                                                     <th style={{...styles.th, ...styles.totalTh}}>Total</th>
                                                     <th style={{...styles.th, ...styles.totalTh}}>Avg %</th>
                                                     <th style={{...styles.th, ...styles.totalTh}}>Grade</th>
@@ -526,11 +577,15 @@ function Results() {
                                                                                 </div>
                                                                             </div>
                                                                         ) : result ? (
-                                                                            <div onClick={() => startEdit(student.studentId, sub.id, result.marksObtained)} title="Click to edit"
-                                                                                style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:'2px', cursor:'pointer', padding:'4px', borderRadius:'4px', minHeight:'44px', justifyContent:'center', outline: isPending ? '2px solid #fd7e14' : 'none' }}>
-                                                                                <span style={{ fontSize:'15px', fontWeight:'bold', color:getMarkColor(result.marksObtained) }}>{result.marksObtained}</span>
-                                                                                <span style={{ color:'white', padding:'1px 5px', borderRadius:'2px', fontSize:'10px', fontWeight:'bold', backgroundColor:getGradeColor(getGradeLabel(result.marksObtained)) }}>{getGradeLabel(result.marksObtained)}</span>
-                                                                                {isPending && <span style={{ fontSize:'8px', color:'#fd7e14' }}>●</span>}
+                                                                            <div style={{ position:'relative', display:'flex', flexDirection:'column', alignItems:'center', gap:'2px', padding:'4px', borderRadius:'4px', minHeight:'44px', justifyContent:'center', outline: isPending ? '2px solid #fd7e14' : 'none' }}>
+                                                                                <div onClick={() => startEdit(student.studentId, sub.id, result.marksObtained)} title="Click to edit" style={{ cursor:'pointer', display:'flex', flexDirection:'column', alignItems:'center', gap:'2px' }}>
+                                                                                    <span style={{ fontSize:'15px', fontWeight:'bold', color:getMarkColor(result.marksObtained) }}>{result.marksObtained}</span>
+                                                                                    <span style={{ color:'white', padding:'1px 5px', borderRadius:'2px', fontSize:'10px', fontWeight:'bold', backgroundColor:getGradeColor(getGradeLabel(result.marksObtained)) }}>{getGradeLabel(result.marksObtained)}</span>
+                                                                                    {isPending && <span style={{ fontSize:'8px', color:'#fd7e14' }}>●</span>}
+                                                                                </div>
+                                                                                <button
+                                                                                    onClick={e => { e.stopPropagation(); setConfirmDelete({ type:'mark', studentId:student.studentId, subjectId:sub.id, studentName:`${student.firstName} ${student.lastName}`, subjectName:sub.name }); }}
+                                                                                    style={{ position:'absolute', top:'1px', right:'1px', backgroundColor:'#dc3545', color:'white', border:'none', borderRadius:'3px', padding:'0px 4px', cursor:'pointer', fontSize:'9px', lineHeight:'1.4' }}>✕</button>
                                                                             </div>
                                                                         ) : (
                                                                             <span onClick={() => startEdit(student.studentId, sub.id, null)} title="Click to add mark"
@@ -584,6 +639,35 @@ function Results() {
             </div>
 
 
+        {/* Delete Confirmation Modal */}
+        {confirmDelete && (
+            <div style={{ position:'fixed', top:0, left:0, right:0, bottom:0, backgroundColor:'rgba(0,0,0,0.5)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:10000 }}>
+                <div style={{ backgroundColor:'white', padding:'25px 30px', borderRadius:'10px', boxShadow:'0 10px 30px rgba(0,0,0,0.3)', maxWidth:'400px', width:'90%' }}>
+                    <h3 style={{ color:'#dc3545', margin:'0 0 12px 0', fontSize:'18px' }}>🗑️ Confirm Delete</h3>
+                    {confirmDelete.type === 'mark' ? (
+                        <p style={{ color:'#555', marginBottom:'20px' }}>
+                            Delete <strong>{confirmDelete.subjectName}</strong> mark for <strong>{confirmDelete.studentName}</strong>? This cannot be undone.
+                        </p>
+                    ) : (
+                        <p style={{ color:'#555', marginBottom:'20px' }}>
+                            Delete <strong>ALL marks</strong> for <strong>{confirmDelete.subjectName}</strong> in this class? This will remove {pivotStudents.length} marks and cannot be undone.
+                        </p>
+                    )}
+                    <div style={{ display:'flex', gap:'10px', justifyContent:'flex-end' }}>
+                        <button onClick={() => setConfirmDelete(null)}
+                            style={{ backgroundColor:'#6c757d', color:'white', border:'none', padding:'9px 20px', borderRadius:'5px', cursor:'pointer', fontWeight:'bold' }}>
+                            Cancel
+                        </button>
+                        <button onClick={() => confirmDelete.type === 'mark'
+                            ? handleDeleteMark(confirmDelete.studentId, confirmDelete.subjectId)
+                            : handleDeleteSubject(confirmDelete.subjectId, confirmDelete.subjectName)}
+                            style={{ backgroundColor:'#dc3545', color:'white', border:'none', padding:'9px 20px', borderRadius:'5px', cursor:'pointer', fontWeight:'bold' }}>
+                            🗑️ Delete
+                        </button>
+                    </div>
+                </div>
+            </div>
+        )}
         </div>
     );
 }
