@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useReactToPrint } from 'react-to-print';
 import api from '../services/api';
 import logo1 from '../assets/logo1.png';
 import logo2 from '../assets/logo2.png';
@@ -124,13 +123,6 @@ const PrintableResultsReport = React.forwardRef(({ students, subjects, pivotData
 
 // ── Main Component ────────────────────────────────────────────────────────────
 function Results() {
-    const printRef = useRef();
-    const handlePrint = useReactToPrint({
-        contentRef: printRef,
-        documentTitle: `Results_${filterClass}_${filterExam}`,
-        pageStyle: `@page { size: A4 landscape; margin: 10mm; } @media print { body { -webkit-print-color-adjust: exact; } }`
-    });
-
     const [results, setResults] = useState([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
@@ -317,6 +309,8 @@ function Results() {
     };
 
     const selectedExamName = exams.find(e => String(e.examId) === String(filterExam))?.examName || '';
+
+
     const pendingCount = Object.keys(pendingChanges).length;
 
     const rankedStudents = [...pivotStudents].sort((a,b) => {
@@ -451,7 +445,39 @@ function Results() {
                                             <h3 style={styles.tableTitle}>{filterClass} — {selectedExamName}</h3>
                                             <p style={styles.tableSubtitle}>{pivotStudents.length} students | {pivotSubjects.length} subjects · 💡 Click any mark to edit</p>
                                         </div>
-                                        <button onClick={handlePrint} style={styles.printBtn}>🖨️ Print Results</button>
+                                        <button onClick={() => {
+                            const examObj = exams.find(e => String(e.examId) === String(filterExam));
+                            const getCode = (name) => {
+                                const codes = {'mathematics':'MTH','english':'ENG','kiswahili':'KSW','science':'SCI','social studies':'SST','agriculture & nutrition':'AGR','creative arts':'CRE.A','cre':'CRE','integrated science':'ISCI'};
+                                const lower = name.toLowerCase().trim();
+                                if (codes[lower]) return codes[lower];
+                                const words = name.split(/[\s&]+/).filter(Boolean);
+                                return words.length===1?name.substring(0,4).toUpperCase():words.map(w=>w.substring(0,3).toUpperCase()).join('.');
+                            };
+                            const ranked = [...pivotStudents].sort((a,b)=>{
+                                const tA=pivotSubjects.reduce((s,sub)=>s+(pivotData[a.studentId]?.[sub.id]?.marksObtained||0),0);
+                                const tB=pivotSubjects.reduce((s,sub)=>s+(pivotData[b.studentId]?.[sub.id]?.marksObtained||0),0);
+                                return tB-tA;
+                            });
+                            const subMeans=pivotSubjects.map(sub=>{const r=pivotStudents.map(s=>pivotData[s.studentId]?.[sub.id]).filter(Boolean);return{id:sub.id,mean:r.length?r.reduce((s,x)=>s+x.marksObtained,0)/r.length:0};});
+                            const subRanks={};[...subMeans].sort((a,b)=>b.mean-a.mean).forEach((s,i)=>{subRanks[s.id]=i+1;});
+                            const hdrs=pivotSubjects.map(sub=>`<th style="color:white;padding:2px;text-align:center;width:35px;vertical-align:bottom;"><div style="writing-mode:vertical-rl;transform:rotate(180deg);white-space:nowrap;font-size:10px;min-height:48px;display:flex;align-items:center;justify-content:center;">${getCode(sub.name)}</div></th>`).join('');
+                            const rows=ranked.map((st,i)=>{
+                                const total=pivotSubjects.reduce((s,sub)=>s+(pivotData[st.studentId]?.[sub.id]?.marksObtained||0),0);
+                                const res=pivotSubjects.map(sub=>pivotData[st.studentId]?.[sub.id]).filter(Boolean);
+                                const avg=res.length?total/res.length:0;
+                                const grade=avg>=75?'EE':avg>=55?'ME':avg>=40?'AE':'BE';
+                                const cells=pivotSubjects.map(sub=>{const r=pivotData[st.studentId]?.[sub.id];return`<td style="padding:2px 3px;border:1px solid #ddd;text-align:center;">${r?r.marksObtained:'—'}</td>`;}).join('');
+                                return`<tr style="background:${i%2===0?'#f8f9fa':'white'}"><td style="padding:2px 4px;border:1px solid #ddd;text-align:center;font-weight:bold;">${i+1}</td><td style="padding:2px 4px;border:1px solid #ddd;font-size:11px;">${st.admissionNumber}</td><td style="padding:2px 4px;border:1px solid #ddd;font-size:11px;white-space:nowrap;"><strong>${st.firstName} ${st.lastName}</strong></td>${cells}<td style="padding:2px 4px;border:1px solid #ddd;text-align:center;font-weight:bold;background:#f0f4ff;">${total.toFixed(0)}</td><td style="padding:2px 4px;border:1px solid #ddd;text-align:center;font-weight:bold;background:#f0f4ff;">${avg.toFixed(1)}%</td><td style="padding:2px 4px;border:1px solid #ddd;text-align:center;font-weight:bold;background:#f0f4ff;">${grade}</td></tr>`;
+                            }).join('');
+                            const totRow=pivotSubjects.map(sub=>{const t=pivotStudents.reduce((s,st)=>s+(pivotData[st.studentId]?.[sub.id]?.marksObtained||0),0);return`<td style="padding:2px 3px;border:1px solid #ddd;text-align:center;font-weight:bold;">${t}</td>`;}).join('');
+                            const meanRow=pivotSubjects.map(sub=>{const r=pivotStudents.map(s=>pivotData[s.studentId]?.[sub.id]).filter(Boolean);const m=r.length?(r.reduce((s,x)=>s+x.marksObtained,0)/r.length).toFixed(1):'-';return`<td style="padding:2px 3px;border:1px solid #ddd;text-align:center;font-weight:bold;">${m}</td>`;}).join('');
+                            const rankRow=pivotSubjects.map(sub=>`<td style="padding:2px 3px;border:1px solid #ddd;text-align:center;font-weight:bold;color:#6f42c1;">#${subRanks[sub.id]}</td>`).join('');
+                            const html=`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${filterClass} Results</title><style>*{box-sizing:border-box;margin:0;padding:0;}body{font-family:'Times New Roman',Times,serif;font-size:12px;color:#000;padding:10px;}@media print{@page{size:A4 landscape;margin:8mm;}.no-print{display:none!important;}body{-webkit-print-color-adjust:exact;print-color-adjust:exact;}}</style></head><body><div class="no-print" style="background:#1F3864;color:white;padding:10px;margin-bottom:10px;border-radius:5px;display:flex;justify-content:space-between;align-items:center;"><span style="font-weight:bold;">${filterClass} — ${examObj?.examName||''}</span><button onclick="window.print()" style="background:#FFD700;color:#1F3864;border:none;padding:8px 20px;border-radius:5px;font-weight:bold;cursor:pointer;font-size:14px;">🖨️ Print / Save PDF</button></div><div style="text-align:center;border-bottom:3px solid #1F3864;padding-bottom:8px;margin-bottom:8px;"><div style="color:#1F3864;font-size:13px;font-weight:bold;text-transform:uppercase;">PIPELINE ADVENTIST PRIMARY & JUNIOR SECONDARY SCHOOL</div><div style="color:#2E75B6;font-style:italic;font-size:11px;margin:2px 0;">Abreast with the Best in Holistic Education</div><div style="font-size:10px;color:#666;">P.O. BOX 61774-00200, NAIROBI | Tel: 0713 301 521 / 0721 885 996</div><div style="background:#1F3864;padding:4px 10px;text-align:center;margin-top:5px;"><div style="color:white;font-weight:bold;">CLASS RESULTS REPORT</div><div style="color:#BDD7EE;font-size:11px;">${filterClass} | ${examObj?.examName||''} | Term ${examObj?.term||''} ${examObj?.academicYear||''}</div></div></div><table style="width:100%;border-collapse:collapse;font-size:12px;"><thead><tr style="background:#1F3864;"><th style="color:white;padding:3px 4px;text-align:center;width:25px;">RNK</th><th style="color:white;padding:3px 4px;text-align:left;width:70px;">ADM NO</th><th style="color:white;padding:3px 4px;text-align:left;width:130px;">STUDENT NAME</th>${hdrs}<th style="color:#FFD700;padding:3px 4px;text-align:center;width:35px;">TOT</th><th style="color:#FFD700;padding:3px 4px;text-align:center;width:40px;">AVG%</th><th style="color:#FFD700;padding:3px 4px;text-align:center;width:30px;">GRD</th></tr></thead><tbody>${rows}<tr style="background:#e8f4f8;border-top:2px solid #2E75B6;"><td colspan="3" style="padding:2px 4px;font-weight:bold;border:1px solid #ddd;">SUBJECT TOTAL</td>${totRow}<td colspan="3" style="border:1px solid #ddd;"></td></tr><tr style="background:#e3f2fd;"><td colspan="3" style="padding:2px 4px;font-weight:bold;border:1px solid #ddd;">SUBJECT MEAN</td>${meanRow}<td colspan="3" style="border:1px solid #ddd;"></td></tr><tr style="background:#f3e5f5;"><td colspan="3" style="padding:2px 4px;font-weight:bold;color:#6f42c1;border:1px solid #ddd;">SUBJECT RANK</td>${rankRow}<td colspan="3" style="border:1px solid #ddd;"></td></tr></tbody></table><div style="display:flex;gap:20px;padding:6px 0;border-top:1px solid #ddd;margin-top:6px;font-size:11px;"><span><strong>Total Students:</strong> ${ranked.length}</span><span><strong>Date:</strong> ${new Date().toLocaleDateString()}</span></div><div style="display:flex;gap:30px;margin-top:10px;border-top:2px solid #1F3864;padding-top:8px;"><div style="flex:1;"><p style="font-size:11px;margin-bottom:5px;">Class Teacher: _________________________</p><p style="font-size:11px;">Signature: _____________ Date: __________</p></div><div style="flex:1;"><p style="font-size:11px;margin-bottom:5px;">Principal: _________________________</p><p style="font-size:11px;">Signature: _____________ Date: __________</p></div></div></body></html>`;
+                            const win=window.open('','_blank');
+                            if(win){win.document.write(html);win.document.close();}
+                            else alert('Please allow popups to print results.');
+                        }} style={styles.printBtn}>🖨️ Print Results</button>
                                         <div style={styles.tableBadges}>
                                             <span style={styles.badge}>👥 {pivotStudents.length}</span>
                                             <span style={styles.badge}>📚 {pivotSubjects.length}</span>
@@ -557,13 +583,7 @@ function Results() {
                 )}
             </div>
 
-            {/* Hidden print area */}
-            <div style={{ overflow:'hidden', height:0, width:0, position:'fixed' }}>
-                <PrintableResultsReport ref={printRef} students={pivotStudents} subjects={pivotSubjects} pivotData={pivotData}
-                    className={filterClass||''} examName={selectedExamName}
-                    academicYear={exams.find(e=>String(e.examId)===String(filterExam))?.academicYear||''}
-                    term={exams.find(e=>String(e.examId)===String(filterExam))?.term||''} />
-            </div>
+
         </div>
     );
 }
