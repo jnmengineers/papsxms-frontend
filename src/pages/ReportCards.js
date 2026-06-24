@@ -417,6 +417,7 @@ function ReportCards() {
                         </div>
                     )}
                 </div>
+                </div>
 
                 {editingCard && (
                     <div style={s.editCard}>
@@ -583,25 +584,22 @@ function ReportCards() {
                     <p style={{ textAlign: 'center', padding: '40px', color: '#666' }}>Loading...</p>
                 ) : null}
 
-            </div>
-
-            </div>
-            {deleteConfirm && (
-                <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999 }}>
-                    <div style={{ backgroundColor: 'white', padding: '25px 30px', borderRadius: '10px', maxWidth: '380px', width: '90%', boxShadow: '0 10px 30px rgba(0,0,0,0.3)' }}>
-                        <h3 style={{ color: '#dc3545', margin: '0 0 12px 0' }}>Delete Report Card?</h3>
-                        <p style={{ color: '#555', marginBottom: '20px' }}>
-                            Delete report card for <strong>{deleteConfirm.student?.firstName} {deleteConfirm.student?.lastName}</strong> - {deleteConfirm.exam?.examName}? This cannot be undone.
-                        </p>
-                        <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
-                            <button onClick={() => setDeleteConfirm(null)} style={s.cancelBtn}>Cancel</button>
-                            <button onClick={() => handleDelete(deleteConfirm.reportId)} style={{ ...s.cancelBtn, backgroundColor: '#dc3545' }}>Delete</button>
+                {deleteConfirm && (
+                    <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999 }}>
+                        <div style={{ backgroundColor: 'white', padding: '25px 30px', borderRadius: '10px', maxWidth: '380px', width: '90%', boxShadow: '0 10px 30px rgba(0,0,0,0.3)' }}>
+                            <h3 style={{ color: '#dc3545', margin: '0 0 12px 0' }}>Delete Report Card?</h3>
+                            <p style={{ color: '#555', marginBottom: '20px' }}>
+                                {'Delete report card for '}
+                                <strong>{deleteConfirm.student?.firstName} {deleteConfirm.student?.lastName}</strong>
+                                {deleteConfirm.exam ? deleteConfirm.exam.examName : ''} - This cannot be undone.
+                            </p>
+                            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+                                <button onClick={() => setDeleteConfirm(null)} style={s.cancelBtn}>Cancel</button>
+                                <button onClick={() => handleDelete(deleteConfirm.reportId)} style={{ ...s.cancelBtn, backgroundColor: '#dc3545' }}>Delete</button>
+                            </div>
                         </div>
                     </div>
-                </div>
-            )}
-            </div>
-            </div>
+                )}
         </div>
     );
 }
