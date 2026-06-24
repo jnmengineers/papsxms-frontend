@@ -639,8 +639,6 @@ function ReportCards() {
                         </table>
                     </div>
                 )}
-            </div>
-
                 </>
                 ) : !loading && classTiles.length > 0 ? (
                     <div style={{ backgroundColor:'white', padding:'30px', borderRadius:'10px', textAlign:'center', boxShadow:'0 2px 4px rgba(0,0,0,0.08)', color:'#888' }}>
