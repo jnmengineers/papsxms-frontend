@@ -423,7 +423,7 @@ function Results() {
                                             onMouseEnter={e => { e.currentTarget.style.transform='translateY(-3px)'; e.currentTarget.style.boxShadow='0 6px 16px rgba(0,0,0,0.15)'; }}
                                             onMouseLeave={e => { e.currentTarget.style.transform='none'; e.currentTarget.style.boxShadow='0 2px 6px rgba(0,0,0,0.08)'; }}
                                             style={{ ...styles.classTile, borderTop:`4px solid ${color}` }}>
-                                            <div style={{ ...styles.classTileHeader, color }}>{cls.stream ? cls.className + ' ' + (cls.stream === 'YELLOW' ? 'Yellow' : cls.stream === 'BLUE' ? 'Blue' : cls.stream === 'RED' ? 'Red' : cls.stream) : cls.className}</div>
+                                            <div style={{ ...styles.classTileHeader, color }}>{cls.stream ? cls.className + ' (' + (cls.stream === 'YELLOW' ? 'Yellow' : cls.stream === 'BLUE' ? 'Blue' : cls.stream === 'RED' ? 'Red' : cls.stream) + ')' : cls.className}</div>
                                             <div style={styles.classTileStats}>
                                                 <div style={styles.classStat}><span style={styles.classStatNum}>{cls.studentCount}</span><span style={styles.classStatLbl}>Students</span></div>
                                                 <div style={styles.classDivider} />
@@ -462,7 +462,7 @@ function Results() {
                                         <button onClick={() => {
                                             const cls = populatedClasses.find(c => c.className === filterClass);
                                             const displayName = cls && cls.stream
-                                                ? filterClass + ' ' + (cls.stream === 'YELLOW' ? 'Yellow' : cls.stream === 'BLUE' ? 'Blue' : cls.stream === 'RED' ? 'Red' : cls.stream)
+                                                ? filterClass + ' (' + (cls.stream === 'YELLOW' ? 'Yellow' : cls.stream === 'BLUE' ? 'Blue' : cls.stream === 'RED' ? 'Red' : cls.stream) + ')'
                                                 : filterClass;
                                             printResults({
                                                 filterClass: displayName,
