@@ -18,7 +18,7 @@ export const classDisplayName = (cls) => {
     const grade = cls.className || cls.class_name || '';
     const stream = cls.stream;
     if (!stream) return grade;
-    return `${grade} ${streamLabels[stream] || stream}`;
+    return `${grade} (${streamLabels[stream] || stream})`;
 };
 
 /**
@@ -41,7 +41,7 @@ export const classPrintLabel = (cls) => {
     const grade = cls.className || cls.class_name || '';
     const stream = cls.stream;
     if (!stream) return grade;
-    return `${grade} ${streamLabels[stream] || stream} Stream`;
+    return `${grade} (${streamLabels[stream] || stream} Stream)`;
 };
 
 /**
