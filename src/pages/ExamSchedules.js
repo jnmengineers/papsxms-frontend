@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import api from '../services/api';
 import logo1 from '../assets/logo1.png';
+import { classDisplayName } from '../utils/classUtils';
 
 // ✅ Outside parent — prevents keyboard dismiss on mobile
 const ScheduleForm = ({ formData, setFormData, exams, classes, subjects, onSubmit, onCancel, submitLabel }) => (
@@ -24,7 +25,7 @@ const ScheduleForm = ({ formData, setFormData, exams, classes, subjects, onSubmi
                     onChange={e => setFormData(prev => ({...prev, schoolClass: { classId: e.target.value }}))} required>
                     <option value="">Select Class</option>
                     {classes.map(cls => (
-                        <option key={cls.classId} value={cls.classId}>{cls.className}</option>
+                        <option key={cls.classId} value={cls.classId}>{classDisplayName(cls)}</option>
                     ))}
                 </select>
             </div>
@@ -178,7 +179,7 @@ function ExamSchedules() {
         ${filtered.map((s,i) => `<tr>
             <td>${i+1}</td>
             <td>${s.exam?.examName||''}</td>
-            <td>${s.schoolClass?.className||''}</td>
+            <td>${classDisplayName(s.schoolClass)||''}</td>
             <td>${s.subject?.subjectName||''}</td>
             <td>${s.examDate||''}</td>
             <td>${s.startTime||''}</td>
@@ -254,7 +255,7 @@ function ExamSchedules() {
                     </select>
                     <select style={styles.filterSelect} value={filterClass} onChange={e => setFilterClass(e.target.value)}>
                         <option value="">All Classes</option>
-                        {classes.map(cls => <option key={cls.classId} value={cls.classId}>{cls.className}</option>)}
+                        {classes.map(cls => <option key={cls.classId} value={cls.classId}>{classDisplayName(cls)}</option>)}
                     </select>
                     <input style={styles.searchInput} placeholder="🔍 Search subject, venue..."
                         value={search} onChange={e => setSearch(e.target.value)} />
@@ -293,7 +294,7 @@ function ExamSchedules() {
                                                     <tr style={{ ...(index%2===0?styles.trEven:styles.trOdd), outline: isEditing?'2px solid #2E75B6':'none', outlineOffset:'-2px' }}>
                                                         <td style={styles.td}>{index+1}</td>
                                                         <td style={styles.td}><span style={styles.examBadge}>{schedule.exam?.examName}</span></td>
-                                                        <td style={styles.td}><span style={styles.classBadge}>{schedule.schoolClass?.className}</span></td>
+                                                        <td style={styles.td}><span style={styles.classBadge}>{classDisplayName(schedule.schoolClass)}</span></td>
                                                         <td style={styles.td}>{schedule.subject?.subjectName}</td>
                                                         <td style={styles.td}><strong>{schedule.startTime}</strong></td>
                                                         <td style={styles.td}>{schedule.endTime}</td>
@@ -313,7 +314,7 @@ function ExamSchedules() {
                                                                 <div style={{ backgroundColor:'#f0f7ff', padding:'15px 20px', borderLeft:'4px solid #2E75B6', borderBottom:'1px solid #ddd' }}>
                                                                     <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'12px' }}>
                                                                         <h4 style={{ color:'#2E75B6', margin:0, fontSize:'13px' }}>
-                                                                            ✏️ Editing: {schedule.exam?.examName} — {schedule.schoolClass?.className} — {schedule.subject?.subjectName}
+                                                                            ✏️ Editing: {schedule.exam?.examName} — {classDisplayName(schedule.schoolClass)} — {schedule.subject?.subjectName}
                                                                         </h4>
                                                                         <button onClick={handleCancelEdit} style={{ background:'none', border:'none', fontSize:'16px', cursor:'pointer', color:'#999' }}>✕</button>
                                                                     </div>

@@ -3,6 +3,7 @@ import { useReactToPrint } from 'react-to-print';
 import api from '../services/api';
 import logo1 from '../assets/logo1.png';
 import logo2 from '../assets/logo2.png';
+import { classDisplayName, streamLabel } from '../utils/classUtils';
 
 // ─── Print Header ─────────────────────────────────────────────────────────────
 const PrintHeader = ({ title, subtitle }) => (
@@ -54,7 +55,7 @@ const PrintableMeritList = React.forwardRef(({ reportCards, results, title, subt
                     {sorted.map((card, i) => (
                         <tr key={card.reportId} style={i % 2 === 0 ? pStyles.trEven : pStyles.trOdd}>
                             <td style={pStyles.tdCenter}><strong>{card.classRank || i + 1}</strong></td>
-                            {level === 'grade' && <td style={pStyles.tdCenter}>{card.student?.className}</td>}
+                            {level === 'grade' && <td style={pStyles.tdCenter}>{classDisplayName(card.student)}</td>}
                             <td style={pStyles.td}>{card.student?.admissionNumber || '-'}</td>
                             <td style={pStyles.tdName}><strong>{card.student?.firstName} {card.student?.lastName}</strong></td>
                             {subjects.map(sub => (
@@ -120,7 +121,7 @@ const PrintableSectionReport = React.forwardRef(({ report, examName, term, year 
                         <tbody>
                             {section.classBreakdown.map((cls, i) => (
                                 <tr key={i} style={i % 2 === 0 ? pStyles.trEven : pStyles.trOdd}>
-                                    <td style={{ ...pStyles.td, fontWeight: 'bold' }}>{cls.className}</td>
+                                    <td style={{ ...pStyles.td, fontWeight: 'bold' }}>{classDisplayName(cls)}</td>
                                     {cls.subjectPerformance?.map((sub, j) => (
                                         <td key={j} style={{ ...pStyles.tdCenter, color: sub.meetingTarget ? '#155724' : '#721c24' }}>
                                             {sub.average}
@@ -365,7 +366,7 @@ function SectionReport() {
                                     onChange={e => setSelectedClass(e.target.value)}>
                                     <option value="">-- Select Class --</option>
                                     {classes.map(cls => (
-                                        <option key={cls.classId} value={cls.classId}>{cls.className}</option>
+                                        <option key={cls.classId} value={cls.classId}>{classDisplayName(cls)}</option>
                                     ))}
                                 </select>
                             )}
@@ -483,7 +484,7 @@ function SectionReport() {
                                                         .map((cls, i) => (
                                                             <tr key={i} style={i % 2 === 0 ? styles.trEven : styles.trOdd}>
                                                                 <td style={{ ...styles.td, fontWeight: 'bold' }}>
-                                                                    {i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : ''} {cls.className}
+                                                                    {i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : ''} {classDisplayName(cls)}
                                                                 </td>
                                                                 {cls.subjectPerformance?.map((sub, j) => (
                                                                     <td key={j} style={{
@@ -548,7 +549,7 @@ function SectionReport() {
                                                         <h4 style={styles.subTitle}>📈 Grade {cls.className} — Stream Comparison</h4>
                                                         {sorted.map((stream, k) => (
                                                             <div key={k} style={styles.streamBarRow}>
-                                                                <div style={styles.streamBarLabel}>{stream.className}</div>
+                                                                <div style={styles.streamBarLabel}>{classDisplayName(stream)}</div>
                                                                 <div style={styles.streamBarOuter}>
                                                                     <div style={{
                                                                         ...styles.streamBarInner,
@@ -585,14 +586,14 @@ function SectionReport() {
                     <div>
                         {selectedExam && selectedClass && streamCards.length > 0 && (
                             <div style={styles.printBar}>
-                                <span style={styles.printBarInfo}>📋 {selectedClassObj?.className} — {streamCards.length} students</span>
+                                <span style={styles.printBarInfo}>📋 {classDisplayName(selectedClassObj)} — {streamCards.length} students</span>
                                 <button onClick={handlePrintStreamMerit} style={styles.printBtn}>🖨️ Print Merit List</button>
                             </div>
                         )}
                         {selectedExam && selectedClass && streamCards.length > 0 ? (
                             <div style={styles.meritCard}>
                                 <div style={styles.meritHeader}>
-                                    <h3 style={styles.meritTitle}>📋 {selectedClassObj?.className} — Stream Merit List</h3>
+                                    <h3 style={styles.meritTitle}>📋 {classDisplayName(selectedClassObj)} — Stream Merit List</h3>
                                     <p style={styles.meritSub}>{selectedExamObj?.examName} | Term {selectedExamObj?.term} {selectedExamObj?.academicYear}</p>
                                 </div>
                                 <div style={{ overflowX: 'auto' }}>
@@ -686,7 +687,7 @@ function SectionReport() {
                                                 <tr key={card.reportId} style={i % 2 === 0 ? styles.trEven : styles.trOdd}>
                                                     <td style={styles.tdC}><strong>{card.termRank || i + 1}</strong></td>
                                                     <td style={styles.tdC}>
-                                                        <span style={styles.streamBadge}>{card.student?.className}</span>
+                                                        <span style={styles.streamBadge}>{classDisplayName(card.student)}</span>
                                                     </td>
                                                     <td style={styles.td}><span style={styles.admNo}>{card.student?.admissionNumber}</span></td>
                                                     <td style={styles.td}><strong>{card.student?.firstName} {card.student?.lastName}</strong></td>

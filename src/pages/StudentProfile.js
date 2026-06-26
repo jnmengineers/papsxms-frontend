@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import logo1 from '../assets/logo1.png';
 import Spinner from '../components/Spinner';
+import { streamLabel } from '../utils/classUtils';
 
 function StudentProfile() {
     const { studentId } = useParams();
@@ -115,7 +116,7 @@ function StudentProfile() {
                                     {student.gender}
                                 </span>
                                 <span style={styles.metaBadge}>🏫 {student.className}</span>
-                                {student.stream && <span style={styles.metaBadge}>🎨 {student.stream}</span>}
+                                {student.stream && <span style={styles.metaBadge}>🎨 {streamLabel(student.stream)}</span>}
                             </p>
                         </div>
                     </div>
@@ -170,7 +171,7 @@ function StudentProfile() {
                                     { label: 'Gender', value: student.gender },
                                     { label: 'Date of Birth', value: student.dateOfBirth },
                                     { label: 'Class', value: student.className },
-                                    { label: 'Stream', value: student.stream || 'N/A' },
+                                    { label: 'Stream', value: streamLabel(student.stream) || 'N/A' },
                                 ].map((item, i) => (
                                     <div key={i} style={styles.detailItem}>
                                         <span style={styles.detailLabel}>{item.label}</span>
