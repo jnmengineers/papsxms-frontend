@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import api from '../services/api';
 import logo1 from '../assets/logo1.png';
 import logo2 from '../assets/logo2.png';
+import { classDisplayName, classPrintLabel, classShortCode } from '../utils/classUtils';
 
 const gradeLabel = (m) => m >= 75 ? 'EE' : m >= 55 ? 'ME' : m >= 40 ? 'AE' : 'BE';
 const gradeColor = (m) => m >= 75 ? '#28a745' : m >= 55 ? '#2E75B6' : m >= 40 ? '#ffc107' : '#dc3545';
@@ -140,10 +141,10 @@ const printReportCard = (card, singleResults, progressiveData) => {
         + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">'
         + '<div style="font-size:12px;"><strong style="color:#1F3864;">Student Name:</strong> ' + (student ? student.firstName + ' ' + student.lastName : '-') + '</div>'
         + '<div style="font-size:12px;"><strong style="color:#1F3864;">Admission No:</strong> ' + (student ? (student.admissionNumber || '-') : '-') + '</div>'
-        + '<div style="font-size:12px;"><strong style="color:#1F3864;">Class:</strong> ' + (student ? (student.className || '-') : '-') + '</div>'
-        + '<div style="font-size:12px;"><strong style="color:#1F3864;">Stream:</strong> ' + (student ? (student.stream || '-') : '-') + '</div>'
+        + '<div style="font-size:12px;"><strong style="color:#1F3864;">Class:</strong> ' + (student && student.schoolClass ? (student.schoolClass.className || student.className || '-') + (student.schoolClass.stream ? ' ' + (student.schoolClass.stream === 'YELLOW' ? 'Yellow' : student.schoolClass.stream === 'BLUE' ? 'Blue' : student.schoolClass.stream === 'RED' ? 'Red' : student.schoolClass.stream) + ' Stream' : '') : (student ? student.className || '-' : '-')) + '</div>'
         + '<div style="font-size:12px;"><strong style="color:#1F3864;">Term:</strong> Term ' + term + '</div>'
         + '<div style="font-size:12px;"><strong style="color:#1F3864;">Academic Year:</strong> ' + academicYear + '</div>'
+        + '<div style="font-size:12px;"><strong style="color:#1F3864;">Exam:</strong> ' + (exam ? exam.examName : '-') + '</div>'
         + '</div></div>'
         + '<table style="width:100%;border-collapse:collapse;margin-bottom:12px;"><thead>'
         + '<tr style="background:#1F3864;">' + theadCols + '</tr>'
@@ -468,7 +469,7 @@ function ReportCards() {
                                         onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-3px)'; }}
                                         onMouseLeave={e => { e.currentTarget.style.transform = 'none'; }}
                                         style={{ ...s.classTile, borderTop: '4px solid ' + color, outline: isSelected ? '3px solid ' + color : 'none' }}>
-                                        <div style={{ ...s.classTileName, color }}>{cls.className}</div>
+                                        <div style={{ ...s.classTileName, color }}>{cls.className}{cls.section && <div style={{fontSize:'11px',fontWeight:'normal',color:'#888',marginTop:'2px'}}>{cls.stream ? (cls.stream === 'YELLOW' ? 'Yellow' : cls.stream === 'BLUE' ? 'Blue' : cls.stream === 'RED' ? 'Red' : cls.stream) + ' Stream' : ''}</div>}</div>
                                         <div style={s.classTileStats}>
                                             <div style={s.classTileStat}>
                                                 <span style={s.classTileNum}>{cls.count}</span>

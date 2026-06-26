@@ -1,80 +1,80 @@
-// ─────────────────────────────────────────────────────────────────────────────
-// classUtils.js  —  Shared helpers for displaying class names professionally
-// Import this wherever you show class names, streams or grade levels
-// ─────────────────────────────────────────────────────────────────────────────
+// ── Class Display Utilities ───────────────────────────────────────────────────
+// Use these everywhere a class name is displayed
 
-// Grade level → human readable name
-export const gradeLabel = (gradeLevel) => {
-    const map = {
-        'PG':  'Play Group',
-        'PP1': 'Pre-Primary 1',
-        'PP2': 'Pre-Primary 2',
-        'G1':  'Grade 1',
-        'G2':  'Grade 2',
-        'G3':  'Grade 3',
-        'G4':  'Grade 4',
-        'G5':  'Grade 5',
-        'G6':  'Grade 6',
-        'G7':  'Grade 7',
-        'G8':  'Grade 8',
-        'G9':  'Grade 9',
-    };
-    return map[gradeLevel] || gradeLevel;
+const streamLabels = {
+    YELLOW: 'Yellow', BLUE: 'Blue', RED: 'Red', GREEN: 'Green'
 };
 
-// Stream → human readable name
-export const streamLabel = (stream) => {
-    if (!stream) return '';
-    const map = {
-        'YELLOW': 'Yellow',
-        'BLUE':   'Blue',
-        'RED':    'Red',
-        'GREEN':  'Green',
-    };
-    return map[stream?.toUpperCase()] || stream;
+const streamInitials = {
+    YELLOW: 'Y', BLUE: 'B', RED: 'R', GREEN: 'G'
 };
 
-// Full class display name for dropdowns e.g. "Play Group (Blue)"
+/**
+ * Full display name: "Grade 1 Blue", "Play Group Yellow", "Grade 7"
+ * Use this everywhere in the UI
+ */
 export const classDisplayName = (cls) => {
     if (!cls) return '';
-    const grade = gradeLabel(cls.gradeLevel);
-    const stream = streamLabel(cls.stream);
-    return stream ? `${grade} (${stream})` : grade;
+    const grade = cls.className || cls.class_name || '';
+    const stream = cls.stream;
+    if (!stream) return grade;
+    return `${grade} ${streamLabels[stream] || stream}`;
 };
 
-// Full class display name for report cards e.g. "Play Group — Blue Stream"
-export const classReportName = (cls) => {
+/**
+ * Short code for print table headers: "G1B", "G1Y", "G7", "PGR"
+ * Use this in print headers where space is tight
+ */
+export const classShortCode = (cls) => {
     if (!cls) return '';
-    const grade = gradeLabel(cls.gradeLevel);
-    const stream = streamLabel(cls.stream);
-    return stream ? `${grade} — ${stream} Stream` : grade;
+    const grade = cls.gradeLevel || cls.grade_level || '';
+    const stream = cls.stream;
+    if (!stream) return grade;
+    return `${grade}${streamInitials[stream] || stream.charAt(0)}`;
 };
 
-// Short display for badges/chips e.g. "PG (Blue)"
-export const classShortName = (cls) => {
+/**
+ * Full label for print documents: "Grade 1 Blue Stream", "Grade 7"
+ */
+export const classPrintLabel = (cls) => {
     if (!cls) return '';
-    const stream = streamLabel(cls.stream);
-    return stream ? `${cls.gradeLevel} (${stream})` : cls.gradeLevel;
+    const grade = cls.className || cls.class_name || '';
+    const stream = cls.stream;
+    if (!stream) return grade;
+    return `${grade} ${streamLabels[stream] || stream} Stream`;
 };
 
-// Stream color
-export const streamColor = (stream) => {
-    const map = {
-        'YELLOW': '#ffc107',
-        'BLUE':   '#2E75B6',
-        'RED':    '#dc3545',
-        'GREEN':  '#28a745',
-    };
-    return map[stream?.toUpperCase()] || '#1F3864';
+/**
+ * Stream label only: "Blue", "Yellow", null
+ */
+export const streamLabel = (stream) => {
+    if (!stream) return null;
+    return streamLabels[stream] || stream;
 };
 
-// Section → human readable
-export const sectionLabel = (section) => {
-    const map = {
-        'PRE_SCHOOL':    'Pre-School',
-        'LOWER_PRIMARY': 'Lower Primary',
-        'UPPER_PRIMARY': 'Upper Primary',
-        'JUNIOR_SCHOOL': 'Junior School',
+/**
+ * Grade level label: "G1" → "Grade 1", "PG" → "Play Group"
+ */
+export const gradeLabel = (gradeLevel) => {
+    const labels = {
+        PG: 'Play Group', PP1: 'Pre-Primary 1', PP2: 'Pre-Primary 2',
+        G1: 'Grade 1', G2: 'Grade 2', G3: 'Grade 3',
+        G4: 'Grade 4', G5: 'Grade 5', G6: 'Grade 6',
+        G7: 'Grade 7', G8: 'Grade 8', G9: 'Grade 9'
     };
-    return map[section] || section;
+    return labels[gradeLevel] || gradeLevel || '';
+};
+
+/**
+ * Sort comparator for classes — by grade level then stream
+ */
+export const compareClasses = (a, b) => {
+    const gradeOrder = ['PG','PP1','PP2','G1','G2','G3','G4','G5','G6','G7','G8','G9'];
+    const streamOrder = ['YELLOW','BLUE','RED','GREEN'];
+    const ga = gradeOrder.indexOf(a.gradeLevel || a.grade_level);
+    const gb = gradeOrder.indexOf(b.gradeLevel || b.grade_level);
+    if (ga !== gb) return ga - gb;
+    const sa = streamOrder.indexOf(a.stream);
+    const sb = streamOrder.indexOf(b.stream);
+    return sa - sb;
 };

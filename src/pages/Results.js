@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import api from '../services/api';
 import logo1 from '../assets/logo1.png';
-import logo2 from '../assets/logo2.png';
+import { classDisplayName, classShortCode } from '../utils/classUtils';
 
 // ── Loading Overlay ───────────────────────────────────────────────────────────
 const LoadingOverlay = ({ message = 'Loading...' }) => (
@@ -15,11 +15,8 @@ const LoadingOverlay = ({ message = 'Loading...' }) => (
     </div>
 );
 
-// ── Printable Results Report ──────────────────────────────────────────────────
-const PrintableResultsReport = React.forwardRef(({ students, subjects, pivotData, className, examName, academicYear, term }, ref) => {
-    const getGradeLabel = (m) => m >= 75 ? 'EE' : m >= 55 ? 'ME' : m >= 40 ? 'AE' : 'BE';
-    const getMarkColor = (m) => !m && m !== 0 ? '#999' : m >= 75 ? '#28a745' : m >= 55 ? '#2E75B6' : m >= 40 ? '#ffc107' : '#dc3545';
-    const getGradeColor = (g) => g === 'EE' ? '#28a745' : g === 'ME' ? '#2E75B6' : g === 'AE' ? '#ffc107' : '#dc3545';
+// ── Print Results via window.open (mobile-safe) ───────────────────────────────
+const printResults = ({ filterClass, examObj, pivotStudents, pivotSubjects, pivotData }) => {
     const getCode = (name) => {
         const codes = { 'mathematics':'MTH','english':'ENG','kiswahili':'KSW','science':'SCI','social studies':'SST','agriculture & nutrition':'AGR','agriculture':'AGRI','creative arts':'CRE.A','cre':'CRE','integrated science':'ISCI','pre-technical studies':'P.TEC' };
         const lower = name.toLowerCase().trim();
@@ -27,99 +24,113 @@ const PrintableResultsReport = React.forwardRef(({ students, subjects, pivotData
         const words = name.split(/[\s&]+/).filter(Boolean);
         return words.length === 1 ? name.substring(0,4).toUpperCase() : words.map(w=>w.substring(0,3).toUpperCase()).join('.');
     };
-    const ranked = [...students].sort((a,b) => {
-        const tA = subjects.reduce((s,sub)=>s+(pivotData[a.studentId]?.[sub.id]?.marksObtained||0),0);
-        const tB = subjects.reduce((s,sub)=>s+(pivotData[b.studentId]?.[sub.id]?.marksObtained||0),0);
-        return tB-tA;
+
+    const ranked = [...pivotStudents].sort((a,b) => {
+        const tA = pivotSubjects.reduce((s,sub) => s+(pivotData[a.studentId]?.[sub.id]?.marksObtained||0),0);
+        const tB = pivotSubjects.reduce((s,sub) => s+(pivotData[b.studentId]?.[sub.id]?.marksObtained||0),0);
+        return tB - tA;
     });
-    const getTotal = (sid) => subjects.reduce((s,sub)=>s+(pivotData[sid]?.[sub.id]?.marksObtained||0),0);
-    const getAvg = (sid) => { const r=subjects.map(sub=>pivotData[sid]?.[sub.id]).filter(Boolean); return r.length?r.reduce((s,x)=>s+x.marksObtained,0)/r.length:0; };
-    const getSubTotal = (subId) => students.reduce((s,st)=>s+(pivotData[st.studentId]?.[subId]?.marksObtained||0),0);
-    const getSubMean = (subId) => { const r=students.map(s=>pivotData[s.studentId]?.[subId]).filter(Boolean); return r.length?(r.reduce((s,x)=>s+x.marksObtained,0)/r.length).toFixed(1):'-'; };
-    const subMeans = subjects.map(sub=>({id:sub.id,mean:parseFloat(getSubMean(sub.id))||0}));
-    const subRanks = {}; [...subMeans].sort((a,b)=>b.mean-a.mean).forEach((s,i)=>{subRanks[s.id]=i+1;});
-    return (
-        <div ref={ref} style={{ padding:'10px 14px', fontFamily:"'Times New Roman',Times,serif", color:'#000', fontSize:'12px' }}>
-            <div style={{ borderBottom:'3px solid #1F3864', paddingBottom:'6px', marginBottom:'8px' }}>
-                <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'5px' }}>
-                    <img src={logo1} alt="Logo" style={{ width:'60px', height:'60px', objectFit:'contain' }} />
-                    <div style={{ textAlign:'center', flex:1, padding:'0 6px' }}>
-                        <div style={{ color:'#1F3864', fontSize:'12px', fontWeight:'bold', textTransform:'uppercase' }}>PIPELINE ADVENTIST PRIMARY & JUNIOR SECONDARY SCHOOL</div>
-                        <div style={{ color:'#2E75B6', fontStyle:'italic', fontSize:'11px', margin:'2px 0' }}>Abreast with the Best in Holistic Education</div>
-                        <div style={{ fontSize:'10px', color:'#666' }}>P.O. BOX 61774-00200, NAIROBI | Tel: 0713 301 521 / 0721 885 996</div>
-                    </div>
-                    <img src={logo2} alt="Logo" style={{ width:'60px', height:'60px', objectFit:'contain' }} />
-                </div>
-                <div style={{ backgroundColor:'#1F3864', padding:'4px 10px', textAlign:'center' }}>
-                    <div style={{ color:'white', fontWeight:'bold', fontSize:'12px' }}>CLASS RESULTS REPORT</div>
-                    <div style={{ color:'#BDD7EE', fontSize:'11px' }}>{className} | {examName} | Term {term} {academicYear}</div>
-                </div>
-            </div>
-            <table style={{ width:'100%', borderCollapse:'collapse', fontSize:'12px' }}>
-                <thead>
-                    <tr style={{ backgroundColor:'#1F3864' }}>
-                        <th style={{ color:'white', padding:'3px 4px', textAlign:'center', width:'25px', fontSize:'11px' }}>RNK</th>
-                        <th style={{ color:'white', padding:'3px 4px', textAlign:'left', width:'70px', fontSize:'11px' }}>ADM NO</th>
-                        <th style={{ color:'white', padding:'3px 4px', textAlign:'left', width:'130px', fontSize:'11px' }}>STUDENT NAME</th>
-                        {subjects.map(sub=>(
-                            <th key={sub.id} style={{ color:'white', padding:'1px', textAlign:'center', width:'35px', verticalAlign:'bottom' }}>
-                                <div style={{ writingMode:'vertical-rl', transform:'rotate(180deg)', whiteSpace:'nowrap', fontSize:'10px', minHeight:'50px', display:'flex', alignItems:'center', justifyContent:'center' }}>{getCode(sub.name)}</div>
-                            </th>
-                        ))}
-                        <th style={{ color:'#FFD700', padding:'3px 4px', textAlign:'center', width:'35px', fontSize:'11px', fontWeight:'bold' }}>TOT</th>
-                        <th style={{ color:'#FFD700', padding:'3px 4px', textAlign:'center', width:'40px', fontSize:'11px', fontWeight:'bold' }}>AVG%</th>
-                        <th style={{ color:'#FFD700', padding:'3px 4px', textAlign:'center', width:'30px', fontSize:'11px', fontWeight:'bold' }}>GRD</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {ranked.map((st,i)=>{
-                        const total=getTotal(st.studentId); const avg=getAvg(st.studentId); const grade=getGradeLabel(avg);
-                        return (
-                            <tr key={st.studentId} style={{ backgroundColor:i%2===0?'#f8f9fa':'white' }}>
-                                <td style={{ padding:'2px 4px', borderBottom:'1px solid #ddd', textAlign:'center', fontWeight:'bold', fontSize:'12px' }}>{i+1}</td>
-                                <td style={{ padding:'2px 4px', borderBottom:'1px solid #ddd', fontSize:'12px' }}>{st.admissionNumber}</td>
-                                <td style={{ padding:'2px 4px', borderBottom:'1px solid #ddd', fontSize:'12px', whiteSpace:'nowrap' }}><strong>{st.firstName} {st.lastName}</strong></td>
-                                {subjects.map(sub=>{
-                                    const r=pivotData[st.studentId]?.[sub.id];
-                                    return <td key={sub.id} style={{ padding:'2px 2px', borderBottom:'1px solid #ddd', textAlign:'center', fontSize:'12px' }}>{r?r.marksObtained:'—'}</td>;
-                                })}
-                                <td style={{ padding:'2px 4px', borderBottom:'1px solid #ddd', textAlign:'center', backgroundColor:'#f0f4ff', fontWeight:'bold', fontSize:'12px' }}>{total.toFixed(0)}</td>
-                                <td style={{ padding:'2px 4px', borderBottom:'1px solid #ddd', textAlign:'center', backgroundColor:'#f0f4ff', fontWeight:'bold', fontSize:'12px', color:getMarkColor(avg) }}>{avg.toFixed(1)}%</td>
-                                <td style={{ padding:'2px 4px', borderBottom:'1px solid #ddd', textAlign:'center', backgroundColor:'#f0f4ff', fontWeight:'bold', fontSize:'12px' }}>{grade}</td>
-                            </tr>
-                        );
-                    })}
-                    <tr style={{ backgroundColor:'#e8f4f8', borderTop:'2px solid #2E75B6' }}>
-                        <td colSpan="3" style={{ padding:'2px 4px', fontWeight:'bold', fontSize:'10px', borderBottom:'1px solid #ddd' }}>SUBJECT TOTAL</td>
-                        {subjects.map(sub=><td key={sub.id} style={{ padding:'2px', textAlign:'center', fontWeight:'bold', borderBottom:'1px solid #ddd', fontSize:'11px' }}>{getSubTotal(sub.id)}</td>)}
-                        <td colSpan="3" style={{ borderBottom:'1px solid #ddd' }} />
-                    </tr>
-                    <tr style={{ backgroundColor:'#e3f2fd' }}>
-                        <td colSpan="3" style={{ padding:'2px 4px', fontWeight:'bold', fontSize:'10px', borderBottom:'1px solid #ddd' }}>SUBJECT MEAN</td>
-                        {subjects.map(sub=><td key={sub.id} style={{ padding:'2px', textAlign:'center', fontWeight:'bold', borderBottom:'1px solid #ddd', fontSize:'11px' }}>{getSubMean(sub.id)}</td>)}
-                        <td colSpan="3" style={{ borderBottom:'1px solid #ddd' }} />
-                    </tr>
-                    <tr style={{ backgroundColor:'#f3e5f5', borderBottom:'2px solid #6f42c1' }}>
-                        <td colSpan="3" style={{ padding:'2px 4px', fontWeight:'bold', fontSize:'10px', color:'#6f42c1', borderBottom:'1px solid #ddd' }}>SUBJECT RANK</td>
-                        {subjects.map(sub=><td key={sub.id} style={{ padding:'2px', textAlign:'center', fontWeight:'bold', color:'#6f42c1', borderBottom:'1px solid #ddd', fontSize:'11px' }}>#{subRanks[sub.id]}</td>)}
-                        <td colSpan="3" style={{ borderBottom:'1px solid #ddd' }} />
-                    </tr>
-                </tbody>
-            </table>
-            <div style={{ display:'flex', gap:'12px', flexWrap:'wrap', padding:'5px 0', borderTop:'1px solid #ddd', marginTop:'5px', fontSize:'11px' }}>
-                <span><strong>Total Students:</strong> {students.length}</span>
-                <span><strong>Class Average:</strong> {students.length>0?(students.reduce((s,st)=>s+getAvg(st.studentId),0)/students.length).toFixed(2):0}%</span>
-                <span><strong>Top Student:</strong> {ranked[0]?`${ranked[0].firstName} ${ranked[0].lastName} (${getAvg(ranked[0].studentId).toFixed(1)}%)`:'-'}</span>
-                <span><strong>Date Printed:</strong> {new Date().toLocaleDateString()}</span>
-            </div>
-            <div style={{ display:'flex', gap:'20px', marginTop:'10px', borderTop:'2px solid #1F3864', paddingTop:'6px' }}>
-                <div style={{ flex:1 }}><p style={{ fontSize:'11px', margin:'0 0 5px 0' }}>Class Teacher: _________________________</p><p style={{ fontSize:'11px', margin:0 }}>Signature: _____________ Date: __________</p></div>
-                <div style={{ flex:1 }}><p style={{ fontSize:'11px', margin:'0 0 5px 0' }}>Principal: _________________________</p><p style={{ fontSize:'11px', margin:0 }}>Signature: _____________ Date: __________</p></div>
-            </div>
-            <p style={{ textAlign:'center', fontSize:'10px', color:'#999', marginTop:'6px' }}>Pipeline Adventist School — Official Class Results Report — {new Date().toLocaleDateString()}</p>
-        </div>
-    );
-});
+
+    const subMeans = pivotSubjects.map(sub => {
+        const r = pivotStudents.map(s => pivotData[s.studentId]?.[sub.id]).filter(Boolean);
+        return { id: sub.id, mean: r.length ? r.reduce((s,x) => s+x.marksObtained, 0)/r.length : 0 };
+    });
+    const subRanks = {};
+    [...subMeans].sort((a,b) => b.mean-a.mean).forEach((s,i) => { subRanks[s.id] = i+1; });
+
+    const hdrs = pivotSubjects.map(sub =>
+        '<th style="color:white;padding:2px;text-align:center;width:35px;vertical-align:bottom;">' +
+        '<div style="writing-mode:vertical-rl;transform:rotate(180deg);white-space:nowrap;font-size:10px;min-height:48px;display:flex;align-items:center;justify-content:center;">' +
+        getCode(sub.name) + '</div></th>'
+    ).join('');
+
+    const rows = ranked.map((st, i) => {
+        const total = pivotSubjects.reduce((s,sub) => s+(pivotData[st.studentId]?.[sub.id]?.marksObtained||0), 0);
+        const res = pivotSubjects.map(sub => pivotData[st.studentId]?.[sub.id]).filter(Boolean);
+        const avg = res.length ? total/res.length : 0;
+        const grade = avg>=75?'EE':avg>=55?'ME':avg>=40?'AE':'BE';
+        const cells = pivotSubjects.map(sub => {
+            const r = pivotData[st.studentId]?.[sub.id];
+            return '<td style="padding:2px 3px;border:1px solid #ddd;text-align:center;">' + (r ? r.marksObtained : '—') + '</td>';
+        }).join('');
+        return '<tr style="background:' + (i%2===0?'#f8f9fa':'white') + '">' +
+            '<td style="padding:2px 4px;border:1px solid #ddd;text-align:center;font-weight:bold;">' + (i+1) + '</td>' +
+            '<td style="padding:2px 4px;border:1px solid #ddd;font-size:11px;">' + st.admissionNumber + '</td>' +
+            '<td style="padding:2px 4px;border:1px solid #ddd;font-size:11px;white-space:nowrap;"><strong>' + st.firstName + ' ' + st.lastName + '</strong></td>' +
+            cells +
+            '<td style="padding:2px 4px;border:1px solid #ddd;text-align:center;font-weight:bold;background:#f0f4ff;">' + total.toFixed(0) + '</td>' +
+            '<td style="padding:2px 4px;border:1px solid #ddd;text-align:center;font-weight:bold;background:#f0f4ff;">' + avg.toFixed(1) + '%</td>' +
+            '<td style="padding:2px 4px;border:1px solid #ddd;text-align:center;font-weight:bold;background:#f0f4ff;">' + grade + '</td>' +
+            '</tr>';
+    }).join('');
+
+    const totRow = pivotSubjects.map(sub => {
+        const t = pivotStudents.reduce((s,st) => s+(pivotData[st.studentId]?.[sub.id]?.marksObtained||0), 0);
+        return '<td style="padding:2px 3px;border:1px solid #ddd;text-align:center;font-weight:bold;">' + t + '</td>';
+    }).join('');
+
+    const meanRow = pivotSubjects.map(sub => {
+        const r = pivotStudents.map(s => pivotData[s.studentId]?.[sub.id]).filter(Boolean);
+        const m = r.length ? (r.reduce((s,x) => s+x.marksObtained,0)/r.length).toFixed(1) : '-';
+        return '<td style="padding:2px 3px;border:1px solid #ddd;text-align:center;font-weight:bold;">' + m + '</td>';
+    }).join('');
+
+    const rankRow = pivotSubjects.map(sub =>
+        '<td style="padding:2px 3px;border:1px solid #ddd;text-align:center;font-weight:bold;color:#6f42c1;">#' + subRanks[sub.id] + '</td>'
+    ).join('');
+
+    const html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">' +
+        '<title>' + filterClass + ' Results</title>' +
+        '<style>*{box-sizing:border-box;margin:0;padding:0;}body{font-family:\'Times New Roman\',Times,serif;font-size:12px;color:#000;padding:10px;}' +
+        '@media print{@page{size:A4 landscape;margin:8mm;}.no-print{display:none!important;}body{-webkit-print-color-adjust:exact;print-color-adjust:exact;}}' +
+        '</style></head>' +
+        '<body onload="setTimeout(function(){window.print();},400);">' +
+        '<div class="no-print" style="background:#1F3864;color:white;padding:10px;margin-bottom:10px;border-radius:5px;display:flex;justify-content:space-between;align-items:center;">' +
+        '<span style="font-weight:bold;">' + filterClass + ' — ' + (examObj ? examObj.examName : '') + '</span>' +
+        '<button onclick="window.print()" style="background:#FFD700;color:#1F3864;border:none;padding:8px 20px;border-radius:5px;font-weight:bold;cursor:pointer;font-size:14px;">Print / Save PDF</button>' +
+        '</div>' +
+        '<div style="text-align:center;border-bottom:3px solid #1F3864;padding-bottom:8px;margin-bottom:8px;">' +
+        '<div style="color:#1F3864;font-size:13px;font-weight:bold;text-transform:uppercase;">PIPELINE ADVENTIST PRIMARY &amp; JUNIOR SECONDARY SCHOOL</div>' +
+        '<div style="color:#2E75B6;font-style:italic;font-size:11px;margin:2px 0;">Abreast with the Best in Holistic Education</div>' +
+        '<div style="font-size:10px;color:#666;">P.O. BOX 61774-00200, NAIROBI | Tel: 0713 301 521 / 0721 885 996</div>' +
+        '<div style="background:#1F3864;padding:4px 10px;text-align:center;margin-top:5px;">' +
+        '<div style="color:white;font-weight:bold;">CLASS RESULTS REPORT</div>' +
+        '<div style="color:#BDD7EE;font-size:11px;">' + filterClass + ' | ' + (examObj ? examObj.examName : '') + ' | Term ' + (examObj ? examObj.term : '') + ' ' + (examObj ? examObj.academicYear : '') + '</div>' +
+        '</div></div>' +
+        '<table style="width:100%;border-collapse:collapse;font-size:12px;">' +
+        '<thead><tr style="background:#1F3864;">' +
+        '<th style="color:white;padding:3px 4px;text-align:center;width:25px;">RNK</th>' +
+        '<th style="color:white;padding:3px 4px;text-align:left;width:70px;">ADM NO</th>' +
+        '<th style="color:white;padding:3px 4px;text-align:left;width:130px;">STUDENT NAME</th>' +
+        hdrs +
+        '<th style="color:#FFD700;padding:3px 4px;text-align:center;width:35px;">TOT</th>' +
+        '<th style="color:#FFD700;padding:3px 4px;text-align:center;width:40px;">AVG%</th>' +
+        '<th style="color:#FFD700;padding:3px 4px;text-align:center;width:30px;">GRD</th>' +
+        '</tr></thead><tbody>' +
+        rows +
+        '<tr style="background:#e8f4f8;border-top:2px solid #2E75B6;"><td colspan="3" style="padding:2px 4px;font-weight:bold;border:1px solid #ddd;">SUBJECT TOTAL</td>' + totRow + '<td colspan="3" style="border:1px solid #ddd;"></td></tr>' +
+        '<tr style="background:#e3f2fd;"><td colspan="3" style="padding:2px 4px;font-weight:bold;border:1px solid #ddd;">SUBJECT MEAN</td>' + meanRow + '<td colspan="3" style="border:1px solid #ddd;"></td></tr>' +
+        '<tr style="background:#f3e5f5;"><td colspan="3" style="padding:2px 4px;font-weight:bold;color:#6f42c1;border:1px solid #ddd;">SUBJECT RANK</td>' + rankRow + '<td colspan="3" style="border:1px solid #ddd;"></td></tr>' +
+        '</tbody></table>' +
+        '<div style="display:flex;gap:20px;padding:6px 0;border-top:1px solid #ddd;margin-top:6px;font-size:11px;">' +
+        '<span><strong>Total Students:</strong> ' + ranked.length + '</span>' +
+        '<span><strong>Date:</strong> ' + new Date().toLocaleDateString() + '</span>' +
+        '</div>' +
+        '<div style="display:flex;gap:30px;margin-top:10px;border-top:2px solid #1F3864;padding-top:8px;">' +
+        '<div style="flex:1;"><p style="font-size:11px;margin-bottom:5px;">Class Teacher: _________________________</p><p style="font-size:11px;">Signature: _____________ Date: __________</p></div>' +
+        '<div style="flex:1;"><p style="font-size:11px;margin-bottom:5px;">Principal: _________________________</p><p style="font-size:11px;">Signature: _____________ Date: __________</p></div>' +
+        '</div>' +
+        '</body></html>';
+
+    const win = window.open('', '_blank');
+    if (win) {
+        win.document.write(html);
+        win.document.close();
+        win.focus();
+    } else {
+        alert('Please allow popups to print results.');
+    }
+};
 
 // ── Main Component ────────────────────────────────────────────────────────────
 function Results() {
@@ -138,18 +149,16 @@ function Results() {
     const [loadingClasses, setLoadingClasses] = useState(false);
     const [allExamResults, setAllExamResults] = useState([]);
 
-    // Pivot data
     const [pivotStudents, setPivotStudents] = useState([]);
     const [pivotSubjects, setPivotSubjects] = useState([]);
     const [pivotData, setPivotData] = useState({});
 
-    // Inline editing
     const [editingCell, setEditingCell] = useState(null);
     const [editingValue, setEditingValue] = useState('');
     const [pendingChanges, setPendingChanges] = useState({});
     const [saving, setSaving] = useState(false);
     const editInputRef = useRef(null);
-    const [confirmDelete, setConfirmDelete] = useState(null); // {type:'mark'|'subject', studentId, subjectId, subjectName}
+    const [confirmDelete, setConfirmDelete] = useState(null);
 
     useEffect(() => { fetchExams(); fetchClasses(); }, []);
 
@@ -160,25 +169,15 @@ function Results() {
         }
     }, [editingCell]);
 
-    const fetchExams = async () => {
-        try { const r = await api.get('/api/exams'); setExams(r.data); } catch(e) {}
-    };
-
-    const fetchClasses = async () => {
-        try { const r = await api.get('/api/classes'); setClasses(r.data); } catch(e) {}
-    };
+    const fetchExams = async () => { try { const r = await api.get('/api/exams'); setExams(r.data); } catch(e) {} };
+    const fetchClasses = async () => { try { const r = await api.get('/api/classes'); setClasses(r.data); } catch(e) {} };
 
     const handleSelectExam = async (examId) => {
-        setFilterExam(examId);
-        setFilterClass('');
-        setSearched(false);
-        setResults([]);
+        setFilterExam(examId); setFilterClass(''); setSearched(false); setResults([]);
         setPivotStudents([]); setPivotSubjects([]); setPivotData({});
-        setPopulatedClasses([]);
-        setPendingChanges({});
+        setPopulatedClasses([]); setPendingChanges({});
         if (!examId) { setStep(1); return; }
-        setStep(2);
-        setLoadingClasses(true);
+        setStep(2); setLoadingClasses(true);
         try {
             const response = await api.get('/api/results');
             const data = response.data.filter(r => String(r.exam?.examId) === String(examId));
@@ -189,7 +188,7 @@ function Results() {
                 const classId = r.student?.schoolClass?.classId;
                 if (cls) {
                     const key = classId || cls;
-                    if (!classMap[key]) classMap[key] = { className: cls, classId, studentIds: new Set(), subjectIds: new Set(), section: r.student?.schoolClass?.section || '' };
+                    if (!classMap[key]) classMap[key] = { className: cls, classId, studentIds: new Set(), subjectIds: new Set(), section: r.student?.schoolClass?.section || '', stream: r.student?.schoolClass?.stream || null, gradeLevel: r.student?.schoolClass?.gradeLevel || '' };
                     if (r.student?.studentId) classMap[key].studentIds.add(r.student.studentId);
                     if (r.subject?.subjectId) classMap[key].subjectIds.add(r.subject.subjectId);
                 }
@@ -201,9 +200,7 @@ function Results() {
     };
 
     const handleSelectClass = (cls) => {
-        setFilterClass(cls.className);
-        setPendingChanges({});
-        setStep(3);
+        setFilterClass(cls.className); setPendingChanges({}); setStep(3);
         handleSearchWithClass(cls.className, filterExam);
     };
 
@@ -212,8 +209,7 @@ function Results() {
         setLoading(true); setError(''); setSearched(true);
         try {
             const data = allExamResults.filter(r => r.student?.className === className);
-            setResults(data);
-            buildPivotTable(data);
+            setResults(data); buildPivotTable(data);
         } catch (err) { setError('Failed to load results'); }
         setLoading(false);
     };
@@ -224,7 +220,7 @@ function Results() {
         const uniqueSubjects = Object.entries(subjectMap).map(([id, name]) => ({ id, name })).sort((a,b) => a.name.localeCompare(b.name));
         const studentMap = {};
         data.forEach(r => { if (r.student) studentMap[r.student.studentId] = r.student; });
-        const uniqueStudents = Object.values(studentMap).sort((a,b) => `${a.firstName}${a.lastName}`.localeCompare(`${b.firstName}${b.lastName}`));
+        const uniqueStudents = Object.values(studentMap).sort((a,b) => (a.firstName+a.lastName).localeCompare(b.firstName+b.lastName));
         const pivot = {};
         data.forEach(r => {
             const sid = r.student?.studentId; const subId = r.subject?.subjectId;
@@ -233,7 +229,6 @@ function Results() {
         setPivotSubjects(uniqueSubjects); setPivotStudents(uniqueStudents); setPivotData(pivot);
     };
 
-    // ── Inline editing ────────────────────────────────────────────────────────
     const startEdit = (studentId, subjectId, currentValue) => {
         setEditingCell({ studentId, subjectId });
         setEditingValue(currentValue !== undefined && currentValue !== null ? String(currentValue) : '');
@@ -274,11 +269,9 @@ function Results() {
 
     const handleDiscardChanges = () => { setPendingChanges({}); handleSearchWithClass(filterClass, filterExam); };
 
-    // ── Delete functions ─────────────────────────────────────────────────────
     const handleDeleteMark = async (studentId, subjectId) => {
         const result = pivotData[studentId]?.[subjectId];
         if (!result?.resultId) {
-            // Only pending — just remove from pending
             const key = `${studentId}_${subjectId}`;
             setPendingChanges(prev => { const n={...prev}; delete n[key]; return n; });
             setPivotData(prev => { const n={...prev}; if(n[studentId]) { n[studentId]={...n[studentId]}; delete n[studentId][subjectId]; } return n; });
@@ -289,14 +282,12 @@ function Results() {
             setPivotData(prev => { const n={...prev}; if(n[studentId]){n[studentId]={...n[studentId]};delete n[studentId][subjectId];} return n; });
             const key=`${studentId}_${subjectId}`;
             setPendingChanges(prev=>{const n={...prev};delete n[key];return n;});
-            setSuccessMsg('✅ Mark deleted successfully');
-            setTimeout(()=>setSuccessMsg(''),3000);
+            setSuccessMsg('✅ Mark deleted'); setTimeout(()=>setSuccessMsg(''),3000);
         } catch(e) { setError('Failed to delete mark'); }
         setConfirmDelete(null);
     };
 
     const handleDeleteSubject = async (subjectId, subjectName) => {
-        // Delete all marks for this subject in this class
         const toDelete = pivotStudents.map(s => pivotData[s.studentId]?.[subjectId]).filter(r => r?.resultId);
         try {
             await Promise.all(toDelete.map(r => api.delete(`/api/results/${r.resultId}`)));
@@ -310,13 +301,6 @@ function Results() {
             setTimeout(()=>setSuccessMsg(''),3000);
         } catch(e) { setError('Failed to delete subject marks'); }
         setConfirmDelete(null);
-    };
-
-    const clearFilters = () => {
-        setFilterExam(''); setFilterClass(''); setSearch(''); setSearched(false);
-        setResults([]); setPivotStudents([]); setPivotSubjects([]); setPivotData({});
-        setAllExamResults([]); setPopulatedClasses([]); setPendingChanges([]);
-        setStep(1); setError(''); setSuccessMsg('');
     };
 
     const getGradeLabel = (marks) => marks >= 75 ? 'EE' : marks >= 55 ? 'ME' : marks >= 40 ? 'AE' : 'BE';
@@ -333,7 +317,7 @@ function Results() {
     const getSubjectRanks = () => {
         const means = pivotSubjects.map(sub => ({ id: sub.id, mean: parseFloat(getSubjectStats(sub.id).mean) || 0 }));
         const ranks = {};
-        [...means].sort((a,b) => b.mean - a.mean).forEach((s,i) => { ranks[s.id] = i+1; });
+        [...means].sort((a,b) => b.mean-a.mean).forEach((s,i) => { ranks[s.id] = i+1; });
         return ranks;
     };
 
@@ -342,16 +326,11 @@ function Results() {
         if (!r.length) return { total: 0, average: 0, grade: '-' };
         const total = r.reduce((s,x) => s + x.marksObtained, 0);
         const average = total / r.length;
-        let grade = 'BE';
-        if (average >= 75) grade = 'EE'; else if (average >= 55) grade = 'ME'; else if (average >= 40) grade = 'AE';
-        return { total: total.toFixed(1), average: average.toFixed(1), grade };
+        return { total: total.toFixed(1), average: average.toFixed(1), grade: average>=75?'EE':average>=55?'ME':average>=40?'AE':'BE' };
     };
 
     const selectedExamName = exams.find(e => String(e.examId) === String(filterExam))?.examName || '';
-
-
     const pendingCount = Object.keys(pendingChanges).length;
-
     const rankedStudents = [...pivotStudents].sort((a,b) => {
         const tA = parseFloat(getStudentStats(a.studentId).total) || 0;
         const tB = parseFloat(getStudentStats(b.studentId).total) || 0;
@@ -383,7 +362,6 @@ function Results() {
                 {error && <p style={styles.error}>{error}</p>}
                 {successMsg && <p style={styles.success}>{successMsg}</p>}
 
-                {/* Pending changes banner */}
                 {pendingCount > 0 && (
                     <div style={styles.pendingBanner}>
                         <span style={{ color:'#856404', fontWeight:'bold' }}>✏️ {pendingCount} unsaved change{pendingCount > 1 ? 's' : ''}</span>
@@ -396,7 +374,6 @@ function Results() {
                     </div>
                 )}
 
-                {/* ── STEP 1: Exam Tiles ── */}
                 {step === 1 && (
                     <div>
                         <h3 style={styles.stepTitle}>📝 Select an Exam</h3>
@@ -416,7 +393,6 @@ function Results() {
                     </div>
                 )}
 
-                {/* ── STEP 2: Class Tiles ── */}
                 {step === 2 && (
                     <div>
                         <div style={styles.stepHeader}>
@@ -447,7 +423,7 @@ function Results() {
                                             onMouseEnter={e => { e.currentTarget.style.transform='translateY(-3px)'; e.currentTarget.style.boxShadow='0 6px 16px rgba(0,0,0,0.15)'; }}
                                             onMouseLeave={e => { e.currentTarget.style.transform='none'; e.currentTarget.style.boxShadow='0 2px 6px rgba(0,0,0,0.08)'; }}
                                             style={{ ...styles.classTile, borderTop:`4px solid ${color}` }}>
-                                            <div style={{ ...styles.classTileHeader, color }}>{cls.className}</div>
+                                            <div style={{ ...styles.classTileHeader, color }}>{cls.stream ? cls.className + ' ' + (cls.stream === 'YELLOW' ? 'Yellow' : cls.stream === 'BLUE' ? 'Blue' : cls.stream === 'RED' ? 'Red' : cls.stream) : cls.className}</div>
                                             <div style={styles.classTileStats}>
                                                 <div style={styles.classStat}><span style={styles.classStatNum}>{cls.studentCount}</span><span style={styles.classStatLbl}>Students</span></div>
                                                 <div style={styles.classDivider} />
@@ -462,7 +438,6 @@ function Results() {
                     </div>
                 )}
 
-                {/* ── STEP 3: Results Table ── */}
                 {step === 3 && (
                     <div>
                         <div style={styles.stepHeader}>
@@ -485,41 +460,16 @@ function Results() {
                                             <p style={styles.tableSubtitle}>{pivotStudents.length} students | {pivotSubjects.length} subjects · 💡 Click any mark to edit</p>
                                         </div>
                                         <button onClick={() => {
-                            const examObj = exams.find(e => String(e.examId) === String(filterExam));
-                            const getCode = (name) => {
-                                const codes = {'mathematics':'MTH','english':'ENG','kiswahili':'KSW','science':'SCI','social studies':'SST','agriculture & nutrition':'AGR','creative arts':'CRE.A','cre':'CRE','integrated science':'ISCI'};
-                                const lower = name.toLowerCase().trim();
-                                if (codes[lower]) return codes[lower];
-                                const words = name.split(/[\s&]+/).filter(Boolean);
-                                return words.length===1?name.substring(0,4).toUpperCase():words.map(w=>w.substring(0,3).toUpperCase()).join('.');
-                            };
-                            const ranked = [...pivotStudents].sort((a,b)=>{
-                                const tA=pivotSubjects.reduce((s,sub)=>s+(pivotData[a.studentId]?.[sub.id]?.marksObtained||0),0);
-                                const tB=pivotSubjects.reduce((s,sub)=>s+(pivotData[b.studentId]?.[sub.id]?.marksObtained||0),0);
-                                return tB-tA;
-                            });
-                            const subMeans=pivotSubjects.map(sub=>{const r=pivotStudents.map(s=>pivotData[s.studentId]?.[sub.id]).filter(Boolean);return{id:sub.id,mean:r.length?r.reduce((s,x)=>s+x.marksObtained,0)/r.length:0};});
-                            const subRanks={};[...subMeans].sort((a,b)=>b.mean-a.mean).forEach((s,i)=>{subRanks[s.id]=i+1;});
-                            const hdrs=pivotSubjects.map(sub=>`<th style="color:white;padding:2px;text-align:center;width:35px;vertical-align:bottom;"><div style="writing-mode:vertical-rl;transform:rotate(180deg);white-space:nowrap;font-size:10px;min-height:48px;display:flex;align-items:center;justify-content:center;">${getCode(sub.name)}</div></th>`).join('');
-                            const rows=ranked.map((st,i)=>{
-                                const total=pivotSubjects.reduce((s,sub)=>s+(pivotData[st.studentId]?.[sub.id]?.marksObtained||0),0);
-                                const res=pivotSubjects.map(sub=>pivotData[st.studentId]?.[sub.id]).filter(Boolean);
-                                const avg=res.length?total/res.length:0;
-                                const grade=avg>=75?'EE':avg>=55?'ME':avg>=40?'AE':'BE';
-                                const cells=pivotSubjects.map(sub=>{const r=pivotData[st.studentId]?.[sub.id];return`<td style="padding:2px 3px;border:1px solid #ddd;text-align:center;">${r?r.marksObtained:'—'}</td>`;}).join('');
-                                return`<tr style="background:${i%2===0?'#f8f9fa':'white'}"><td style="padding:2px 4px;border:1px solid #ddd;text-align:center;font-weight:bold;">${i+1}</td><td style="padding:2px 4px;border:1px solid #ddd;font-size:11px;">${st.admissionNumber}</td><td style="padding:2px 4px;border:1px solid #ddd;font-size:11px;white-space:nowrap;"><strong>${st.firstName} ${st.lastName}</strong></td>${cells}<td style="padding:2px 4px;border:1px solid #ddd;text-align:center;font-weight:bold;background:#f0f4ff;">${total.toFixed(0)}</td><td style="padding:2px 4px;border:1px solid #ddd;text-align:center;font-weight:bold;background:#f0f4ff;">${avg.toFixed(1)}%</td><td style="padding:2px 4px;border:1px solid #ddd;text-align:center;font-weight:bold;background:#f0f4ff;">${grade}</td></tr>`;
-                            }).join('');
-                            const totRow=pivotSubjects.map(sub=>{const t=pivotStudents.reduce((s,st)=>s+(pivotData[st.studentId]?.[sub.id]?.marksObtained||0),0);return`<td style="padding:2px 3px;border:1px solid #ddd;text-align:center;font-weight:bold;">${t}</td>`;}).join('');
-                            const meanRow=pivotSubjects.map(sub=>{const r=pivotStudents.map(s=>pivotData[s.studentId]?.[sub.id]).filter(Boolean);const m=r.length?(r.reduce((s,x)=>s+x.marksObtained,0)/r.length).toFixed(1):'-';return`<td style="padding:2px 3px;border:1px solid #ddd;text-align:center;font-weight:bold;">${m}</td>`;}).join('');
-                            const rankRow=pivotSubjects.map(sub=>`<td style="padding:2px 3px;border:1px solid #ddd;text-align:center;font-weight:bold;color:#6f42c1;">#${subRanks[sub.id]}</td>`).join('');
-                            const html=`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${filterClass} Results</title><style>*{box-sizing:border-box;margin:0;padding:0;}body{font-family:'Times New Roman',Times,serif;font-size:12px;color:#000;padding:10px;}@media print{@page{size:A4 landscape;margin:8mm;}.no-print{display:none!important;}body{-webkit-print-color-adjust:exact;print-color-adjust:exact;}}</style></head><body onload="setTimeout(function(){window.print();},400);"><div class="no-print" style="background:#1F3864;color:white;padding:10px;margin-bottom:10px;border-radius:5px;display:flex;justify-content:space-between;align-items:center;"><span style="font-weight:bold;">${filterClass} — ${examObj?.examName||''}</span><button onclick="window.print()" style="background:#FFD700;color:#1F3864;border:none;padding:8px 20px;border-radius:5px;font-weight:bold;cursor:pointer;font-size:14px;">🖨️ Print / Save PDF</button></div><div style="text-align:center;border-bottom:3px solid #1F3864;padding-bottom:8px;margin-bottom:8px;"><div style="color:#1F3864;font-size:13px;font-weight:bold;text-transform:uppercase;">PIPELINE ADVENTIST PRIMARY & JUNIOR SECONDARY SCHOOL</div><div style="color:#2E75B6;font-style:italic;font-size:11px;margin:2px 0;">Abreast with the Best in Holistic Education</div><div style="font-size:10px;color:#666;">P.O. BOX 61774-00200, NAIROBI | Tel: 0713 301 521 / 0721 885 996</div><div style="background:#1F3864;padding:4px 10px;text-align:center;margin-top:5px;"><div style="color:white;font-weight:bold;">CLASS RESULTS REPORT</div><div style="color:#BDD7EE;font-size:11px;">${filterClass} | ${examObj?.examName||''} | Term ${examObj?.term||''} ${examObj?.academicYear||''}</div></div></div><table style="width:100%;border-collapse:collapse;font-size:12px;"><thead><tr style="background:#1F3864;"><th style="color:white;padding:3px 4px;text-align:center;width:25px;">RNK</th><th style="color:white;padding:3px 4px;text-align:left;width:70px;">ADM NO</th><th style="color:white;padding:3px 4px;text-align:left;width:130px;">STUDENT NAME</th>${hdrs}<th style="color:#FFD700;padding:3px 4px;text-align:center;width:35px;">TOT</th><th style="color:#FFD700;padding:3px 4px;text-align:center;width:40px;">AVG%</th><th style="color:#FFD700;padding:3px 4px;text-align:center;width:30px;">GRD</th></tr></thead><tbody>${rows}<tr style="background:#e8f4f8;border-top:2px solid #2E75B6;"><td colspan="3" style="padding:2px 4px;font-weight:bold;border:1px solid #ddd;">SUBJECT TOTAL</td>${totRow}<td colspan="3" style="border:1px solid #ddd;"></td></tr><tr style="background:#e3f2fd;"><td colspan="3" style="padding:2px 4px;font-weight:bold;border:1px solid #ddd;">SUBJECT MEAN</td>${meanRow}<td colspan="3" style="border:1px solid #ddd;"></td></tr><tr style="background:#f3e5f5;"><td colspan="3" style="padding:2px 4px;font-weight:bold;color:#6f42c1;border:1px solid #ddd;">SUBJECT RANK</td>${rankRow}<td colspan="3" style="border:1px solid #ddd;"></td></tr></tbody></table><div style="display:flex;gap:20px;padding:6px 0;border-top:1px solid #ddd;margin-top:6px;font-size:11px;"><span><strong>Total Students:</strong> ${ranked.length}</span><span><strong>Date:</strong> ${new Date().toLocaleDateString()}</span></div><div style="display:flex;gap:30px;margin-top:10px;border-top:2px solid #1F3864;padding-top:8px;"><div style="flex:1;"><p style="font-size:11px;margin-bottom:5px;">Class Teacher: _________________________</p><p style="font-size:11px;">Signature: _____________ Date: __________</p></div><div style="flex:1;"><p style="font-size:11px;margin-bottom:5px;">Principal: _________________________</p><p style="font-size:11px;">Signature: _____________ Date: __________</p></div></div></body></html>`;
-                            const win=window.open('','_blank');
-                                if(win){
-                                    win.document.write(html);
-                                    win.document.close();
-                                    win.onload = function(){ win.focus(); setTimeout(function(){ win.print(); }, 400); };
-                                } else alert('Please allow popups to print results.');
-                        }} style={styles.printBtn}>🖨️ Print Results</button>
+                                            const cls = populatedClasses.find(c => c.className === filterClass);
+                                            const displayName = cls && cls.stream
+                                                ? filterClass + ' ' + (cls.stream === 'YELLOW' ? 'Yellow' : cls.stream === 'BLUE' ? 'Blue' : cls.stream === 'RED' ? 'Red' : cls.stream)
+                                                : filterClass;
+                                            printResults({
+                                                filterClass: displayName,
+                                                examObj: exams.find(e => String(e.examId) === String(filterExam)),
+                                                pivotStudents, pivotSubjects, pivotData
+                                            });
+                                        }} style={styles.printBtn}>🖨️ Print Results</button>
                                         <div style={styles.tableBadges}>
                                             <span style={styles.badge}>👥 {pivotStudents.length}</span>
                                             <span style={styles.badge}>📚 {pivotSubjects.length}</span>
@@ -538,9 +488,7 @@ function Results() {
                                                         <th key={sub.id} style={{...styles.th, ...styles.subjectTh}}>
                                                             <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:'3px' }}>
                                                                 <span>{sub.name}</span>
-                                                                <button
-                                                                    onClick={() => setConfirmDelete({ type:'subject', subjectId:sub.id, subjectName:sub.name })}
-                                                                    title={`Delete all ${sub.name} marks`}
+                                                                <button onClick={() => setConfirmDelete({ type:'subject', subjectId:sub.id, subjectName:sub.name })}
                                                                     style={{ backgroundColor:'rgba(220,53,69,0.8)', color:'white', border:'none', borderRadius:'3px', padding:'1px 6px', cursor:'pointer', fontSize:'10px', lineHeight:'1.4' }}>
                                                                     🗑️ Del All
                                                                 </button>
@@ -586,8 +534,7 @@ function Results() {
                                                                                     <span style={{ color:'white', padding:'1px 5px', borderRadius:'2px', fontSize:'10px', fontWeight:'bold', backgroundColor:getGradeColor(getGradeLabel(result.marksObtained)) }}>{getGradeLabel(result.marksObtained)}</span>
                                                                                     {isPending && <span style={{ fontSize:'8px', color:'#fd7e14' }}>●</span>}
                                                                                 </div>
-                                                                                <button
-                                                                                    onClick={e => { e.stopPropagation(); setConfirmDelete({ type:'mark', studentId:student.studentId, subjectId:sub.id, studentName:`${student.firstName} ${student.lastName}`, subjectName:sub.name }); }}
+                                                                                <button onClick={e => { e.stopPropagation(); setConfirmDelete({ type:'mark', studentId:student.studentId, subjectId:sub.id, studentName:`${student.firstName} ${student.lastName}`, subjectName:sub.name }); }}
                                                                                     style={{ position:'absolute', top:'1px', right:'1px', backgroundColor:'#dc3545', color:'white', border:'none', borderRadius:'3px', padding:'0px 4px', cursor:'pointer', fontSize:'9px', lineHeight:'1.4' }}>✕</button>
                                                                             </div>
                                                                         ) : (
@@ -604,7 +551,6 @@ function Results() {
                                                         </tr>
                                                     );
                                                 })}
-                                                {/* Summary rows */}
                                                 <tr style={{ backgroundColor:'#e8f4f8', borderTop:'2px solid #2E75B6' }}>
                                                     <td colSpan="3" style={{...styles.td, fontWeight:'bold', color:'#1F3864', fontSize:'12px'}}>📊 Total Marks</td>
                                                     {pivotSubjects.map(sub => { const s=getSubjectStats(sub.id); return <td key={sub.id} style={{...styles.td, textAlign:'center'}}><strong style={{color:'#1F3864',fontSize:'12px'}}>{s.total}</strong></td>; })}
@@ -641,36 +587,23 @@ function Results() {
                 )}
             </div>
 
-
-        {/* Delete Confirmation Modal */}
-        {confirmDelete && (
-            <div style={{ position:'fixed', top:0, left:0, right:0, bottom:0, backgroundColor:'rgba(0,0,0,0.5)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:10000 }}>
-                <div style={{ backgroundColor:'white', padding:'25px 30px', borderRadius:'10px', boxShadow:'0 10px 30px rgba(0,0,0,0.3)', maxWidth:'400px', width:'90%' }}>
-                    <h3 style={{ color:'#dc3545', margin:'0 0 12px 0', fontSize:'18px' }}>🗑️ Confirm Delete</h3>
-                    {confirmDelete.type === 'mark' ? (
-                        <p style={{ color:'#555', marginBottom:'20px' }}>
-                            Delete <strong>{confirmDelete.subjectName}</strong> mark for <strong>{confirmDelete.studentName}</strong>? This cannot be undone.
-                        </p>
-                    ) : (
-                        <p style={{ color:'#555', marginBottom:'20px' }}>
-                            Delete <strong>ALL marks</strong> for <strong>{confirmDelete.subjectName}</strong> in this class? This will remove {pivotStudents.length} marks and cannot be undone.
-                        </p>
-                    )}
-                    <div style={{ display:'flex', gap:'10px', justifyContent:'flex-end' }}>
-                        <button onClick={() => setConfirmDelete(null)}
-                            style={{ backgroundColor:'#6c757d', color:'white', border:'none', padding:'9px 20px', borderRadius:'5px', cursor:'pointer', fontWeight:'bold' }}>
-                            Cancel
-                        </button>
-                        <button onClick={() => confirmDelete.type === 'mark'
-                            ? handleDeleteMark(confirmDelete.studentId, confirmDelete.subjectId)
-                            : handleDeleteSubject(confirmDelete.subjectId, confirmDelete.subjectName)}
-                            style={{ backgroundColor:'#dc3545', color:'white', border:'none', padding:'9px 20px', borderRadius:'5px', cursor:'pointer', fontWeight:'bold' }}>
-                            🗑️ Delete
-                        </button>
+            {confirmDelete && (
+                <div style={{ position:'fixed', top:0, left:0, right:0, bottom:0, backgroundColor:'rgba(0,0,0,0.5)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:10000 }}>
+                    <div style={{ backgroundColor:'white', padding:'25px 30px', borderRadius:'10px', boxShadow:'0 10px 30px rgba(0,0,0,0.3)', maxWidth:'400px', width:'90%' }}>
+                        <h3 style={{ color:'#dc3545', margin:'0 0 12px 0', fontSize:'18px' }}>🗑️ Confirm Delete</h3>
+                        {confirmDelete.type === 'mark' ? (
+                            <p style={{ color:'#555', marginBottom:'20px' }}>Delete <strong>{confirmDelete.subjectName}</strong> mark for <strong>{confirmDelete.studentName}</strong>? This cannot be undone.</p>
+                        ) : (
+                            <p style={{ color:'#555', marginBottom:'20px' }}>Delete <strong>ALL marks</strong> for <strong>{confirmDelete.subjectName}</strong> in this class? This will remove {pivotStudents.length} marks and cannot be undone.</p>
+                        )}
+                        <div style={{ display:'flex', gap:'10px', justifyContent:'flex-end' }}>
+                            <button onClick={() => setConfirmDelete(null)} style={{ backgroundColor:'#6c757d', color:'white', border:'none', padding:'9px 20px', borderRadius:'5px', cursor:'pointer', fontWeight:'bold' }}>Cancel</button>
+                            <button onClick={() => confirmDelete.type === 'mark' ? handleDeleteMark(confirmDelete.studentId, confirmDelete.subjectId) : handleDeleteSubject(confirmDelete.subjectId, confirmDelete.subjectName)}
+                                style={{ backgroundColor:'#dc3545', color:'white', border:'none', padding:'9px 20px', borderRadius:'5px', cursor:'pointer', fontWeight:'bold' }}>🗑️ Delete</button>
+                        </div>
                     </div>
                 </div>
-            </div>
-        )}
+            )}
         </div>
     );
 }
