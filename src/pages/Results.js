@@ -612,18 +612,21 @@ function Results() {
                                                 <tr style={{ backgroundColor:'#e3f2fd' }}>
                                                     <td colSpan="3" style={{...styles.td, fontWeight:'bold', color:'#2E75B6', fontSize:'12px'}}>📈 Mean (excl. blanks)</td>
                                                     {pivotSubjects.map(sub => { const s=getSubjectStats(sub.id); const mean=parseFloat(s.mean); return <td key={sub.id} style={{...styles.td, textAlign:'center'}}><span style={{fontWeight:'bold',fontSize:'12px',color:getMarkColor(mean)}}>{s.mean}</span><div style={{fontSize:'9px',color:'#999'}}>{s.count} pupils</div></td>; })}
-                                                    <td colSpan="4" style={{...styles.td, textAlign:'center', padding:'4px 8px'}}>
+                                                    <td style={{...styles.td, ...styles.totalCell, textAlign:'center', padding:'4px 6px'}}>
                                                         {(() => {
                                                             const cm = getClassOverallMean();
                                                             if (!cm) return null;
                                                             return (
-                                                                <div style={{ border: '2px solid #1F3864', borderRadius: '6px', padding: '4px 8px', display: 'inline-block', minWidth: '70px' }}>
-                                                                    <div style={{ fontSize: '9px', color: '#555', fontWeight: 'bold' }}>CLASS TOTAL MEAN</div>
-                                                                    <div style={{ fontSize: '18px', fontWeight: 'bold', color: '#1F3864' }}>{cm}</div>
+                                                                <div>
+                                                                    <div style={{ fontSize: '9px', color: '#555', fontWeight: 'bold', whiteSpace:'nowrap' }}>CLASS MEAN</div>
+                                                                    <div style={{ fontSize: '16px', fontWeight: 'bold', color: '#1F3864' }}>{cm}</div>
                                                                 </div>
                                                             );
                                                         })()}
                                                     </td>
+                                                    <td style={styles.td} />
+                                                    <td style={styles.td} />
+                                                    <td style={styles.td} />
                                                 </tr>
                                                 {(() => {
                                                     const ranks = getSubjectRanks();
