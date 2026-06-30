@@ -153,17 +153,27 @@ function Teachers() {
     };
 
     const handleAssignTeacher = async (classId, teacherId) => {
+        if (!teacherId) return;
         try {
-            if (teacherId === '') {
-                await api.patch(`/api/classes/${classId}/unassign-teacher`);
-            } else {
-                await api.patch(`/api/classes/${classId}/assign-teacher/${teacherId}`);
-            }
-            setSuccessMsg('✅ Class teacher updated!');
+            await api.patch(`/api/classes/${classId}/assign-teacher/${teacherId}`);
+            setSuccessMsg('✅ Class teacher assigned!');
             fetchClasses();
             setTimeout(() => setSuccessMsg(''), 2000);
         } catch (err) {
-            setError('Failed to update class teacher assignment');
+            setError('Failed to assign class teacher');
+            setTimeout(() => setError(''), 3000);
+        }
+    };
+
+    const handleUnassignTeacher = async (classId) => {
+        if (!window.confirm('Remove this teacher from the class?')) return;
+        try {
+            await api.patch(`/api/classes/${classId}/unassign-teacher`);
+            setSuccessMsg('✅ Teacher removed from class!');
+            fetchClasses();
+            setTimeout(() => setSuccessMsg(''), 2000);
+        } catch (err) {
+            setError('Failed to remove class teacher');
             setTimeout(() => setError(''), 3000);
         }
     };
@@ -390,16 +400,30 @@ function Teachers() {
                                                             {cls.classTeacher ? '✅ Assigned' : '❌ Unassigned'}
                                                         </span>
                                                     </div>
-                                                    <select style={styles.assignSelect}
-                                                        value={cls.classTeacher?.teacherId || ''}
-                                                        onChange={e => handleAssignTeacher(cls.classId, e.target.value)}>
-                                                        <option value="">— No Teacher —</option>
-                                                        {teachers.map(t => (
-                                                            <option key={t.teacherId} value={t.teacherId}>
-                                                                {t.firstName} {t.lastName} ({t.phone})
-                                                            </option>
-                                                        ))}
-                                                    </select>
+                                                    {cls.classTeacher ? (
+                                                        <div style={styles.assignedRow}>
+                                                            <span style={styles.assignedName}>
+                                                                👨‍🏫 {cls.classTeacher.firstName} {cls.classTeacher.lastName}
+                                                            </span>
+                                                            <button
+                                                                onClick={() => handleUnassignTeacher(cls.classId)}
+                                                                style={styles.unassignBtn}
+                                                                title="Remove teacher from this class">
+                                                                ✕ Remove
+                                                            </button>
+                                                        </div>
+                                                    ) : (
+                                                        <select style={styles.assignSelect}
+                                                            value=""
+                                                            onChange={e => handleAssignTeacher(cls.classId, e.target.value)}>
+                                                            <option value="" disabled>— Assign a Teacher —</option>
+                                                            {teachers.map(t => (
+                                                                <option key={t.teacherId} value={t.teacherId}>
+                                                                    {t.firstName} {t.lastName} ({t.phone})
+                                                                </option>
+                                                            ))}
+                                                        </select>
+                                                    )}
                                                 </div>
                                             ))}
                                     </div>
@@ -493,6 +517,9 @@ const styles = {
     classCardName: { fontWeight: 'bold', color: '#1F3864', fontSize: '15px' },
     statusDot: { color: 'white', padding: '2px 8px', borderRadius: '10px', fontSize: '10px', fontWeight: 'bold' },
     assignSelect: { padding: '8px', borderRadius: '5px', border: '1px solid #ddd', fontSize: '12px', width: '100%' },
+    assignedRow: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', backgroundColor: '#e8f5e9', borderRadius: '5px', padding: '6px 10px' },
+    assignedName: { fontSize: '12px', color: '#1b5e20', fontWeight: 'bold', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' },
+    unassignBtn: { backgroundColor: '#dc3545', color: 'white', border: 'none', padding: '4px 10px', borderRadius: '4px', cursor: 'pointer', fontSize: '11px', fontWeight: 'bold', whiteSpace: 'nowrap', flexShrink: 0 },
 
     emptyState: { backgroundColor: 'white', padding: '60px', borderRadius: '10px', textAlign: 'center', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' },
     emptyIcon: { fontSize: '48px', marginBottom: '15px' },
