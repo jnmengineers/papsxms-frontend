@@ -147,6 +147,7 @@ function Results() {
     const userRole = localStorage.getItem('role');
     const linkedClassId = localStorage.getItem('linkedClassId');
     const linkedClassName = localStorage.getItem('linkedClassName');
+    const linkedStream = localStorage.getItem('linkedStream') || null; // ✅ NEW — reliable stream match
     const isTeacher = userRole === 'TEACHER';
 
     const [results, setResults] = useState([]);
@@ -214,22 +215,18 @@ function Results() {
             const populated = Object.values(classMap).map(c => ({ ...c, studentCount: c.studentIds.size, subjectCount: c.subjectIds.size })).sort((a,b) => a.className.localeCompare(b.className));
 
             if (isTeacher && linkedClassId && linkedClassId !== 'null' && linkedClassId !== 'undefined') {
-                const teacherClassObj = classes.find(c => String(c.classId) === String(linkedClassId));
-
-                // Primary: match by classId (covers when API returns a valid classId on the student)
+                // Show step 2 for teachers too, but only with their own class tile.
+                // ✅ FIXED: match reliably using linkedClassId (preferred), with
+                // className+stream (both sourced directly from the login response —
+                // no dependency on the separate /api/classes fetch, so no race
+                // condition) as a fallback for any result rows missing a nested classId.
                 let teacherPopulated = populated.filter(c => String(c.classId) === String(linkedClassId));
 
-                if (!teacherPopulated.length && teacherClassObj) {
-                    // Fallback: classId missing in results data — match by className + stream
+                if (!teacherPopulated.length && linkedClassName) {
                     teacherPopulated = populated.filter(c =>
-                        c.className === teacherClassObj.className &&
-                        (!teacherClassObj.stream || c.stream === teacherClassObj.stream)
+                        c.className === linkedClassName &&
+                        (linkedStream ? c.stream === linkedStream : !c.stream)
                     );
-                }
-
-                if (!teacherPopulated.length && teacherClassObj) {
-                    // Last resort: className only (single-stream grade or stream field absent)
-                    teacherPopulated = populated.filter(c => c.className === teacherClassObj.className);
                 }
 
                 setPopulatedClasses(teacherPopulated);
@@ -253,10 +250,11 @@ function Results() {
         try {
             let data;
             if (isTeacher && linkedClassId && linkedClassId !== 'null' && linkedClassId !== 'undefined') {
-                // Use classStream from the tile when explicitly passed (initial click),
-                // otherwise fall back to the classes API state (used by save/discard refresh).
-                const teacherClassObj = classes.find(c => String(c.classId) === String(linkedClassId));
-                const effectiveStream = classStream !== undefined ? classStream : (teacherClassObj?.stream || null);
+                // ✅ FIXED: use linkedStream from login response directly — no dependency
+                // on the separate `classes` fetch (which caused the original bug where
+                // Grade 2 Yellow's teacher saw nothing because `classes` hadn't loaded
+                // yet, or className/stream combos didn't resolve correctly).
+                const effectiveStream = classStream || linkedStream;
                 data = allExamResults.filter(r => {
                     if (String(r.student?.schoolClass?.classId) === String(linkedClassId)) return true;
                     if (r.student?.className === className) {
@@ -484,7 +482,7 @@ function Results() {
                             <div style={styles.emptyCard}>
                                 <p>📭 No results found for this exam yet.</p>
                                 {isTeacher ? (
-                                    <p style={{ color:'#666', fontSize:'13px' }}>No marks have been entered yet for your class ({linkedClassName}) in this exam.</p>
+                                    <p style={{ color:'#666', fontSize:'13px' }}>No marks have been entered yet for your class ({linkedClassName}{linkedStream ? ` ${linkedStream}` : ''}) in this exam.</p>
                                 ) : (
                                     <p style={{ color:'#666', fontSize:'13px' }}>Use Mark Entry to add marks first.</p>
                                 )}
