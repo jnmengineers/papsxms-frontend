@@ -201,9 +201,12 @@ function Results() {
             data.forEach(r => {
                 const cls = r.student?.className;
                 const classId = r.student?.schoolClass?.classId;
+                const stream = r.student?.schoolClass?.stream || r.student?.stream || null;
                 if (cls) {
-                    const key = classId || cls;
-                    if (!classMap[key]) classMap[key] = { className: cls, classId, studentIds: new Set(), subjectIds: new Set(), section: r.student?.schoolClass?.section || '', stream: r.student?.schoolClass?.stream || null, gradeLevel: r.student?.schoolClass?.gradeLevel || '' };
+                    // Key by classId when available; otherwise by className+stream so that
+                    // multi-stream grades keep separate tiles even when the API returns classId=null.
+                    const key = classId != null ? String(classId) : `${cls}|${stream || ''}`;
+                    if (!classMap[key]) classMap[key] = { className: cls, classId, studentIds: new Set(), subjectIds: new Set(), section: r.student?.schoolClass?.section || '', stream, gradeLevel: r.student?.schoolClass?.gradeLevel || '' };
                     if (r.student?.studentId) classMap[key].studentIds.add(r.student.studentId);
                     if (r.subject?.subjectId) classMap[key].subjectIds.add(r.subject.subjectId);
                 }
@@ -251,7 +254,22 @@ function Results() {
         if (!examId || !className) return;
         setLoading(true); setError(''); setSearched(true);
         try {
-            const data = allExamResults.filter(r => r.student?.className === className);
+            let data;
+            if (isTeacher && linkedClassId && linkedClassId !== 'null' && linkedClassId !== 'undefined') {
+                const teacherClassObj = classes.find(c => String(c.classId) === String(linkedClassId));
+                const teacherStream = teacherClassObj?.stream || null;
+                data = allExamResults.filter(r => {
+                    if (String(r.student?.schoolClass?.classId) === String(linkedClassId)) return true;
+                    if (r.student?.className === className) {
+                        if (!teacherStream) return true;
+                        return r.student?.stream === teacherStream ||
+                               r.student?.schoolClass?.stream === teacherStream;
+                    }
+                    return false;
+                });
+            } else {
+                data = allExamResults.filter(r => r.student?.className === className);
+            }
             setResults(data); buildPivotTable(data);
         } catch (err) { setError('Failed to load results'); }
         setLoading(false);
@@ -492,8 +510,8 @@ function Results() {
                 {step === 3 && (
                     <div>
                         <div style={styles.stepHeader}>
-                            <button onClick={() => { setStep(isTeacher ? 1 : 2); setSearched(false); setPendingChanges({}); if (isTeacher) { setPopulatedClasses([]); setAllExamResults([]); } }} style={styles.backBtn}>
-                                {isTeacher ? '← Back to Exams' : '← Back to Classes'}
+                            <button onClick={() => { setStep(2); setSearched(false); setPendingChanges({}); }} style={styles.backBtn}>
+                                ← Back to Classes
                             </button>
                             <h3 style={styles.stepTitle}>📊 {filterClass} — {selectedExamName}</h3>
                             <input style={styles.searchInput} placeholder="🔍 Search student..." value={search} onChange={e => setSearch(e.target.value)} />
