@@ -228,7 +228,7 @@ function ReportCards() {
     useEffect(() => { fetchReportCards(); fetchStudents(); fetchClasses(); fetchExams(); }, []);
 
     useEffect(() => {
-        let data = reportCards;
+        let data = reportCards.filter(cardBelongsToTeacher);
         if (search) data = data.filter(c =>
             c.student?.firstName?.toLowerCase().includes(search.toLowerCase()) ||
             c.student?.lastName?.toLowerCase().includes(search.toLowerCase()) ||
@@ -240,21 +240,27 @@ function ReportCards() {
             String(c.student?.schoolClass?.className) === String(selectedClassFilter)
         );
         setFiltered(data);
-    }, [search, filterExam, selectedClassFilter, reportCards]);
+    }, [search, filterExam, selectedClassFilter, reportCards, classes]);
 
     const fetchReportCards = async () => {
         try {
             const r = await api.get('/api/reportCards');
-            let data = r.data;
-            if (isTeacher && linkedClassId) {
-                data = data.filter(card =>
-                    String(card.student?.schoolClass?.classId) === String(linkedClassId) ||
-                    card.student?.className === linkedClassName
-                );
-            }
-            setReportCards(data); setFiltered(data); setLoading(false);
+            setReportCards(r.data); setFiltered(r.data); setLoading(false);
         }
         catch (e) { setError('Failed to load report cards'); setLoading(false); }
+    };
+
+    // Returns true if a report card belongs to the logged-in teacher's class.
+    // Uses the classes array (from API) so className/stream are always in the right format.
+    const cardBelongsToTeacher = (card) => {
+        if (!isTeacher || !linkedClassId) return true;
+        if (String(card.student?.schoolClass?.classId) === String(linkedClassId)) return true;
+        const teacherClassObj = classes.find(c => String(c.classId) === String(linkedClassId));
+        if (!teacherClassObj) return false;
+        if (card.student?.className !== teacherClassObj.className) return false;
+        if (!teacherClassObj.stream) return true;
+        return card.student?.stream === teacherClassObj.stream ||
+               card.student?.schoolClass?.stream === teacherClassObj.stream;
     };
     const fetchStudents = async () => { try { const r = await api.get('/api/students'); setStudents(r.data); } catch (e) {} };
     const fetchClasses = async () => { try { const r = await api.get('/api/classes'); setClasses(r.data); } catch (e) {} };
@@ -336,7 +342,7 @@ function ReportCards() {
 
     const classTilesData = () => {
         const map = {};
-        reportCards.forEach(card => {
+        reportCards.filter(cardBelongsToTeacher).forEach(card => {
             const cls = card.student?.className || card.student?.schoolClass?.className;
             const section = card.student?.schoolClass?.section || '';
             if (!cls) return;

@@ -211,15 +211,30 @@ function Results() {
             const populated = Object.values(classMap).map(c => ({ ...c, studentCount: c.studentIds.size, subjectCount: c.subjectIds.size })).sort((a,b) => a.className.localeCompare(b.className));
 
             if (isTeacher && linkedClassId) {
-                // Teacher: auto-select their class and skip the class grid
+                // Use the classes state as the authoritative source — avoids linkedClassName format mismatches
+                const teacherClassObj = classes.find(c => String(c.classId) === String(linkedClassId));
+                const teacherStream = teacherClassObj?.stream || null;
+                const teacherBaseName = teacherClassObj?.className || null;
+
                 const teacherClass = populated.find(c => String(c.classId) === String(linkedClassId))
-                    || populated.find(c => c.className === linkedClassName);
+                    || (teacherBaseName ? populated.find(c => c.className === teacherBaseName && (!teacherStream || c.stream === teacherStream)) : null)
+                    || (teacherBaseName ? populated.find(c => c.className === teacherBaseName) : null);
+
                 if (teacherClass) {
                     setPopulatedClasses([teacherClass]);
                     setFilterClass(teacherClass.className);
                     setStep(3);
                     setSearched(true);
-                    const classData = data.filter(r => r.student?.className === teacherClass.className);
+                    // Filter by classId first, then fall back to className + stream
+                    const classData = data.filter(r => {
+                        if (String(r.student?.schoolClass?.classId) === String(linkedClassId)) return true;
+                        if (r.student?.className === (teacherBaseName || teacherClass.className)) {
+                            if (!teacherStream) return true;
+                            return r.student?.stream === teacherStream ||
+                                   r.student?.schoolClass?.stream === teacherStream;
+                        }
+                        return false;
+                    });
                     setResults(classData);
                     buildPivotTable(classData);
                 } else {
