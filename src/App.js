@@ -23,11 +23,13 @@ import ChangePassword from './pages/ChangePassword';
 import Import from './pages/Import';
 import ProgressiveReport from './pages/ProgressiveReport';
 import InactivityTimeout from './components/InactivityTimeout';
+import UpdateChecker from './components/UpdateChecker';
 
 function App() {
     return (
         <Router>
             <InactivityTimeout />
+            <UpdateChecker />
             <Routes>
                 {/* Public */}
                 <Route path="/" element={<Login />} />
