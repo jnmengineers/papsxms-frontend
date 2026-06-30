@@ -3,7 +3,7 @@ import { useReactToPrint } from 'react-to-print';
 import api from '../services/api';
 import logo1 from '../assets/logo1.png';
 import logo2 from '../assets/logo2.png';
-import { classDisplayName, streamLabel } from '../utils/classUtils';
+import { classDisplayName, streamLabel, gradeLabel } from '../utils/classUtils';
 
 // ─── Print Header ─────────────────────────────────────────────────────────────
 const PrintHeader = ({ title, subtitle }) => (
@@ -195,6 +195,8 @@ function SectionReport() {
     const [error, setError] = useState('');
     const [successMsg, setSuccessMsg] = useState('');
     const [expandedStreams, setExpandedStreams] = useState({});
+    const [selectedGrade, setSelectedGrade] = useState('');
+    const [gradeSubjects, setGradeSubjects] = useState([]);
 
     const sectionReportRef = useRef();
     const streamMeritRef = useRef();
@@ -253,6 +255,22 @@ function SectionReport() {
         } catch (e) {}
     };
 
+    const fetchGradeSubjects = async (gradeLevel) => {
+        const firstClass = classes.find(c => c.gradeLevel === gradeLevel);
+        if (!firstClass) return;
+        try {
+            const r = await api.get(`/api/class-subjects/by-class/${firstClass.classId}`);
+            setGradeSubjects(r.data.map(cs => cs.subject).filter(Boolean));
+        } catch (e) {}
+    };
+
+    useEffect(() => {
+        if (selectedGrade && selectedExam) {
+            fetchGradeSubjects(selectedGrade);
+            fetchAllReportCards();
+        }
+    }, [selectedGrade, selectedExam]);
+
     const handleCalculateRanks = async () => {
         if (!selectedExam) return;
         setCalculating(true); setError('');
@@ -288,6 +306,20 @@ function SectionReport() {
 
     const gradeCards = allReportCards.filter(c =>
         gradeClassNames.includes(c.student?.className)
+    );
+
+    // Grade merit: unique grade levels across all classes, for the dedicated grade dropdown
+    const uniqueGrades = [...new Map(
+        classes.filter(c => c.gradeLevel).map(c => [c.gradeLevel, c])
+    ).values()].sort((a, b) => {
+        const order = ['PG','PP1','PP2','GRADE_1','GRADE_2','GRADE_3','GRADE_4','GRADE_5','GRADE_6','GRADE_7','GRADE_8','GRADE_9'];
+        return (order.indexOf(a.gradeLevel) ?? 99) - (order.indexOf(b.gradeLevel) ?? 99);
+    });
+
+    const selectedGradeClasses = classes.filter(c => c.gradeLevel === selectedGrade);
+    const selectedGradeClassNames = selectedGradeClasses.map(c => c.className);
+    const selectedGradeCards = allReportCards.filter(c =>
+        selectedGradeClassNames.includes(c.student?.className)
     );
 
     const getMark = (studentId, subjectId) => {
@@ -655,17 +687,40 @@ function SectionReport() {
                 {/* ── GRADE MERIT LIST TAB ── */}
                 {activeTab === 'grade' && (
                     <div>
-                        {selectedExam && selectedClass && gradeCards.length > 0 && (
+                        {/* Grade selector — dedicated to this tab, shows whole grades only */}
+                        <div style={{ backgroundColor: 'white', padding: '16px 20px', borderRadius: '10px', marginBottom: '16px', boxShadow: '0 2px 4px rgba(0,0,0,0.08)', display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
+                            <label style={{ ...styles.label, whiteSpace: 'nowrap' }}>🏫 Select Grade</label>
+                            <select style={{ ...styles.select, minWidth: '220px' }} value={selectedGrade}
+                                onChange={e => setSelectedGrade(e.target.value)}>
+                                <option value="">-- Select Grade --</option>
+                                {uniqueGrades.map(cls => {
+                                    const streamCount = classes.filter(c => c.gradeLevel === cls.gradeLevel).length;
+                                    return (
+                                        <option key={cls.gradeLevel} value={cls.gradeLevel}>
+                                            {gradeLabel(cls.gradeLevel)}{streamCount > 1 ? ` (${streamCount} streams)` : ''}
+                                        </option>
+                                    );
+                                })}
+                            </select>
+                            {selectedGrade && (
+                                <span style={{ color: '#666', fontSize: '13px' }}>
+                                    Combining: {selectedGradeClasses.map(c => classDisplayName(c)).join(', ')}
+                                </span>
+                            )}
+                        </div>
+
+                        {selectedExam && selectedGrade && selectedGradeCards.length > 0 && (
                             <div style={styles.printBar}>
-                                <span style={styles.printBarInfo}>🏫 Grade {gradeLevel} — All Streams — {gradeCards.length} students</span>
+                                <span style={styles.printBarInfo}>🏫 {gradeLabel(selectedGrade)} — All Streams — {selectedGradeCards.length} students</span>
                                 <button onClick={handlePrintGradeMerit} style={styles.printBtn}>🖨️ Print Grade Merit List</button>
                             </div>
                         )}
-                        {selectedExam && selectedClass && gradeCards.length > 0 ? (
+
+                        {selectedExam && selectedGrade && selectedGradeCards.length > 0 ? (
                             <div style={styles.meritCard}>
                                 <div style={styles.meritHeader}>
-                                    <h3 style={styles.meritTitle}>🏫 Grade {gradeLevel} — All Streams Merit List</h3>
-                                    <p style={styles.meritSub}>{selectedExamObj?.examName} | Term {selectedExamObj?.term} {selectedExamObj?.academicYear} | {gradeClassNames.join(', ')}</p>
+                                    <h3 style={styles.meritTitle}>🏫 {gradeLabel(selectedGrade)} — All Streams Merit List</h3>
+                                    <p style={styles.meritSub}>{selectedExamObj?.examName} | Term {selectedExamObj?.term} {selectedExamObj?.academicYear} | {selectedGradeClassNames.join(', ')}</p>
                                 </div>
                                 <div style={{ overflowX: 'auto' }}>
                                     <table style={styles.table}>
@@ -675,7 +730,7 @@ function SectionReport() {
                                                 <th style={styles.th}>STREAM</th>
                                                 <th style={styles.th}>ADM NO</th>
                                                 <th style={styles.th}>NAME</th>
-                                                {classSubjects.map(sub => (
+                                                {gradeSubjects.map(sub => (
                                                     <th key={sub.subjectId} style={styles.thSub}>{sub.subjectName}</th>
                                                 ))}
                                                 <th style={styles.thTotal}>TOTAL</th>
@@ -683,7 +738,7 @@ function SectionReport() {
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            {[...gradeCards].sort((a, b) => (a.termRank || 999) - (b.termRank || 999)).map((card, i) => (
+                                            {[...selectedGradeCards].sort((a, b) => (a.termRank || 999) - (b.termRank || 999)).map((card, i) => (
                                                 <tr key={card.reportId} style={i % 2 === 0 ? styles.trEven : styles.trOdd}>
                                                     <td style={styles.tdC}><strong>{card.termRank || i + 1}</strong></td>
                                                     <td style={styles.tdC}>
@@ -691,7 +746,7 @@ function SectionReport() {
                                                     </td>
                                                     <td style={styles.td}><span style={styles.admNo}>{card.student?.admissionNumber}</span></td>
                                                     <td style={styles.td}><strong>{card.student?.firstName} {card.student?.lastName}</strong></td>
-                                                    {classSubjects.map(sub => (
+                                                    {gradeSubjects.map(sub => (
                                                         <td key={sub.subjectId} style={styles.tdC}>
                                                             {getMark(card.student?.studentId, sub.subjectId)}
                                                         </td>
@@ -711,15 +766,15 @@ function SectionReport() {
                                     </table>
                                 </div>
                                 <div style={styles.meritFooter}>
-                                    <span>👥 {gradeCards.length} students</span>
-                                    <span>📊 Avg: {(gradeCards.reduce((s, c) => s + (c.averageMarks || 0), 0) / gradeCards.length).toFixed(2)}%</span>
-                                    <span>🏫 {gradeClassNames.length} streams</span>
+                                    <span>👥 {selectedGradeCards.length} students</span>
+                                    <span>📊 Avg: {(selectedGradeCards.reduce((s, c) => s + (c.averageMarks || 0), 0) / selectedGradeCards.length).toFixed(2)}%</span>
+                                    <span>🏫 {selectedGradeClasses.length} stream{selectedGradeClasses.length !== 1 ? 's' : ''}</span>
                                 </div>
                             </div>
                         ) : (
                             <div style={styles.emptyState}>
                                 <div style={styles.emptyIcon}>🏫</div>
-                                <p>{!selectedExam ? 'Select an exam' : !selectedClass ? 'Select a class to determine grade' : 'No report cards found for this grade.'}</p>
+                                <p>{!selectedExam ? 'Select an exam first' : !selectedGrade ? 'Select a grade above' : 'No report cards found for this grade. Calculate ranks first.'}</p>
                             </div>
                         )}
                     </div>
@@ -746,11 +801,11 @@ function SectionReport() {
                 />
                 <PrintableMeritList
                     ref={gradeMeritRef}
-                    reportCards={gradeCards}
+                    reportCards={selectedGradeCards}
                     results={allResults}
-                    subjects={classSubjects}
-                    title={`GRADE ${gradeLevel || ''} MERIT LIST — ALL STREAMS`}
-                    subtitle={`${selectedExamObj?.examName || ''} | Term ${selectedExamObj?.term || ''} ${selectedExamObj?.academicYear || ''} | ${gradeClassNames.join(', ')}`}
+                    subjects={gradeSubjects}
+                    title={`${gradeLabel(selectedGrade) || ''} MERIT LIST — ALL STREAMS`}
+                    subtitle={`${selectedExamObj?.examName || ''} | Term ${selectedExamObj?.term || ''} ${selectedExamObj?.academicYear || ''} | ${selectedGradeClassNames.join(', ')}`}
                     level="grade"
                 />
             </div>
