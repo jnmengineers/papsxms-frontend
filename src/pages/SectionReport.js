@@ -215,6 +215,14 @@ function SectionReport() {
         if (role === 'TEACHER' && linkedClassId) setSelectedClass(linkedClassId);
     }, [linkedClassId]);
 
+    // Once classes load, auto-set the grade for teachers
+    useEffect(() => {
+        if (role === 'TEACHER' && linkedClassId && classes.length > 0) {
+            const teacherClass = classes.find(c => String(c.classId) === String(linkedClassId));
+            if (teacherClass?.gradeLevel) setSelectedGrade(teacherClass.gradeLevel);
+        }
+    }, [classes]);
+
     useEffect(() => {
         if (selectedExam && selectedClass) {
             fetchAllReportCards();
@@ -447,13 +455,11 @@ function SectionReport() {
                         backgroundColor: activeTab === 'stream' ? '#1F3864' : 'white',
                         color: activeTab === 'stream' ? 'white' : '#1F3864'
                     }}>📋 Stream Merit List</button>
-                    {role === 'ADMIN' && (
-                        <button onClick={() => setActiveTab('grade')} style={{
-                            ...styles.tab,
-                            backgroundColor: activeTab === 'grade' ? '#1F3864' : 'white',
-                            color: activeTab === 'grade' ? 'white' : '#1F3864'
-                        }}>🏫 Grade Merit List</button>
-                    )}
+                    <button onClick={() => setActiveTab('grade')} style={{
+                        ...styles.tab,
+                        backgroundColor: activeTab === 'grade' ? '#1F3864' : 'white',
+                        color: activeTab === 'grade' ? 'white' : '#1F3864'
+                    }}>🏫 Grade Merit List</button>
                 </div>
 
                 {/* ── SECTION REPORT TAB ── */}
@@ -689,19 +695,25 @@ function SectionReport() {
                     <div>
                         {/* Grade selector — dedicated to this tab, shows whole grades only */}
                         <div style={{ backgroundColor: 'white', padding: '16px 20px', borderRadius: '10px', marginBottom: '16px', boxShadow: '0 2px 4px rgba(0,0,0,0.08)', display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
-                            <label style={{ ...styles.label, whiteSpace: 'nowrap' }}>🏫 Select Grade</label>
-                            <select style={{ ...styles.select, minWidth: '220px' }} value={selectedGrade}
-                                onChange={e => setSelectedGrade(e.target.value)}>
-                                <option value="">-- Select Grade --</option>
-                                {uniqueGrades.map(cls => {
-                                    const streamCount = classes.filter(c => c.gradeLevel === cls.gradeLevel).length;
-                                    return (
-                                        <option key={cls.gradeLevel} value={cls.gradeLevel}>
-                                            {gradeLabel(cls.gradeLevel)}{streamCount > 1 ? ` (${streamCount} streams)` : ''}
-                                        </option>
-                                    );
-                                })}
-                            </select>
+                            <label style={{ ...styles.label, whiteSpace: 'nowrap' }}>🏫 Grade</label>
+                            {role === 'TEACHER' ? (
+                                <div style={styles.classDisplay}>
+                                    🔒 {gradeLabel(selectedGrade)} — All Streams
+                                </div>
+                            ) : (
+                                <select style={{ ...styles.select, minWidth: '220px' }} value={selectedGrade}
+                                    onChange={e => setSelectedGrade(e.target.value)}>
+                                    <option value="">-- Select Grade --</option>
+                                    {uniqueGrades.map(cls => {
+                                        const streamCount = classes.filter(c => c.gradeLevel === cls.gradeLevel).length;
+                                        return (
+                                            <option key={cls.gradeLevel} value={cls.gradeLevel}>
+                                                {gradeLabel(cls.gradeLevel)}{streamCount > 1 ? ` (${streamCount} streams)` : ''}
+                                            </option>
+                                        );
+                                    })}
+                                </select>
+                            )}
                             {selectedGrade && (
                                 <span style={{ color: '#666', fontSize: '13px' }}>
                                     Combining: {selectedGradeClasses.map(c => classDisplayName(c)).join(', ')}
