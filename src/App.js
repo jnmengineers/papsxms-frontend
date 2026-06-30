@@ -22,10 +22,12 @@ import StudentProfile from './pages/StudentProfile';
 import ChangePassword from './pages/ChangePassword';
 import Import from './pages/Import';
 import ProgressiveReport from './pages/ProgressiveReport';
+import InactivityTimeout from './components/InactivityTimeout';
 
 function App() {
     return (
         <Router>
+            <InactivityTimeout />
             <Routes>
                 {/* Public */}
                 <Route path="/" element={<Login />} />
