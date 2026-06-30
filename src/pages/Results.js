@@ -75,6 +75,11 @@ const printResults = ({ filterClass, examObj, pivotStudents, pivotSubjects, pivo
         return '<td style="padding:2px 3px;border:1px solid #ddd;text-align:center;font-weight:bold;">' + m + '</td>';
     }).join('');
 
+    const classMeanVal = subMeans.filter(s => s.mean > 0);
+    const classMean = classMeanVal.length
+        ? classMeanVal.reduce((s,x) => s + x.mean, 0).toFixed(1)
+        : '-';
+
     const rankRow = pivotSubjects.map(sub =>
         '<td style="padding:2px 3px;border:1px solid #ddd;text-align:center;font-weight:bold;color:#6f42c1;">#' + subRanks[sub.id] + '</td>'
     ).join('');
@@ -109,12 +114,17 @@ const printResults = ({ filterClass, examObj, pivotStudents, pivotSubjects, pivo
         '</tr></thead><tbody>' +
         rows +
         '<tr style="background:#e8f4f8;border-top:2px solid #2E75B6;"><td colspan="3" style="padding:2px 4px;font-weight:bold;border:1px solid #ddd;">SUBJECT TOTAL</td>' + totRow + '<td colspan="3" style="border:1px solid #ddd;"></td></tr>' +
-        '<tr style="background:#e3f2fd;"><td colspan="3" style="padding:2px 4px;font-weight:bold;border:1px solid #ddd;">SUBJECT MEAN</td>' + meanRow + '<td colspan="3" style="border:1px solid #ddd;"></td></tr>' +
+        '<tr style="background:#e3f2fd;"><td colspan="3" style="padding:2px 4px;font-weight:bold;border:1px solid #ddd;">SUBJECT MEAN</td>' + meanRow +
+            '<td colspan="3" style="padding:2px 6px;border:2px solid #1F3864;background:#fff;text-align:center;">' +
+            '<div style="font-size:9px;color:#555;font-weight:bold;">CLASS TOTAL MEAN</div>' +
+            '<div style="font-size:16px;font-weight:bold;color:#1F3864;">' + classMean + '</div>' +
+            '</td></tr>' +
         '<tr style="background:#f3e5f5;"><td colspan="3" style="padding:2px 4px;font-weight:bold;color:#6f42c1;border:1px solid #ddd;">SUBJECT RANK</td>' + rankRow + '<td colspan="3" style="border:1px solid #ddd;"></td></tr>' +
         '</tbody></table>' +
-        '<div style="display:flex;gap:20px;padding:6px 0;border-top:1px solid #ddd;margin-top:6px;font-size:11px;">' +
+        '<div style="display:flex;gap:20px;align-items:center;padding:6px 0;border-top:1px solid #ddd;margin-top:6px;font-size:11px;">' +
         '<span><strong>Total Students:</strong> ' + ranked.length + '</span>' +
         '<span><strong>Date:</strong> ' + new Date().toLocaleDateString() + '</span>' +
+        '<span style="margin-left:auto;background:#1F3864;color:white;padding:3px 12px;border-radius:4px;font-weight:bold;font-size:12px;">CLASS TOTAL MEAN: ' + classMean + '</span>' +
         '</div>' +
         '<div style="display:flex;gap:30px;margin-top:10px;border-top:2px solid #1F3864;padding-top:8px;">' +
         '<div style="flex:1;"><p style="font-size:11px;margin-bottom:5px;">Class Teacher: _________________________</p><p style="font-size:11px;">Signature: _____________ Date: __________</p></div>' +
@@ -346,6 +356,14 @@ function Results() {
         return ranks;
     };
 
+    const getClassOverallMean = () => {
+        const means = pivotSubjects.map(sub => {
+            const s = getSubjectStats(sub.id);
+            return parseFloat(s.mean);
+        }).filter(m => !isNaN(m) && m > 0);
+        return means.length ? means.reduce((s, m) => s + m, 0).toFixed(1) : null;
+    };
+
     const getStudentStats = (studentId) => {
         const r = pivotSubjects.map(sub => pivotData[studentId]?.[sub.id]).filter(Boolean);
         if (!r.length) return { total: 0, average: 0, grade: '-' };
@@ -500,6 +518,16 @@ function Results() {
                                             <span style={styles.badge}>📚 {pivotSubjects.length}</span>
                                             {pendingCount > 0 && <span style={{ ...styles.badge, backgroundColor:'#fd7e14' }}>✏️ {pendingCount} pending</span>}
                                         </div>
+                                        {(() => {
+                                            const cm = getClassOverallMean();
+                                            if (!cm) return null;
+                                            return (
+                                                <div style={{ backgroundColor: '#1F3864', borderRadius: '8px', padding: '8px 16px', textAlign: 'center', minWidth: '100px' }}>
+                                                    <div style={{ color: 'rgba(255,255,255,0.7)', fontSize: '10px', fontWeight: 'bold', letterSpacing: '0.5px' }}>CLASS TOTAL MEAN</div>
+                                                    <div style={{ color: '#FFD700', fontSize: '24px', fontWeight: 'bold', lineHeight: 1.1 }}>{cm}</div>
+                                                </div>
+                                            );
+                                        })()}
                                     </div>
 
                                     <div style={styles.tableWrapper}>
@@ -584,7 +612,18 @@ function Results() {
                                                 <tr style={{ backgroundColor:'#e3f2fd' }}>
                                                     <td colSpan="3" style={{...styles.td, fontWeight:'bold', color:'#2E75B6', fontSize:'12px'}}>📈 Mean (excl. blanks)</td>
                                                     {pivotSubjects.map(sub => { const s=getSubjectStats(sub.id); const mean=parseFloat(s.mean); return <td key={sub.id} style={{...styles.td, textAlign:'center'}}><span style={{fontWeight:'bold',fontSize:'12px',color:getMarkColor(mean)}}>{s.mean}</span><div style={{fontSize:'9px',color:'#999'}}>{s.count} pupils</div></td>; })}
-                                                    <td colSpan="4" style={styles.td} />
+                                                    <td colSpan="4" style={{...styles.td, textAlign:'center', padding:'4px 8px'}}>
+                                                        {(() => {
+                                                            const cm = getClassOverallMean();
+                                                            if (!cm) return null;
+                                                            return (
+                                                                <div style={{ border: '2px solid #1F3864', borderRadius: '6px', padding: '4px 8px', display: 'inline-block', minWidth: '70px' }}>
+                                                                    <div style={{ fontSize: '9px', color: '#555', fontWeight: 'bold' }}>CLASS TOTAL MEAN</div>
+                                                                    <div style={{ fontSize: '18px', fontWeight: 'bold', color: '#1F3864' }}>{cm}</div>
+                                                                </div>
+                                                            );
+                                                        })()}
+                                                    </td>
                                                 </tr>
                                                 {(() => {
                                                     const ranks = getSubjectRanks();
