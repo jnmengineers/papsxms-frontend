@@ -266,6 +266,16 @@ function ReportCards() {
     const fetchClasses = async () => { try { const r = await api.get('/api/classes'); setClasses(r.data); } catch (e) {} };
     const fetchExams = async () => { try { const r = await api.get('/api/exams'); setExams(r.data); } catch (e) {} };
 
+    const getServerError = (err) => {
+        const data = err.response?.data;
+        if (typeof data === 'string' && data.length < 300) return data;
+        if (data?.message) return data.message;
+        if (data?.error) return data.error;
+        if (err.response?.status === 400) return 'Bad request — check that results exist for this student and exam.';
+        if (err.response?.status === 409) return 'Report card already exists for this student and exam.';
+        return 'Request failed. Make sure marks have been entered for this student first.';
+    };
+
     const handleGenerateStudent = async (e) => {
         e.preventDefault();
         if (!genStudent || !genExam) { setError('Select both student and exam'); return; }
@@ -275,7 +285,7 @@ function ReportCards() {
             setSuccessMsg('Report card generated!');
             setGenStudent(''); fetchReportCards();
             setTimeout(() => setSuccessMsg(''), 3000);
-        } catch (e) { setError('Failed. Make sure results exist for this student.'); }
+        } catch (err) { setError(getServerError(err)); }
         setGenerating(false);
     };
 
@@ -284,17 +294,35 @@ function ReportCards() {
         const classStudents = students.filter(s => String(s.schoolClass?.classId) === String(genClassId));
         if (!classStudents.length) { setError('No students found in this class'); return; }
         setGenerating(true); setError(''); setSuccessMsg('');
-        let success = 0, failed = 0;
+        let success = 0;
+        const failedStudents = [];
         setBulkProgress({ done: 0, total: classStudents.length, success: 0, failed: 0 });
         for (let i = 0; i < classStudents.length; i++) {
-            try { await api.post('/api/reportCards/generate/student/' + classStudents[i].studentId + '/exam/' + genExam); success++; }
-            catch (e) { failed++; }
-            setBulkProgress({ done: i + 1, total: classStudents.length, success, failed });
+            try {
+                await api.post('/api/reportCards/generate/student/' + classStudents[i].studentId + '/exam/' + genExam);
+                success++;
+            } catch (err) {
+                failedStudents.push({
+                    name: `${classStudents[i].firstName} ${classStudents[i].lastName}`,
+                    reason: getServerError(err),
+                });
+            }
+            setBulkProgress({ done: i + 1, total: classStudents.length, success, failed: failedStudents.length });
         }
         setGenerating(false);
-        setSuccessMsg('Generated ' + success + ' report card(s).' + (failed > 0 ? ' ' + failed + ' failed.' : ''));
-        setBulkProgress(null); fetchReportCards();
-        setTimeout(() => setSuccessMsg(''), 5000);
+        setBulkProgress(null);
+        fetchReportCards();
+        if (failedStudents.length === 0) {
+            setSuccessMsg(`✅ All ${success} report cards generated successfully!`);
+            setTimeout(() => setSuccessMsg(''), 5000);
+        } else {
+            const failList = failedStudents.map(f => `• ${f.name}: ${f.reason}`).join('\n');
+            setError(`⚠️ ${success} generated, ${failedStudents.length} failed:\n${failList}`);
+            if (success > 0) {
+                setSuccessMsg(`✅ ${success} report card(s) generated.`);
+                setTimeout(() => setSuccessMsg(''), 5000);
+            }
+        }
     };
 
     const handleEdit = (card) => {
@@ -647,7 +675,7 @@ const s = {
     content: { padding: 'clamp(15px,3vw,30px)' },
     title: { color: '#1F3864', margin: '0 0 5px 0', fontSize: '24px' },
     subtitle: { color: '#666', margin: '0 0 20px 0', fontSize: '14px' },
-    error: { color: 'red', padding: '10px', backgroundColor: '#fff3f3', borderRadius: '5px', marginBottom: '15px' },
+    error: { color: 'red', padding: '10px', backgroundColor: '#fff3f3', borderRadius: '5px', marginBottom: '15px', whiteSpace: 'pre-line' },
     success: { color: '#155724', padding: '10px', backgroundColor: '#d4edda', borderRadius: '5px', marginBottom: '15px' },
     genCard: { backgroundColor: 'white', padding: '20px', borderRadius: '10px', marginBottom: '20px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' },
     genTabs: { display: 'flex', gap: '10px', marginBottom: '15px', flexWrap: 'wrap' },

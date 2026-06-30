@@ -210,37 +210,30 @@ function Results() {
             });
             const populated = Object.values(classMap).map(c => ({ ...c, studentCount: c.studentIds.size, subjectCount: c.subjectIds.size })).sort((a,b) => a.className.localeCompare(b.className));
 
-            if (isTeacher && linkedClassId) {
-                // Use the classes state as the authoritative source — avoids linkedClassName format mismatches
+            if (isTeacher && linkedClassId && linkedClassId !== 'null' && linkedClassId !== 'undefined') {
+                // Show step 2 for teachers too, but only with their own class tile.
+                // We try classId match first, then fall back to className+stream using the
+                // classes array (loaded independently — might not be ready yet, so we also
+                // keep a raw className+stream fallback from the results data itself).
                 const teacherClassObj = classes.find(c => String(c.classId) === String(linkedClassId));
-                const teacherStream = teacherClassObj?.stream || null;
-                const teacherBaseName = teacherClassObj?.className || null;
 
-                const teacherClass = populated.find(c => String(c.classId) === String(linkedClassId))
-                    || (teacherBaseName ? populated.find(c => c.className === teacherBaseName && (!teacherStream || c.stream === teacherStream)) : null)
-                    || (teacherBaseName ? populated.find(c => c.className === teacherBaseName) : null);
+                let teacherPopulated = populated.filter(c => String(c.classId) === String(linkedClassId));
 
-                if (teacherClass) {
-                    setPopulatedClasses([teacherClass]);
-                    setFilterClass(teacherClass.className);
-                    setStep(3);
-                    setSearched(true);
-                    // Filter by classId first, then fall back to className + stream
-                    const classData = data.filter(r => {
-                        if (String(r.student?.schoolClass?.classId) === String(linkedClassId)) return true;
-                        if (r.student?.className === (teacherBaseName || teacherClass.className)) {
-                            if (!teacherStream) return true;
-                            return r.student?.stream === teacherStream ||
-                                   r.student?.schoolClass?.stream === teacherStream;
-                        }
-                        return false;
-                    });
-                    setResults(classData);
-                    buildPivotTable(classData);
-                } else {
-                    setPopulatedClasses([]);
-                    setStep(2);
+                if (!teacherPopulated.length && teacherClassObj) {
+                    // classId not present in results data — match by className + stream
+                    teacherPopulated = populated.filter(c =>
+                        c.className === teacherClassObj.className &&
+                        (!teacherClassObj.stream || !c.stream || c.stream === teacherClassObj.stream)
+                    );
                 }
+
+                if (!teacherPopulated.length && teacherClassObj) {
+                    // Last resort: className only (single-stream grade or stream field missing)
+                    teacherPopulated = populated.filter(c => c.className === teacherClassObj.className);
+                }
+
+                setPopulatedClasses(teacherPopulated);
+                setStep(2);
             } else {
                 setPopulatedClasses(populated);
                 setStep(2);
