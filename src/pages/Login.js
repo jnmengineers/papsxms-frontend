@@ -35,6 +35,7 @@ function Login() {
             localStorage.setItem('role', data.role);
             localStorage.setItem('linkedClassId', data.linkedClassId || '');
             localStorage.setItem('linkedClassName', data.linkedClassName || '');
+            localStorage.setItem('linkedStream', data.linkedStream || ''); // ✅ NEW
 
             if (data.mustChangePassword) {
                 localStorage.setItem('mustChangePassword', 'true');
