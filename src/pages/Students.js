@@ -7,6 +7,63 @@ import Spinner from '../components/Spinner';
 import Toast from '../components/Toast';
 import useToast from '../hooks/useToast';
 
+// Outside parent — prevents keyboard dismiss on re-render
+const StudentFormFields = ({ formData, setFormData, classId, setClassId, sections, classes, onSubmit, onCancel, submitLabel, showClassField = false }) => (
+    <form onSubmit={onSubmit} style={styles.inlineForm}>
+        <div style={styles.formGrid}>
+            <div style={styles.formGroup}>
+                <label style={styles.label}>First Name</label>
+                <input style={styles.input} value={formData.firstName}
+                    onChange={e => setFormData({...formData, firstName: e.target.value})} required />
+            </div>
+            <div style={styles.formGroup}>
+                <label style={styles.label}>Last Name</label>
+                <input style={styles.input} value={formData.lastName}
+                    onChange={e => setFormData({...formData, lastName: e.target.value})} required />
+            </div>
+            <div style={styles.formGroup}>
+                <label style={styles.label}>Date of Birth</label>
+                <input type="date" style={styles.input} value={formData.dateOfBirth}
+                    onChange={e => setFormData({...formData, dateOfBirth: e.target.value})} required />
+            </div>
+            <div style={styles.formGroup}>
+                <label style={styles.label}>Gender</label>
+                <select style={styles.input} value={formData.gender}
+                    onChange={e => setFormData({...formData, gender: e.target.value})} required>
+                    <option value="">Select Gender</option>
+                    <option value="Male">Male</option>
+                    <option value="Female">Female</option>
+                </select>
+            </div>
+            <div style={styles.formGroup}>
+                <label style={styles.label}>Admission Number</label>
+                <input style={styles.input} value={formData.admissionNumber}
+                    onChange={e => setFormData({...formData, admissionNumber: e.target.value})} required />
+            </div>
+            {showClassField && (
+                <div style={styles.formGroup}>
+                    <label style={styles.label}>Class</label>
+                    <select style={styles.input} value={classId}
+                        onChange={e => setClassId(e.target.value)} required>
+                        <option value="">Select Class</option>
+                        {sections.map(section => (
+                            <optgroup key={section.value} label={section.label}>
+                                {classes.filter(c => c.section === section.value).map(cls => (
+                                    <option key={cls.classId} value={cls.classId}>{cls.className}</option>
+                                ))}
+                            </optgroup>
+                        ))}
+                    </select>
+                </div>
+            )}
+        </div>
+        <div style={styles.btnGroup}>
+            <button type="submit" style={styles.submitBtn}>{submitLabel}</button>
+            <button type="button" onClick={onCancel} style={styles.cancelBtn}>✕ Cancel</button>
+        </div>
+    </form>
+);
+
 function Students() {
     const [students, setStudents] = useState([]);
     const [filtered, setFiltered] = useState([]);
@@ -210,62 +267,6 @@ function Students() {
         }
     };
 
-    const StudentFormFields = ({ onSubmit, onCancel, submitLabel, showClassField = false }) => (
-        <form onSubmit={onSubmit} style={styles.inlineForm}>
-            <div style={styles.formGrid}>
-                <div style={styles.formGroup}>
-                    <label style={styles.label}>First Name</label>
-                    <input style={styles.input} value={formData.firstName}
-                        onChange={e => setFormData({...formData, firstName: e.target.value})} required />
-                </div>
-                <div style={styles.formGroup}>
-                    <label style={styles.label}>Last Name</label>
-                    <input style={styles.input} value={formData.lastName}
-                        onChange={e => setFormData({...formData, lastName: e.target.value})} required />
-                </div>
-                <div style={styles.formGroup}>
-                    <label style={styles.label}>Date of Birth</label>
-                    <input type="date" style={styles.input} value={formData.dateOfBirth}
-                        onChange={e => setFormData({...formData, dateOfBirth: e.target.value})} required />
-                </div>
-                <div style={styles.formGroup}>
-                    <label style={styles.label}>Gender</label>
-                    <select style={styles.input} value={formData.gender}
-                        onChange={e => setFormData({...formData, gender: e.target.value})} required>
-                        <option value="">Select Gender</option>
-                        <option value="Male">Male</option>
-                        <option value="Female">Female</option>
-                    </select>
-                </div>
-                <div style={styles.formGroup}>
-                    <label style={styles.label}>Admission Number</label>
-                    <input style={styles.input} value={formData.admissionNumber}
-                        onChange={e => setFormData({...formData, admissionNumber: e.target.value})} required />
-                </div>
-                {showClassField && (
-                    <div style={styles.formGroup}>
-                        <label style={styles.label}>Class</label>
-                        <select style={styles.input} value={classId}
-                            onChange={e => setClassId(e.target.value)} required>
-                            <option value="">Select Class</option>
-                            {sections.map(section => (
-                                <optgroup key={section.value} label={section.label}>
-                                    {classes.filter(c => c.section === section.value).map(cls => (
-                                        <option key={cls.classId} value={cls.classId}>{cls.className}</option>
-                                    ))}
-                                </optgroup>
-                            ))}
-                        </select>
-                    </div>
-                )}
-            </div>
-            <div style={styles.btnGroup}>
-                <button type="submit" style={styles.submitBtn}>{submitLabel}</button>
-                <button type="button" onClick={onCancel} style={styles.cancelBtn}>✕ Cancel</button>
-            </div>
-        </form>
-    );
-
     const grouped = gradesBySection();
 
     return (
@@ -313,6 +314,9 @@ function Students() {
                     <div style={styles.addFormCard}>
                         <h3 style={styles.formTitle}>➕ Add New Student</h3>
                         <StudentFormFields
+                            formData={formData} setFormData={setFormData}
+                            classId={classId} setClassId={setClassId}
+                            sections={sections} classes={classes}
                             onSubmit={handleSubmitAdd}
                             onCancel={() => { setShowAddForm(false); setFormData({ firstName: '', lastName: '', dateOfBirth: '', gender: '', admissionNumber: '' }); }}
                             submitLabel="💾 Save Student"
@@ -583,6 +587,9 @@ function Students() {
                                                                 <button onClick={handleCancelEdit} style={styles.closeBtn}>✕</button>
                                                             </div>
                                                             <StudentFormFields
+                                                                formData={formData} setFormData={setFormData}
+                                                                classId={classId} setClassId={setClassId}
+                                                                sections={sections} classes={classes}
                                                                 onSubmit={handleSubmitEdit}
                                                                 onCancel={handleCancelEdit}
                                                                 submitLabel="✅ Update Student"

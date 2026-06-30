@@ -3,6 +3,40 @@ import api from '../services/api';
 import logo1 from '../assets/logo1.png';
 import { classDisplayName, classReportName, gradeLabel, streamLabel, streamColor } from '../utils/classUtils';
 
+// Outside parent — prevents keyboard dismiss on re-render
+const TeacherFormFields = ({ formData, setFormData, onSubmit, onCancel, submitLabel }) => (
+    <form onSubmit={onSubmit} style={styles.inlineForm}>
+        <div style={styles.formGrid}>
+            <div style={styles.formGroup}>
+                <label style={styles.label}>First Name</label>
+                <input style={styles.input} value={formData.firstName}
+                    onChange={e => setFormData({...formData, firstName: e.target.value})} required />
+            </div>
+            <div style={styles.formGroup}>
+                <label style={styles.label}>Last Name</label>
+                <input style={styles.input} value={formData.lastName}
+                    onChange={e => setFormData({...formData, lastName: e.target.value})} required />
+            </div>
+            <div style={styles.formGroup}>
+                <label style={styles.label}>Phone <span style={styles.requiredTag}>Required • Unique</span></label>
+                <input style={styles.input} value={formData.phone}
+                    onChange={e => setFormData({...formData, phone: e.target.value})}
+                    placeholder="e.g. 0712345678" required />
+            </div>
+            <div style={styles.formGroup}>
+                <label style={styles.label}>Email <span style={styles.optionalTag}>Optional</span></label>
+                <input type="email" style={styles.input} value={formData.email}
+                    onChange={e => setFormData({...formData, email: e.target.value})}
+                    placeholder="Can be added later" />
+            </div>
+        </div>
+        <div style={styles.btnGroup}>
+            <button type="submit" style={styles.submitBtn}>{submitLabel}</button>
+            <button type="button" onClick={onCancel} style={styles.cancelBtn}>✕ Cancel</button>
+        </div>
+    </form>
+);
+
 function Teachers() {
     const [teachers, setTeachers] = useState([]);
     const [classes, setClasses] = useState([]);
@@ -158,40 +192,6 @@ function Teachers() {
     const totalAssigned = classes.filter(c => c.classTeacher).length;
     const totalUnassigned = classes.length - totalAssigned;
 
-    // Shared teacher form fields
-    const TeacherFormFields = ({ onSubmit, onCancel, submitLabel }) => (
-        <form onSubmit={onSubmit} style={styles.inlineForm}>
-            <div style={styles.formGrid}>
-                <div style={styles.formGroup}>
-                    <label style={styles.label}>First Name</label>
-                    <input style={styles.input} value={formData.firstName}
-                        onChange={e => setFormData({...formData, firstName: e.target.value})} required />
-                </div>
-                <div style={styles.formGroup}>
-                    <label style={styles.label}>Last Name</label>
-                    <input style={styles.input} value={formData.lastName}
-                        onChange={e => setFormData({...formData, lastName: e.target.value})} required />
-                </div>
-                <div style={styles.formGroup}>
-                    <label style={styles.label}>Phone <span style={styles.requiredTag}>Required • Unique</span></label>
-                    <input style={styles.input} value={formData.phone}
-                        onChange={e => setFormData({...formData, phone: e.target.value})}
-                        placeholder="e.g. 0712345678" required />
-                </div>
-                <div style={styles.formGroup}>
-                    <label style={styles.label}>Email <span style={styles.optionalTag}>Optional</span></label>
-                    <input type="email" style={styles.input} value={formData.email}
-                        onChange={e => setFormData({...formData, email: e.target.value})}
-                        placeholder="Can be added later" />
-                </div>
-            </div>
-            <div style={styles.btnGroup}>
-                <button type="submit" style={styles.submitBtn}>{submitLabel}</button>
-                <button type="button" onClick={onCancel} style={styles.cancelBtn}>✕ Cancel</button>
-            </div>
-        </form>
-    );
-
     return (
         <div style={styles.container}>
             <div style={styles.navbar}>
@@ -224,6 +224,7 @@ function Teachers() {
                     <div style={styles.addFormCard}>
                         <h3 style={styles.formTitle}>➕ Add New Teacher</h3>
                         <TeacherFormFields
+                            formData={formData} setFormData={setFormData}
                             onSubmit={handleSubmitAdd}
                             onCancel={() => { setShowAddForm(false); setFormData({ firstName: '', lastName: '', email: '', phone: '' }); }}
                             submitLabel="💾 Save Teacher"
@@ -313,6 +314,7 @@ function Teachers() {
                                                                         <button onClick={handleCancelEdit} style={styles.closeBtn}>✕</button>
                                                                     </div>
                                                                     <TeacherFormFields
+                                                                        formData={formData} setFormData={setFormData}
                                                                         onSubmit={handleSubmitEdit}
                                                                         onCancel={handleCancelEdit}
                                                                         submitLabel="✅ Update Teacher"

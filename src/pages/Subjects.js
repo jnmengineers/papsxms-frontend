@@ -1,6 +1,41 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import api from '../services/api';
 import logo1 from '../assets/logo1.png';
+
+// Outside parent — prevents keyboard dismiss on re-render
+const SubjectFormFields = ({ formData, setFormData, onSubmit, onCancel, submitLabel }) => (
+    <form onSubmit={onSubmit} style={styles.inlineForm}>
+        <div style={styles.formGrid}>
+            <div style={styles.formGroup}>
+                <label style={styles.label}>Subject Name</label>
+                <input style={styles.input} value={formData.subjectName}
+                    onChange={e => setFormData({...formData, subjectName: e.target.value})}
+                    placeholder="e.g. Mathematics" required />
+            </div>
+            <div style={styles.formGroup}>
+                <label style={styles.label}>Subject Code</label>
+                <input style={styles.input} value={formData.subjectCode}
+                    onChange={e => setFormData({...formData, subjectCode: e.target.value})}
+                    placeholder="e.g. MATH" required />
+            </div>
+            <div style={styles.formGroup}>
+                <label style={styles.label}>Grade Level</label>
+                <select style={styles.input} value={formData.gradeLevel}
+                    onChange={e => setFormData({...formData, gradeLevel: e.target.value})} required>
+                    <option value="">Select Grade</option>
+                    <optgroup label="Pre-School"><option value="PG">PG</option><option value="PP1">PP1</option><option value="PP2">PP2</option></optgroup>
+                    <optgroup label="Lower Primary"><option value="G1">G1</option><option value="G2">G2</option><option value="G3">G3</option></optgroup>
+                    <optgroup label="Upper Primary"><option value="G4">G4</option><option value="G5">G5</option><option value="G6">G6</option></optgroup>
+                    <optgroup label="Junior School"><option value="G7">G7</option><option value="G8">G8</option><option value="G9">G9</option></optgroup>
+                </select>
+            </div>
+        </div>
+        <div style={styles.btnGroup}>
+            <button type="submit" style={styles.submitBtn}>{submitLabel}</button>
+            <button type="button" onClick={onCancel} style={styles.cancelBtn}>✕ Cancel</button>
+        </div>
+    </form>
+);
 
 function Subjects() {
     const [subjects, setSubjects] = useState([]);
@@ -192,40 +227,6 @@ function Subjects() {
         return subjects.some(s => s.subjectName.toLowerCase() === subjectName.toLowerCase() && s.gradeLevel === gradeLevel);
     };
 
-    const SubjectFormFields = ({ onSubmit, onCancel, submitLabel }) => (
-        <form onSubmit={onSubmit} style={styles.inlineForm}>
-            <div style={styles.formGrid}>
-                <div style={styles.formGroup}>
-                    <label style={styles.label}>Subject Name</label>
-                    <input style={styles.input} value={formData.subjectName}
-                        onChange={e => setFormData({...formData, subjectName: e.target.value})}
-                        placeholder="e.g. Mathematics" required />
-                </div>
-                <div style={styles.formGroup}>
-                    <label style={styles.label}>Subject Code</label>
-                    <input style={styles.input} value={formData.subjectCode}
-                        onChange={e => setFormData({...formData, subjectCode: e.target.value})}
-                        placeholder="e.g. MATH" required />
-                </div>
-                <div style={styles.formGroup}>
-                    <label style={styles.label}>Grade Level</label>
-                    <select style={styles.input} value={formData.gradeLevel}
-                        onChange={e => setFormData({...formData, gradeLevel: e.target.value})} required>
-                        <option value="">Select Grade</option>
-                        <optgroup label="Pre-School"><option value="PG">PG</option><option value="PP1">PP1</option><option value="PP2">PP2</option></optgroup>
-                        <optgroup label="Lower Primary"><option value="G1">G1</option><option value="G2">G2</option><option value="G3">G3</option></optgroup>
-                        <optgroup label="Upper Primary"><option value="G4">G4</option><option value="G5">G5</option><option value="G6">G6</option></optgroup>
-                        <optgroup label="Junior School"><option value="G7">G7</option><option value="G8">G8</option><option value="G9">G9</option></optgroup>
-                    </select>
-                </div>
-            </div>
-            <div style={styles.btnGroup}>
-                <button type="submit" style={styles.submitBtn}>{submitLabel}</button>
-                <button type="button" onClick={onCancel} style={styles.cancelBtn}>✕ Cancel</button>
-            </div>
-        </form>
-    );
-
     return (
         <div style={styles.container}>
             <div style={styles.navbar}>
@@ -255,6 +256,7 @@ function Subjects() {
                     <div style={styles.addFormCard}>
                         <h3 style={styles.formTitle}>➕ Add New Subject</h3>
                         <SubjectFormFields
+                            formData={formData} setFormData={setFormData}
                             onSubmit={handleSubmitAdd}
                             onCancel={() => { setShowAddForm(false); setFormData({ subjectName: '', subjectCode: '', gradeLevel: '' }); }}
                             submitLabel="💾 Save Subject"
@@ -351,6 +353,7 @@ function Subjects() {
                                                                                     <button onClick={handleCancelEdit} style={styles.closeBtn}>✕</button>
                                                                                 </div>
                                                                                 <SubjectFormFields
+                                                                                    formData={formData} setFormData={setFormData}
                                                                                     onSubmit={handleSubmitEdit}
                                                                                     onCancel={handleCancelEdit}
                                                                                     submitLabel="✅ Update Subject"
