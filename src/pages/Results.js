@@ -134,6 +134,11 @@ const printResults = ({ filterClass, examObj, pivotStudents, pivotSubjects, pivo
 
 // ── Main Component ────────────────────────────────────────────────────────────
 function Results() {
+    const userRole = localStorage.getItem('role');
+    const linkedClassId = localStorage.getItem('linkedClassId');
+    const linkedClassName = localStorage.getItem('linkedClassName');
+    const isTeacher = userRole === 'TEACHER';
+
     const [results, setResults] = useState([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
@@ -194,7 +199,27 @@ function Results() {
                 }
             });
             const populated = Object.values(classMap).map(c => ({ ...c, studentCount: c.studentIds.size, subjectCount: c.subjectIds.size })).sort((a,b) => a.className.localeCompare(b.className));
-            setPopulatedClasses(populated);
+
+            if (isTeacher && linkedClassId) {
+                // Teacher: auto-select their class and skip the class grid
+                const teacherClass = populated.find(c => String(c.classId) === String(linkedClassId))
+                    || populated.find(c => c.className === linkedClassName);
+                if (teacherClass) {
+                    setPopulatedClasses([teacherClass]);
+                    setFilterClass(teacherClass.className);
+                    setStep(3);
+                    setSearched(true);
+                    const classData = data.filter(r => r.student?.className === teacherClass.className);
+                    setResults(classData);
+                    buildPivotTable(classData);
+                } else {
+                    setPopulatedClasses([]);
+                    setStep(2);
+                }
+            } else {
+                setPopulatedClasses(populated);
+                setStep(2);
+            }
         } catch (e) { setError('Failed to load classes'); }
         setLoadingClasses(false);
     };
@@ -441,7 +466,9 @@ function Results() {
                 {step === 3 && (
                     <div>
                         <div style={styles.stepHeader}>
-                            <button onClick={() => { setStep(2); setSearched(false); setPendingChanges({}); }} style={styles.backBtn}>← Back to Classes</button>
+                            <button onClick={() => { setStep(isTeacher ? 1 : 2); setSearched(false); setPendingChanges({}); if (isTeacher) { setPopulatedClasses([]); setAllExamResults([]); } }} style={styles.backBtn}>
+                                {isTeacher ? '← Back to Exams' : '← Back to Classes'}
+                            </button>
                             <h3 style={styles.stepTitle}>📊 {filterClass} — {selectedExamName}</h3>
                             <input style={styles.searchInput} placeholder="🔍 Search student..." value={search} onChange={e => setSearch(e.target.value)} />
                         </div>

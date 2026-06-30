@@ -186,6 +186,11 @@ const printReportCard = (card, singleResults, progressiveData) => {
 };
 
 function ReportCards() {
+    const userRole = localStorage.getItem('role');
+    const linkedClassId = localStorage.getItem('linkedClassId');
+    const linkedClassName = localStorage.getItem('linkedClassName');
+    const isTeacher = userRole === 'TEACHER';
+
     const [reportCards, setReportCards] = useState([]);
     const [loading, setLoading] = useState(true);
     const [printing, setPrinting] = useState(null);
@@ -201,7 +206,7 @@ function ReportCards() {
     const [filtered, setFiltered] = useState([]);
     const [genMode, setGenMode] = useState('class');
     const [genExam, setGenExam] = useState('');
-    const [genClassId, setGenClassId] = useState('');
+    const [genClassId, setGenClassId] = useState(isTeacher && linkedClassId ? linkedClassId : '');
     const [genStudent, setGenStudent] = useState('');
     const [bulkProgress, setBulkProgress] = useState(null);
     const [selectedClassFilter, setSelectedClassFilter] = useState('');
@@ -238,7 +243,17 @@ function ReportCards() {
     }, [search, filterExam, selectedClassFilter, reportCards]);
 
     const fetchReportCards = async () => {
-        try { const r = await api.get('/api/reportCards'); setReportCards(r.data); setFiltered(r.data); setLoading(false); }
+        try {
+            const r = await api.get('/api/reportCards');
+            let data = r.data;
+            if (isTeacher && linkedClassId) {
+                data = data.filter(card =>
+                    String(card.student?.schoolClass?.classId) === String(linkedClassId) ||
+                    card.student?.className === linkedClassName
+                );
+            }
+            setReportCards(data); setFiltered(data); setLoading(false);
+        }
         catch (e) { setError('Failed to load report cards'); setLoading(false); }
     };
     const fetchStudents = async () => { try { const r = await api.get('/api/students'); setStudents(r.data); } catch (e) {} };
@@ -375,16 +390,21 @@ function ReportCards() {
                         {genMode === 'class' && (
                             <div style={{ flex: 1 }}>
                                 <label style={s.label}>Class</label>
-                                <select style={s.input} value={genClassId} onChange={e => setGenClassId(e.target.value)}>
-                                    <option value="">-- Select Class --</option>
-                                    {sections.map(sec => (
-                                        <optgroup key={sec.value} label={sec.label}>
-                                            {classes.filter(c => c.section === sec.value).map(cls => (
-                                                <option key={cls.classId} value={cls.classId}>{classDisplayName(cls)}</option>
-                                            ))}
-                                        </optgroup>
-                                    ))}
-                                </select>
+                                {isTeacher ? (
+                                    <input style={{ ...s.input, backgroundColor: '#f8f9fa', color: '#555', cursor: 'not-allowed' }}
+                                        value={linkedClassName || 'Your class'} disabled />
+                                ) : (
+                                    <select style={s.input} value={genClassId} onChange={e => setGenClassId(e.target.value)}>
+                                        <option value="">-- Select Class --</option>
+                                        {sections.map(sec => (
+                                            <optgroup key={sec.value} label={sec.label}>
+                                                {classes.filter(c => c.section === sec.value).map(cls => (
+                                                    <option key={cls.classId} value={cls.classId}>{classDisplayName(cls)}</option>
+                                                ))}
+                                            </optgroup>
+                                        ))}
+                                    </select>
+                                )}
                             </div>
                         )}
                         {genMode === 'student' && (
@@ -392,9 +412,12 @@ function ReportCards() {
                                 <label style={s.label}>Student</label>
                                 <select style={s.input} value={genStudent} onChange={e => setGenStudent(e.target.value)}>
                                     <option value="">-- Select Student --</option>
-                                    {students.slice().sort((a, b) => (a.firstName + a.lastName).localeCompare(b.firstName + b.lastName)).map(st => (
-                                        <option key={st.studentId} value={st.studentId}>{st.firstName} {st.lastName} - {st.className} ({st.admissionNumber})</option>
-                                    ))}
+                                    {students
+                                        .filter(st => !isTeacher || String(st.schoolClass?.classId) === String(linkedClassId))
+                                        .slice().sort((a, b) => (a.firstName + a.lastName).localeCompare(b.firstName + b.lastName))
+                                        .map(st => (
+                                            <option key={st.studentId} value={st.studentId}>{st.firstName} {st.lastName} - {st.className} ({st.admissionNumber})</option>
+                                        ))}
                                 </select>
                             </div>
                         )}
