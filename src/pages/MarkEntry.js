@@ -6,6 +6,15 @@ import logo1 from '../assets/logo1.png';
 import { classDisplayName, gradeLabel, streamLabel } from '../utils/classUtils';
 import logo2 from '../assets/logo2.png';
 
+// ── Orientation Toggle ────────────────────────────────────────────────────────
+const OrientationToggle = ({ value, onChange }) => (
+    <span style={{ display: 'flex', gap: '3px' }}>
+        {['portrait', 'landscape'].map(o => (
+            <button key={o} onClick={() => onChange(o)} style={{ fontSize: '11px', padding: '3px 9px', borderRadius: '4px', cursor: 'pointer', border: `1.5px solid ${value === o ? '#1F3864' : '#ccc'}`, background: value === o ? '#1F3864' : 'white', color: value === o ? 'white' : '#666', fontWeight: value === o ? 'bold' : 'normal', textTransform: 'capitalize' }}>{o}</button>
+        ))}
+    </span>
+);
+
 // ── Printable Blank Mark Sheet ────────────────────────────────────────────────
 const PrintableMarkSheet = React.forwardRef(({ students, subjects, className, examName, academicYear, term }, ref) => (
     <div ref={ref} style={pStyles.page}>
@@ -118,9 +127,11 @@ function MarkEntry() {
     const [step, setStep] = useState(1);
 
     const printRef = useRef();
+    const [printOrientation, setPrintOrientation] = useState('landscape');
     const handlePrint = useReactToPrint({
         contentRef: printRef,
-        documentTitle: `MarkSheet_${clsName()}_${examName()}`
+        documentTitle: `MarkSheet_${clsName()}_${examName()}`,
+        pageStyle: `@page { size: A4 ${printOrientation}; margin: 10mm; } @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }`
     });
 
     function clsName() {
@@ -501,7 +512,10 @@ function MarkEntry() {
                     </div>
                     <div style={styles.headerBtns}>
                         {activeClassId() && students.length > 0 && subjects.length > 0 && (
-                            <button onClick={handlePrint} style={styles.printBtn}>🖨️ Print Blank Sheet</button>
+                            <>
+                                <OrientationToggle value={printOrientation} onChange={setPrintOrientation} />
+                                <button onClick={handlePrint} style={styles.printBtn}>🖨️ Print Blank Sheet</button>
+                            </>
                         )}
                         {(step > 1 || selectedSubject) && (
                             <button onClick={handleReset} style={styles.resetBtn}>↺ Reset</button>

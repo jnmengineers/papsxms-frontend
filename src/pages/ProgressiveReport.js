@@ -5,6 +5,15 @@ import logo1 from '../assets/logo1.png';
 import logo2 from '../assets/logo2.png';
 import { classDisplayName } from '../utils/classUtils';
 
+// ── Orientation Toggle ────────────────────────────────────────────────────────
+const OrientationToggle = ({ value, onChange }) => (
+    <span style={{ display: 'flex', gap: '3px' }}>
+        {['portrait', 'landscape'].map(o => (
+            <button key={o} onClick={() => onChange(o)} style={{ fontSize: '11px', padding: '3px 9px', borderRadius: '4px', cursor: 'pointer', border: `1.5px solid ${value === o ? '#1F3864' : '#ccc'}`, background: value === o ? '#1F3864' : 'white', color: value === o ? 'white' : '#666', fontWeight: value === o ? 'bold' : 'normal', textTransform: 'capitalize' }}>{o}</button>
+        ))}
+    </span>
+);
+
 // ── Grade helpers ─────────────────────────────────────────────────────────────
 const getGrade = (marks) => {
     if (marks === null || marks === undefined) return { label: '-', color: '#999' };
@@ -186,9 +195,11 @@ function ProgressiveReport() {
     const [examNames, setExamNames] = useState({});
 
     const printRef = useRef();
+    const [printOrientation, setPrintOrientation] = useState('portrait');
     const handlePrint = useReactToPrint({
         contentRef: printRef,
-        documentTitle: `Progressive_Report_${progressiveData?.student?.firstName}`
+        documentTitle: `Progressive_Report_${progressiveData?.student?.firstName}`,
+        pageStyle: `@page { size: A4 ${printOrientation}; margin: 10mm; } @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }`
     });
 
     const sections = [
@@ -361,6 +372,7 @@ function ProgressiveReport() {
                                     <span style={styles.printBarInfo}>
                                         📈 {progressiveData.student?.firstName} {progressiveData.student?.lastName} — Term {progressiveData.term} {progressiveData.academicYear}
                                     </span>
+                                    <OrientationToggle value={printOrientation} onChange={setPrintOrientation} />
                                     <button onClick={handlePrint} style={styles.printBtn}>🖨️ Print Report</button>
                                 </div>
 

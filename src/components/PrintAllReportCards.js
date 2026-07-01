@@ -5,6 +5,15 @@ import logo1 from '../assets/logo1.png';
 import logo2 from '../assets/logo2.png';
 import { classDisplayName } from '../utils/classUtils';
 
+// ── Orientation Toggle ────────────────────────────────────────────────────────
+const OrientationToggle = ({ value, onChange }) => (
+    <span style={{ display: 'flex', gap: '3px' }}>
+        {['portrait', 'landscape'].map(o => (
+            <button key={o} onClick={() => onChange(o)} style={{ fontSize: '11px', padding: '3px 9px', borderRadius: '4px', cursor: 'pointer', border: `1.5px solid ${value === o ? '#1F3864' : '#ccc'}`, background: value === o ? '#1F3864' : 'white', color: value === o ? 'white' : '#666', fontWeight: value === o ? 'bold' : 'normal', textTransform: 'capitalize' }}>{o}</button>
+        ))}
+    </span>
+);
+
 // Single printable report card
 const SingleReportCard = ({ card, results }) => (
     <div style={printStyles.page}>
@@ -120,11 +129,13 @@ function PrintAllReportCards({ examId, classId, className, examName, onClose }) 
     const [loading, setLoading] = useState(true);
     const [preparing, setPreparing] = useState(false);
     const [error, setError] = useState('');
+    const [printOrientation, setPrintOrientation] = useState('portrait');
     const printRef = useRef();
 
     const handlePrint = useReactToPrint({
         contentRef: printRef,
         documentTitle: `ReportCards_${className}_${examName}`,
+        pageStyle: `@page { size: A4 ${printOrientation}; margin: 10mm; } @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }`
     });
 
     useEffect(() => {
@@ -193,9 +204,12 @@ function PrintAllReportCards({ examId, classId, className, examName, onClose }) 
                 <div style={modalStyles.footer}>
                     <button onClick={onClose} style={modalStyles.cancelBtn}>Cancel</button>
                     {cards.length > 0 && (
-                        <button onClick={handlePrepareAndPrint} style={modalStyles.printBtn} disabled={preparing || loading}>
-                            {preparing ? '⏳ Preparing...' : `🖨️ Print ${cards.length} Report Cards`}
-                        </button>
+                        <>
+                            <OrientationToggle value={printOrientation} onChange={setPrintOrientation} />
+                            <button onClick={handlePrepareAndPrint} style={modalStyles.printBtn} disabled={preparing || loading}>
+                                {preparing ? '⏳ Preparing...' : `🖨️ Print ${cards.length} Report Cards`}
+                            </button>
+                        </>
                     )}
                 </div>
             </div>

@@ -5,6 +5,15 @@ import logo1 from '../assets/logo1.png';
 import logo2 from '../assets/logo2.png';
 import { classDisplayName, streamLabel, gradeLabel } from '../utils/classUtils';
 
+// ─── Orientation Toggle ───────────────────────────────────────────────────────
+const OrientationToggle = ({ value, onChange }) => (
+    <span style={{ display: 'flex', gap: '3px' }}>
+        {['portrait', 'landscape'].map(o => (
+            <button key={o} onClick={() => onChange(o)} style={{ fontSize: '11px', padding: '3px 9px', borderRadius: '4px', cursor: 'pointer', border: `1.5px solid ${value === o ? '#1F3864' : '#ccc'}`, background: value === o ? '#1F3864' : 'white', color: value === o ? 'white' : '#666', fontWeight: value === o ? 'bold' : 'normal', textTransform: 'capitalize' }}>{o}</button>
+        ))}
+    </span>
+);
+
 // ─── Print Header ─────────────────────────────────────────────────────────────
 const PrintHeader = ({ title, subtitle }) => (
     <div style={pStyles.header}>
@@ -202,9 +211,13 @@ function SectionReport() {
     const streamMeritRef = useRef();
     const gradeMeritRef = useRef();
 
-    const handlePrintSectionReport = useReactToPrint({ contentRef: sectionReportRef, documentTitle: 'Section_Performance_Report', pageStyle: '@page { size: A4 portrait; margin: 10mm; } @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }' });
-    const handlePrintStreamMerit = useReactToPrint({ contentRef: streamMeritRef, documentTitle: `Merit_List_${selectedClass}`, pageStyle: '@page { size: A4 landscape; margin: 10mm; } @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }' });
-    const handlePrintGradeMerit = useReactToPrint({ contentRef: gradeMeritRef, documentTitle: `Grade_Merit_List`, pageStyle: '@page { size: A4 landscape; margin: 10mm; } @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }' });
+    const [sectionOrientation, setSectionOrientation] = useState('portrait');
+    const [streamMeritOrientation, setStreamMeritOrientation] = useState('landscape');
+    const [gradeMeritOrientation, setGradeMeritOrientation] = useState('landscape');
+
+    const handlePrintSectionReport = useReactToPrint({ contentRef: sectionReportRef, documentTitle: 'Section_Performance_Report', pageStyle: `@page { size: A4 ${sectionOrientation}; margin: 10mm; } @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }` });
+    const handlePrintStreamMerit = useReactToPrint({ contentRef: streamMeritRef, documentTitle: `Merit_List_${selectedClass}`, pageStyle: `@page { size: A4 ${streamMeritOrientation}; margin: 10mm; } @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }` });
+    const handlePrintGradeMerit = useReactToPrint({ contentRef: gradeMeritRef, documentTitle: `Grade_Merit_List`, pageStyle: `@page { size: A4 ${gradeMeritOrientation}; margin: 10mm; } @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }` });
 
     useEffect(() => {
         fetchExams();
@@ -468,6 +481,7 @@ function SectionReport() {
                         {report && (
                             <div style={styles.printBar}>
                                 <span style={styles.printBarInfo}>📊 {selectedExamObj?.examName} — Section Performance Report</span>
+                                <OrientationToggle value={sectionOrientation} onChange={setSectionOrientation} />
                                 <button onClick={handlePrintSectionReport} style={styles.printBtn}>🖨️ Print Report</button>
                             </div>
                         )}
@@ -625,6 +639,7 @@ function SectionReport() {
                         {selectedExam && selectedClass && streamCards.length > 0 && (
                             <div style={styles.printBar}>
                                 <span style={styles.printBarInfo}>📋 {classDisplayName(selectedClassObj)} — {streamCards.length} students</span>
+                                <OrientationToggle value={streamMeritOrientation} onChange={setStreamMeritOrientation} />
                                 <button onClick={handlePrintStreamMerit} style={styles.printBtn}>🖨️ Print Merit List</button>
                             </div>
                         )}
@@ -724,6 +739,7 @@ function SectionReport() {
                         {selectedExam && selectedGrade && selectedGradeCards.length > 0 && (
                             <div style={styles.printBar}>
                                 <span style={styles.printBarInfo}>🏫 {gradeLabel(selectedGrade)} — All Streams — {selectedGradeCards.length} students</span>
+                                <OrientationToggle value={gradeMeritOrientation} onChange={setGradeMeritOrientation} />
                                 <button onClick={handlePrintGradeMerit} style={styles.printBtn}>🖨️ Print Grade Merit List</button>
                             </div>
                         )}

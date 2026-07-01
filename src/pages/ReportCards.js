@@ -8,7 +8,7 @@ const gradeLabel = (m) => m >= 75 ? 'EE' : m >= 55 ? 'ME' : m >= 40 ? 'AE' : 'BE
 const gradeColor = (m) => m >= 75 ? '#28a745' : m >= 55 ? '#2E75B6' : m >= 40 ? '#ffc107' : '#dc3545';
 const gradeRemarks = (m) => m >= 75 ? 'Exceeding Expectations' : m >= 55 ? 'Meeting Expectations' : m >= 40 ? 'Approaching Expectations' : 'Below Expectations';
 
-const printReportCard = (card, singleResults, progressiveData) => {
+const printReportCard = (card, singleResults, progressiveData, orientation = 'portrait') => {
     const student = card.student;
     const exam = card.exam;
     const term = exam?.term;
@@ -117,7 +117,7 @@ const printReportCard = (card, singleResults, progressiveData) => {
     const html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">'
         + '<title>Report Card - ' + (student ? student.firstName + ' ' + student.lastName : '') + '</title>'
         + '<style>*{box-sizing:border-box;margin:0;padding:0;}body{font-family:"Times New Roman",Times,serif;font-size:12px;color:#000;padding:15px;max-width:800px;margin:0 auto;}'
-        + '@media print{@page{size:A4;margin:10mm;}.no-print{display:none!important;}body{-webkit-print-color-adjust:exact;print-color-adjust:exact;}}</style>'
+        + '@media print{@page{size:A4 ' + orientation + ';margin:10mm;}.no-print{display:none!important;}body{-webkit-print-color-adjust:exact;print-color-adjust:exact;}}</style>'
         + '</head><body>'
         + '<div class="no-print" style="background:#1F3864;color:white;padding:10px 15px;margin-bottom:15px;border-radius:8px;display:flex;justify-content:space-between;align-items:center;">'
         + '<span style="font-weight:bold;">Report Card - ' + (student ? student.firstName + ' ' + student.lastName : '') + '</span>'
@@ -194,6 +194,7 @@ function ReportCards() {
     const [reportCards, setReportCards] = useState([]);
     const [loading, setLoading] = useState(true);
     const [printing, setPrinting] = useState(null);
+    const [cardPrintOrientation, setCardPrintOrientation] = useState('portrait');
     const [error, setError] = useState('');
     const [successMsg, setSuccessMsg] = useState('');
     const [students, setStudents] = useState([]);
@@ -358,7 +359,7 @@ function ReportCards() {
                     progressiveData = progRes.data;
                 }
             } catch (e) {}
-            printReportCard(card, singleResults, progressiveData);
+            printReportCard(card, singleResults, progressiveData, cardPrintOrientation);
         } catch (e) { setError('Failed to load results for printing'); }
         setPrinting(null);
     };
@@ -574,6 +575,12 @@ function ReportCards() {
                             </select>
                             <button onClick={() => { setSearch(''); setFilterExam(''); }} style={s.clearBtn}>Clear</button>
                             <span style={{ color: '#666', fontSize: '13px', alignSelf: 'center' }}>{filtered.length} card(s)</span>
+                            <span style={{ display: 'flex', gap: '3px', alignItems: 'center', marginLeft: 'auto' }}>
+                                <span style={{ fontSize: '11px', color: '#666' }}>Print:</span>
+                                {['portrait', 'landscape'].map(o => (
+                                    <button key={o} onClick={() => setCardPrintOrientation(o)} style={{ fontSize: '11px', padding: '3px 9px', borderRadius: '4px', cursor: 'pointer', border: `1.5px solid ${cardPrintOrientation === o ? '#1F3864' : '#ccc'}`, background: cardPrintOrientation === o ? '#1F3864' : 'white', color: cardPrintOrientation === o ? 'white' : '#666', fontWeight: cardPrintOrientation === o ? 'bold' : 'normal', textTransform: 'capitalize' }}>{o}</button>
+                                ))}
+                            </span>
                         </div>
                         {loading ? (
                             <p style={{ textAlign: 'center', padding: '40px', color: '#666' }}>Loading...</p>
