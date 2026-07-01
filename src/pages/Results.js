@@ -3,7 +3,6 @@ import api from '../services/api';
 import logo1 from '../assets/logo1.png';
 import { classDisplayName, classShortCode } from '../utils/classUtils';
 
-// ── Loading Overlay ───────────────────────────────────────────────────────────
 const LoadingOverlay = ({ message = 'Loading...' }) => (
     <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(31,56,100,0.92)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', zIndex: 9999 }}>
         <div style={{ textAlign: 'center' }}>
@@ -15,7 +14,6 @@ const LoadingOverlay = ({ message = 'Loading...' }) => (
     </div>
 );
 
-// ── Print Results via window.open (mobile-safe) ───────────────────────────────
 const printResults = ({ filterClass, examObj, pivotStudents, pivotSubjects, pivotData }) => {
     const getCode = (name) => {
         const codes = { 'mathematics':'MTH','english':'ENG','kiswahili':'KSW','science':'SCI','social studies':'SST','agriculture & nutrition':'AGR','agriculture':'AGRI','creative arts':'CRE.A','cre':'CRE','integrated science':'ISCI','pre-technical studies':'P.TEC' };
@@ -24,130 +22,44 @@ const printResults = ({ filterClass, examObj, pivotStudents, pivotSubjects, pivo
         const words = name.split(/[\s&]+/).filter(Boolean);
         return words.length === 1 ? name.substring(0,4).toUpperCase() : words.map(w=>w.substring(0,3).toUpperCase()).join('.');
     };
-
     const ranked = [...pivotStudents].sort((a,b) => {
         const tA = pivotSubjects.reduce((s,sub) => s+(pivotData[a.studentId]?.[sub.id]?.marksObtained||0),0);
         const tB = pivotSubjects.reduce((s,sub) => s+(pivotData[b.studentId]?.[sub.id]?.marksObtained||0),0);
         return tB - tA;
     });
-
     const subMeans = pivotSubjects.map(sub => {
         const r = pivotStudents.map(s => pivotData[s.studentId]?.[sub.id]).filter(Boolean);
         return { id: sub.id, mean: r.length ? r.reduce((s,x) => s+x.marksObtained, 0)/r.length : 0 };
     });
     const subRanks = {};
     [...subMeans].sort((a,b) => b.mean-a.mean).forEach((s,i) => { subRanks[s.id] = i+1; });
-
     const hdrs = pivotSubjects.map(sub =>
-        '<th style="color:white;padding:2px;text-align:center;width:35px;vertical-align:bottom;">' +
-        '<div style="writing-mode:vertical-rl;transform:rotate(180deg);white-space:nowrap;font-size:10px;min-height:48px;display:flex;align-items:center;justify-content:center;">' +
-        getCode(sub.name) + '</div></th>'
+        '<th style="color:white;padding:2px;text-align:center;width:35px;vertical-align:bottom;"><div style="writing-mode:vertical-rl;transform:rotate(180deg);white-space:nowrap;font-size:10px;min-height:48px;display:flex;align-items:center;justify-content:center;">' + getCode(sub.name) + '</div></th>'
     ).join('');
-
     const rows = ranked.map((st, i) => {
         const total = pivotSubjects.reduce((s,sub) => s+(pivotData[st.studentId]?.[sub.id]?.marksObtained||0), 0);
         const res = pivotSubjects.map(sub => pivotData[st.studentId]?.[sub.id]).filter(Boolean);
         const avg = res.length ? total/res.length : 0;
         const grade = avg>=75?'EE':avg>=55?'ME':avg>=40?'AE':'BE';
-        const cells = pivotSubjects.map(sub => {
-            const r = pivotData[st.studentId]?.[sub.id];
-            return '<td style="padding:2px 3px;border:1px solid #ddd;text-align:center;">' + (r ? r.marksObtained : '—') + '</td>';
-        }).join('');
-        return '<tr style="background:' + (i%2===0?'#f8f9fa':'white') + '">' +
-            '<td style="padding:2px 4px;border:1px solid #ddd;text-align:center;font-weight:bold;">' + (i+1) + '</td>' +
-            '<td style="padding:2px 4px;border:1px solid #ddd;font-size:11px;">' + st.admissionNumber + '</td>' +
-            '<td style="padding:2px 4px;border:1px solid #ddd;font-size:11px;white-space:nowrap;"><strong>' + st.firstName + ' ' + st.lastName + '</strong></td>' +
-            cells +
-            '<td style="padding:2px 4px;border:1px solid #ddd;text-align:center;font-weight:bold;background:#f0f4ff;">' + total.toFixed(0) + '</td>' +
-            '<td style="padding:2px 4px;border:1px solid #ddd;text-align:center;font-weight:bold;background:#f0f4ff;">' + avg.toFixed(1) + '%</td>' +
-            '<td style="padding:2px 4px;border:1px solid #ddd;text-align:center;font-weight:bold;background:#f0f4ff;">' + grade + '</td>' +
-            '</tr>';
+        const cells = pivotSubjects.map(sub => { const r = pivotData[st.studentId]?.[sub.id]; return '<td style="padding:2px 3px;border:1px solid #ddd;text-align:center;">' + (r ? r.marksObtained : '—') + '</td>'; }).join('');
+        return '<tr style="background:' + (i%2===0?'#f8f9fa':'white') + '"><td style="padding:2px 4px;border:1px solid #ddd;text-align:center;font-weight:bold;">' + (i+1) + '</td><td style="padding:2px 4px;border:1px solid #ddd;font-size:11px;">' + st.admissionNumber + '</td><td style="padding:2px 4px;border:1px solid #ddd;font-size:11px;white-space:nowrap;"><strong>' + st.firstName + ' ' + st.lastName + '</strong></td>' + cells + '<td style="padding:2px 4px;border:1px solid #ddd;text-align:center;font-weight:bold;background:#f0f4ff;">' + total.toFixed(0) + '</td><td style="padding:2px 4px;border:1px solid #ddd;text-align:center;font-weight:bold;background:#f0f4ff;">' + avg.toFixed(1) + '%</td><td style="padding:2px 4px;border:1px solid #ddd;text-align:center;font-weight:bold;background:#f0f4ff;">' + grade + '</td></tr>';
     }).join('');
-
-    const totRow = pivotSubjects.map(sub => {
-        const t = pivotStudents.reduce((s,st) => s+(pivotData[st.studentId]?.[sub.id]?.marksObtained||0), 0);
-        return '<td style="padding:2px 3px;border:1px solid #ddd;text-align:center;font-weight:bold;">' + t + '</td>';
-    }).join('');
-
-    const meanRow = pivotSubjects.map(sub => {
-        const r = pivotStudents.map(s => pivotData[s.studentId]?.[sub.id]).filter(Boolean);
-        const m = r.length ? (r.reduce((s,x) => s+x.marksObtained,0)/r.length).toFixed(1) : '-';
-        return '<td style="padding:2px 3px;border:1px solid #ddd;text-align:center;font-weight:bold;">' + m + '</td>';
-    }).join('');
-
+    const totRow = pivotSubjects.map(sub => { const t = pivotStudents.reduce((s,st) => s+(pivotData[st.studentId]?.[sub.id]?.marksObtained||0), 0); return '<td style="padding:2px 3px;border:1px solid #ddd;text-align:center;font-weight:bold;">' + t + '</td>'; }).join('');
+    const meanRow = pivotSubjects.map(sub => { const r = pivotStudents.map(s => pivotData[s.studentId]?.[sub.id]).filter(Boolean); const m = r.length ? (r.reduce((s,x) => s+x.marksObtained,0)/r.length).toFixed(1) : '-'; return '<td style="padding:2px 3px;border:1px solid #ddd;text-align:center;font-weight:bold;">' + m + '</td>'; }).join('');
     const classMeanVal = subMeans.filter(s => s.mean > 0);
-    const classMean = classMeanVal.length
-        ? classMeanVal.reduce((s,x) => s + x.mean, 0).toFixed(1)
-        : '-';
-
-    const rankRow = pivotSubjects.map(sub =>
-        '<td style="padding:2px 3px;border:1px solid #ddd;text-align:center;font-weight:bold;color:#6f42c1;">#' + subRanks[sub.id] + '</td>'
-    ).join('');
-
-    const html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">' +
-        '<title>' + filterClass + ' Results</title>' +
-        '<style>*{box-sizing:border-box;margin:0;padding:0;}body{font-family:\'Times New Roman\',Times,serif;font-size:12px;color:#000;padding:10px;}' +
-        '@media print{@page{size:A4 landscape;margin:8mm;}.no-print{display:none!important;}body{-webkit-print-color-adjust:exact;print-color-adjust:exact;}}' +
-        '</style></head>' +
-        '<body onload="setTimeout(function(){window.print();},400);">' +
-        '<div class="no-print" style="background:#1F3864;color:white;padding:10px;margin-bottom:10px;border-radius:5px;display:flex;justify-content:space-between;align-items:center;">' +
-        '<span style="font-weight:bold;">' + filterClass + ' — ' + (examObj ? examObj.examName : '') + '</span>' +
-        '<button onclick="window.print()" style="background:#FFD700;color:#1F3864;border:none;padding:8px 20px;border-radius:5px;font-weight:bold;cursor:pointer;font-size:14px;">Print / Save PDF</button>' +
-        '</div>' +
-        '<div style="text-align:center;border-bottom:3px solid #1F3864;padding-bottom:8px;margin-bottom:8px;">' +
-        '<div style="color:#1F3864;font-size:13px;font-weight:bold;text-transform:uppercase;">PIPELINE ADVENTIST PRIMARY &amp; JUNIOR SECONDARY SCHOOL</div>' +
-        '<div style="color:#2E75B6;font-style:italic;font-size:11px;margin:2px 0;">Abreast with the Best in Holistic Education</div>' +
-        '<div style="font-size:10px;color:#666;">P.O. BOX 61774-00200, NAIROBI | Tel: 0713 301 521 / 0721 885 996</div>' +
-        '<div style="background:#1F3864;padding:4px 10px;text-align:center;margin-top:5px;">' +
-        '<div style="color:white;font-weight:bold;">CLASS RESULTS REPORT</div>' +
-        '<div style="color:#BDD7EE;font-size:11px;">' + filterClass + ' | ' + (examObj ? examObj.examName : '') + ' | Term ' + (examObj ? examObj.term : '') + ' ' + (examObj ? examObj.academicYear : '') + '</div>' +
-        '</div></div>' +
-        '<table style="width:100%;border-collapse:collapse;font-size:12px;">' +
-        '<thead><tr style="background:#1F3864;">' +
-        '<th style="color:white;padding:3px 4px;text-align:center;width:25px;">RNK</th>' +
-        '<th style="color:white;padding:3px 4px;text-align:left;width:70px;">ADM NO</th>' +
-        '<th style="color:white;padding:3px 4px;text-align:left;width:130px;">STUDENT NAME</th>' +
-        hdrs +
-        '<th style="color:#FFD700;padding:3px 4px;text-align:center;width:35px;">TOT</th>' +
-        '<th style="color:#FFD700;padding:3px 4px;text-align:center;width:40px;">AVG%</th>' +
-        '<th style="color:#FFD700;padding:3px 4px;text-align:center;width:30px;">GRD</th>' +
-        '</tr></thead><tbody>' +
-        rows +
-        '<tr style="background:#e8f4f8;border-top:2px solid #2E75B6;"><td colspan="3" style="padding:2px 4px;font-weight:bold;border:1px solid #ddd;">SUBJECT TOTAL</td>' + totRow + '<td colspan="3" style="border:1px solid #ddd;"></td></tr>' +
-        '<tr style="background:#e3f2fd;"><td colspan="3" style="padding:2px 4px;font-weight:bold;border:1px solid #ddd;">SUBJECT MEAN</td>' + meanRow +
-            '<td colspan="3" style="padding:2px 6px;border:2px solid #1F3864;background:#fff;text-align:center;">' +
-            '<div style="font-size:9px;color:#555;font-weight:bold;">CLASS TOTAL MEAN</div>' +
-            '<div style="font-size:16px;font-weight:bold;color:#1F3864;">' + classMean + '</div>' +
-            '</td></tr>' +
-        '<tr style="background:#f3e5f5;"><td colspan="3" style="padding:2px 4px;font-weight:bold;color:#6f42c1;border:1px solid #ddd;">SUBJECT RANK</td>' + rankRow + '<td colspan="3" style="border:1px solid #ddd;"></td></tr>' +
-        '</tbody></table>' +
-        '<div style="display:flex;gap:20px;align-items:center;padding:6px 0;border-top:1px solid #ddd;margin-top:6px;font-size:11px;">' +
-        '<span><strong>Total Students:</strong> ' + ranked.length + '</span>' +
-        '<span><strong>Date:</strong> ' + new Date().toLocaleDateString() + '</span>' +
-        '<span style="margin-left:auto;background:#1F3864;color:white;padding:3px 12px;border-radius:4px;font-weight:bold;font-size:12px;">CLASS TOTAL MEAN: ' + classMean + '</span>' +
-        '</div>' +
-        '<div style="display:flex;gap:30px;margin-top:10px;border-top:2px solid #1F3864;padding-top:8px;">' +
-        '<div style="flex:1;"><p style="font-size:11px;margin-bottom:5px;">Class Teacher: _________________________</p><p style="font-size:11px;">Signature: _____________ Date: __________</p></div>' +
-        '<div style="flex:1;"><p style="font-size:11px;margin-bottom:5px;">Principal: _________________________</p><p style="font-size:11px;">Signature: _____________ Date: __________</p></div>' +
-        '</div>' +
-        '</body></html>';
-
+    const classMean = classMeanVal.length ? classMeanVal.reduce((s,x) => s + x.mean, 0).toFixed(1) : '-';
+    const rankRow = pivotSubjects.map(sub => '<td style="padding:2px 3px;border:1px solid #ddd;text-align:center;font-weight:bold;color:#6f42c1;">#' + subRanks[sub.id] + '</td>').join('');
+    const html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>' + filterClass + ' Results</title><style>*{box-sizing:border-box;margin:0;padding:0;}body{font-family:\'Times New Roman\',Times,serif;font-size:12px;color:#000;padding:10px;}@media print{@page{size:A4 landscape;margin:8mm;}.no-print{display:none!important;}body{-webkit-print-color-adjust:exact;print-color-adjust:exact;}}</style></head><body onload="setTimeout(function(){window.print();},400);"><div class="no-print" style="background:#1F3864;color:white;padding:10px;margin-bottom:10px;border-radius:5px;display:flex;justify-content:space-between;align-items:center;"><span style="font-weight:bold;">' + filterClass + ' — ' + (examObj ? examObj.examName : '') + '</span><button onclick="window.print()" style="background:#FFD700;color:#1F3864;border:none;padding:8px 20px;border-radius:5px;font-weight:bold;cursor:pointer;font-size:14px;">Print / Save PDF</button></div><div style="text-align:center;border-bottom:3px solid #1F3864;padding-bottom:8px;margin-bottom:8px;"><div style="color:#1F3864;font-size:13px;font-weight:bold;text-transform:uppercase;">PIPELINE ADVENTIST PRIMARY &amp; JUNIOR SECONDARY SCHOOL</div><div style="color:#2E75B6;font-style:italic;font-size:11px;margin:2px 0;">Abreast with the Best in Holistic Education</div><div style="font-size:10px;color:#666;">P.O. BOX 61774-00200, NAIROBI | Tel: 0713 301 521 / 0721 885 996</div><div style="background:#1F3864;padding:4px 10px;text-align:center;margin-top:5px;"><div style="color:white;font-weight:bold;">CLASS RESULTS REPORT</div><div style="color:#BDD7EE;font-size:11px;">' + filterClass + ' | ' + (examObj ? examObj.examName : '') + ' | Term ' + (examObj ? examObj.term : '') + ' ' + (examObj ? examObj.academicYear : '') + '</div></div></div><table style="width:100%;border-collapse:collapse;font-size:12px;"><thead><tr style="background:#1F3864;"><th style="color:white;padding:3px 4px;text-align:center;width:25px;">RNK</th><th style="color:white;padding:3px 4px;text-align:left;width:70px;">ADM NO</th><th style="color:white;padding:3px 4px;text-align:left;width:130px;">STUDENT NAME</th>' + hdrs + '<th style="color:#FFD700;padding:3px 4px;text-align:center;width:35px;">TOT</th><th style="color:#FFD700;padding:3px 4px;text-align:center;width:40px;">AVG%</th><th style="color:#FFD700;padding:3px 4px;text-align:center;width:30px;">GRD</th></tr></thead><tbody>' + rows + '<tr style="background:#e8f4f8;border-top:2px solid #2E75B6;"><td colspan="3" style="padding:2px 4px;font-weight:bold;border:1px solid #ddd;">SUBJECT TOTAL</td>' + totRow + '<td colspan="3" style="border:1px solid #ddd;"></td></tr><tr style="background:#e3f2fd;"><td colspan="3" style="padding:2px 4px;font-weight:bold;border:1px solid #ddd;">SUBJECT MEAN</td>' + meanRow + '<td colspan="3" style="padding:2px 6px;border:2px solid #1F3864;background:#fff;text-align:center;"><div style="font-size:9px;color:#555;font-weight:bold;">CLASS TOTAL MEAN</div><div style="font-size:16px;font-weight:bold;color:#1F3864;">' + classMean + '</div></td></tr><tr style="background:#f3e5f5;"><td colspan="3" style="padding:2px 4px;font-weight:bold;color:#6f42c1;border:1px solid #ddd;">SUBJECT RANK</td>' + rankRow + '<td colspan="3" style="border:1px solid #ddd;"></td></tr></tbody></table><div style="display:flex;gap:20px;align-items:center;padding:6px 0;border-top:1px solid #ddd;margin-top:6px;font-size:11px;"><span><strong>Total Students:</strong> ' + ranked.length + '</span><span><strong>Date:</strong> ' + new Date().toLocaleDateString() + '</span><span style="margin-left:auto;background:#1F3864;color:white;padding:3px 12px;border-radius:4px;font-weight:bold;font-size:12px;">CLASS TOTAL MEAN: ' + classMean + '</span></div><div style="display:flex;gap:30px;margin-top:10px;border-top:2px solid #1F3864;padding-top:8px;"><div style="flex:1;"><p style="font-size:11px;margin-bottom:5px;">Class Teacher: _________________________</p><p style="font-size:11px;">Signature: _____________ Date: __________</p></div><div style="flex:1;"><p style="font-size:11px;margin-bottom:5px;">Principal: _________________________</p><p style="font-size:11px;">Signature: _____________ Date: __________</p></div></div></body></html>';
     const win = window.open('', '_blank');
-    if (win) {
-        win.document.write(html);
-        win.document.close();
-        win.focus();
-    } else {
-        alert('Please allow popups to print results.');
-    }
+    if (win) { win.document.write(html); win.document.close(); win.focus(); }
+    else alert('Please allow popups to print results.');
 };
 
-// ── Main Component ────────────────────────────────────────────────────────────
 function Results() {
     const userRole = localStorage.getItem('role');
     const linkedClassId = localStorage.getItem('linkedClassId');
     const linkedClassName = localStorage.getItem('linkedClassName');
-    const linkedStream = localStorage.getItem('linkedStream') || null; // ✅ NEW — reliable stream match
+    const linkedStream = localStorage.getItem('linkedStream') || null;
     const isTeacher = userRole === 'TEACHER';
 
     const [results, setResults] = useState([]);
@@ -159,16 +71,15 @@ function Results() {
     const [searched, setSearched] = useState(false);
     const [filterExam, setFilterExam] = useState('');
     const [filterClass, setFilterClass] = useState('');
+    const [filterClassStream, setFilterClassStream] = useState(null); // ✅ track stream separately
     const [search, setSearch] = useState('');
     const [step, setStep] = useState(1);
     const [populatedClasses, setPopulatedClasses] = useState([]);
     const [loadingClasses, setLoadingClasses] = useState(false);
     const [allExamResults, setAllExamResults] = useState([]);
-
     const [pivotStudents, setPivotStudents] = useState([]);
     const [pivotSubjects, setPivotSubjects] = useState([]);
     const [pivotData, setPivotData] = useState({});
-
     const [editingCell, setEditingCell] = useState(null);
     const [editingValue, setEditingValue] = useState('');
     const [pendingChanges, setPendingChanges] = useState({});
@@ -177,19 +88,15 @@ function Results() {
     const [confirmDelete, setConfirmDelete] = useState(null);
 
     useEffect(() => { fetchExams(); fetchClasses(); }, []);
-
     useEffect(() => {
-        if (editingCell && editInputRef.current) {
-            editInputRef.current.focus();
-            editInputRef.current.select();
-        }
+        if (editingCell && editInputRef.current) { editInputRef.current.focus(); editInputRef.current.select(); }
     }, [editingCell]);
 
     const fetchExams = async () => { try { const r = await api.get('/api/exams'); setExams(r.data); } catch(e) {} };
     const fetchClasses = async () => { try { const r = await api.get('/api/classes'); setClasses(r.data); } catch(e) {} };
 
     const handleSelectExam = async (examId) => {
-        setFilterExam(examId); setFilterClass(''); setSearched(false); setResults([]);
+        setFilterExam(examId); setFilterClass(''); setFilterClassStream(null); setSearched(false); setResults([]);
         setPivotStudents([]); setPivotSubjects([]); setPivotData({});
         setPopulatedClasses([]); setPendingChanges({});
         if (!examId) { setStep(1); return; }
@@ -202,49 +109,37 @@ function Results() {
             data.forEach(r => {
                 const cls = r.student?.className;
                 const classId = r.student?.schoolClass?.classId;
-                const stream = r.student?.schoolClass?.stream || r.student?.stream || null;
+                const stream = r.student?.stream || r.student?.schoolClass?.stream || null;
                 if (cls) {
-                    // Key by classId when available; otherwise by className+stream so that
-                    // multi-stream grades keep separate tiles even when the API returns classId=null.
                     const key = classId != null ? String(classId) : `${cls}|${stream || ''}`;
                     if (!classMap[key]) classMap[key] = { className: cls, classId, studentIds: new Set(), subjectIds: new Set(), section: r.student?.schoolClass?.section || '', stream, gradeLevel: r.student?.schoolClass?.gradeLevel || '' };
                     if (r.student?.studentId) classMap[key].studentIds.add(r.student.studentId);
                     if (r.subject?.subjectId) classMap[key].subjectIds.add(r.subject.subjectId);
                 }
             });
-            const populated = Object.values(classMap).map(c => ({ ...c, studentCount: c.studentIds.size, subjectCount: c.subjectIds.size })).sort((a,b) => a.className.localeCompare(b.className));
+            const populated = Object.values(classMap).map(c => ({ ...c, studentCount: c.studentIds.size, subjectCount: c.subjectIds.size })).sort((a,b) => a.className.localeCompare(b.className) || (a.stream||'').localeCompare(b.stream||''));
 
             if (isTeacher && linkedClassId && linkedClassId !== 'null' && linkedClassId !== 'undefined') {
-                // Show step 2 for teachers too, but only with their own class tile.
-                // ✅ FIXED: match reliably using linkedClassId (preferred), with
-                // className+stream (both sourced directly from the login response —
-                // no dependency on the separate /api/classes fetch, so no race
-                // condition) as a fallback for any result rows missing a nested classId.
-                // ✅ FIXED: schoolClass is not serialized in API response so classId
-                // on result objects is always null. Match by className + stream instead,
-                // both sourced directly from localStorage (set at login).
                 let teacherPopulated = populated.filter(c =>
                     c.className === linkedClassName &&
                     (linkedStream ? c.stream === linkedStream : !c.stream)
                 );
-
-                // Fallback: classId match in case API serialization improves
                 if (!teacherPopulated.length) {
                     teacherPopulated = populated.filter(c => String(c.classId) === String(linkedClassId));
                 }
-
                 setPopulatedClasses(teacherPopulated);
-                setStep(2);
             } else {
                 setPopulatedClasses(populated);
-                setStep(2);
             }
+            setStep(2);
         } catch (e) { setError('Failed to load classes'); }
         setLoadingClasses(false);
     };
 
     const handleSelectClass = (cls) => {
-        setFilterClass(cls.className); setPendingChanges({}); setStep(3);
+        setFilterClass(cls.className);
+        setFilterClassStream(cls.stream || null); // ✅ store stream
+        setPendingChanges({}); setStep(3);
         handleSearchWithClass(cls.className, filterExam, cls.stream);
     };
 
@@ -254,17 +149,20 @@ function Results() {
         try {
             let data;
             if (isTeacher && linkedClassId && linkedClassId !== 'null' && linkedClassId !== 'undefined') {
-                // ✅ FIXED: use linkedStream from login response directly — no dependency
-                // on the separate `classes` fetch (which caused the original bug where
-                // Grade 2 Yellow's teacher saw nothing because `classes` hadn't loaded
-                // yet, or className/stream combos didn't resolve correctly).
-                // ✅ FIXED: schoolClass not in API response, match by className only
-                // since all students in the same class share the same className.
-                // Stream is implicit — className uniquely identifies the class after
-                // the student table was updated to use full names ("Grade 2" not "G2Y").
-                data = allExamResults.filter(r => r.student?.className === linkedClassName);
+                // Teacher: filter by their linked class name and stream
+                data = allExamResults.filter(r => {
+                    if (r.student?.className !== linkedClassName) return false;
+                    if (!linkedStream) return !r.student?.stream;
+                    return r.student?.stream === linkedStream;
+                });
             } else {
-                data = allExamResults.filter(r => r.student?.className === className);
+                // Admin/Clerk: filter by selected class name AND stream
+                // ✅ FIXED: include stream so Grade 3 Blue and Red stay separate
+                data = allExamResults.filter(r => {
+                    if (r.student?.className !== className) return false;
+                    if (classStream == null) return r.student?.stream == null;
+                    return r.student?.stream === classStream;
+                });
             }
             setResults(data); buildPivotTable(data);
         } catch (err) { setError('Failed to load results'); }
@@ -319,12 +217,12 @@ function Results() {
             setSuccessMsg(`✅ ${r.data.updated || 0} updated, ${r.data.saved || 0} new saved!`);
             setPendingChanges({});
             setTimeout(() => setSuccessMsg(''), 3000);
-            handleSearchWithClass(filterClass, filterExam);
+            handleSearchWithClass(filterClass, filterExam, filterClassStream);
         } catch (e) { setError('Failed to save changes'); }
         setSaving(false);
     };
 
-    const handleDiscardChanges = () => { setPendingChanges({}); handleSearchWithClass(filterClass, filterExam); };
+    const handleDiscardChanges = () => { setPendingChanges({}); handleSearchWithClass(filterClass, filterExam, filterClassStream); };
 
     const handleDeleteMark = async (studentId, subjectId) => {
         const result = pivotData[studentId]?.[subjectId];
@@ -379,10 +277,7 @@ function Results() {
     };
 
     const getClassOverallMean = () => {
-        const means = pivotSubjects.map(sub => {
-            const s = getSubjectStats(sub.id);
-            return parseFloat(s.mean);
-        }).filter(m => !isNaN(m) && m > 0);
+        const means = pivotSubjects.map(sub => parseFloat(getSubjectStats(sub.id).mean)).filter(m => !isNaN(m) && m > 0);
         return means.length ? means.reduce((s, m) => s + m, 0).toFixed(1) : null;
     };
 
@@ -481,7 +376,7 @@ function Results() {
                             <div style={styles.emptyCard}>
                                 <p>📭 No results found for this exam yet.</p>
                                 {isTeacher ? (
-                                    <p style={{ color:'#666', fontSize:'13px' }}>No marks have been entered yet for your class ({linkedClassName}{linkedStream ? ` ${linkedStream}` : ''}) in this exam.</p>
+                                    <p style={{ color:'#666', fontSize:'13px' }}>No marks have been entered yet for your class ({linkedClassName}{linkedStream ? ` (${linkedStream})` : ''}) in this exam.</p>
                                 ) : (
                                     <p style={{ color:'#666', fontSize:'13px' }}>Use Mark Entry to add marks first.</p>
                                 )}
@@ -513,29 +408,26 @@ function Results() {
                 {step === 3 && (
                     <div>
                         <div style={styles.stepHeader}>
-                            <button onClick={() => { setStep(2); setSearched(false); setPendingChanges({}); }} style={styles.backBtn}>
-                                ← Back to Classes
-                            </button>
-                            <h3 style={styles.stepTitle}>📊 {filterClass} — {selectedExamName}</h3>
+                            <button onClick={() => { setStep(2); setSearched(false); setPendingChanges({}); setFilterClassStream(null); }} style={styles.backBtn}>← Back to Classes</button>
+                            <h3 style={styles.stepTitle}>📊 {classDisplayName({ className: filterClass, stream: filterClassStream })} — {selectedExamName}</h3>
                             <input style={styles.searchInput} placeholder="🔍 Search student..." value={search} onChange={e => setSearch(e.target.value)} />
                         </div>
 
                         {searched && !loading && (
                             pivotStudents.length === 0 ? (
                                 <div style={styles.emptyCard}>
-                                    <p>📭 No results found for <strong>{selectedExamName}</strong> — <strong>{filterClass}</strong></p>
+                                    <p>📭 No results found for <strong>{selectedExamName}</strong> — <strong>{classDisplayName({ className: filterClass, stream: filterClassStream })}</strong></p>
                                     <p style={{ color:'#666', fontSize:'13px' }}>Use Mark Entry to add marks for this class and exam.</p>
                                 </div>
                             ) : (
                                 <div style={styles.tableCard}>
                                     <div style={styles.tableTopBar}>
                                         <div>
-                                            <h3 style={styles.tableTitle}>{filterClass} — {selectedExamName}</h3>
+                                            <h3 style={styles.tableTitle}>{classDisplayName({ className: filterClass, stream: filterClassStream })} — {selectedExamName}</h3>
                                             <p style={styles.tableSubtitle}>{pivotStudents.length} students | {pivotSubjects.length} subjects · 💡 Click any mark to edit</p>
                                         </div>
                                         <button onClick={() => {
-                                            const cls = populatedClasses.find(c => c.className === filterClass);
-                                            const displayName = classDisplayName(cls) || filterClass;
+                                            const displayName = classDisplayName({ className: filterClass, stream: filterClassStream }) || filterClass;
                                             printResults({
                                                 filterClass: displayName,
                                                 examObj: exams.find(e => String(e.examId) === String(filterExam)),
@@ -642,20 +534,9 @@ function Results() {
                                                     <td colSpan="3" style={{...styles.td, fontWeight:'bold', color:'#2E75B6', fontSize:'12px'}}>📈 Mean (excl. blanks)</td>
                                                     {pivotSubjects.map(sub => { const s=getSubjectStats(sub.id); const mean=parseFloat(s.mean); return <td key={sub.id} style={{...styles.td, textAlign:'center'}}><span style={{fontWeight:'bold',fontSize:'12px',color:getMarkColor(mean)}}>{s.mean}</span><div style={{fontSize:'9px',color:'#999'}}>{s.count} pupils</div></td>; })}
                                                     <td style={{...styles.td, ...styles.totalCell, textAlign:'center', padding:'4px 6px'}}>
-                                                        {(() => {
-                                                            const cm = getClassOverallMean();
-                                                            if (!cm) return null;
-                                                            return (
-                                                                <div>
-                                                                    <div style={{ fontSize: '9px', color: '#555', fontWeight: 'bold', whiteSpace:'nowrap' }}>CLASS MEAN</div>
-                                                                    <div style={{ fontSize: '16px', fontWeight: 'bold', color: '#1F3864' }}>{cm}</div>
-                                                                </div>
-                                                            );
-                                                        })()}
+                                                        {(() => { const cm = getClassOverallMean(); if (!cm) return null; return (<div><div style={{ fontSize: '9px', color: '#555', fontWeight: 'bold', whiteSpace:'nowrap' }}>CLASS MEAN</div><div style={{ fontSize: '16px', fontWeight: 'bold', color: '#1F3864' }}>{cm}</div></div>); })()}
                                                     </td>
-                                                    <td style={styles.td} />
-                                                    <td style={styles.td} />
-                                                    <td style={styles.td} />
+                                                    <td style={styles.td} /><td style={styles.td} /><td style={styles.td} />
                                                 </tr>
                                                 {(() => {
                                                     const ranks = getSubjectRanks();
