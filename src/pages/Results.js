@@ -220,13 +220,17 @@ function Results() {
                 // className+stream (both sourced directly from the login response —
                 // no dependency on the separate /api/classes fetch, so no race
                 // condition) as a fallback for any result rows missing a nested classId.
-                let teacherPopulated = populated.filter(c => String(c.classId) === String(linkedClassId));
+                // ✅ FIXED: schoolClass is not serialized in API response so classId
+                // on result objects is always null. Match by className + stream instead,
+                // both sourced directly from localStorage (set at login).
+                let teacherPopulated = populated.filter(c =>
+                    c.className === linkedClassName &&
+                    (linkedStream ? c.stream === linkedStream : !c.stream)
+                );
 
-                if (!teacherPopulated.length && linkedClassName) {
-                    teacherPopulated = populated.filter(c =>
-                        c.className === linkedClassName &&
-                        (linkedStream ? c.stream === linkedStream : !c.stream)
-                    );
+                // Fallback: classId match in case API serialization improves
+                if (!teacherPopulated.length) {
+                    teacherPopulated = populated.filter(c => String(c.classId) === String(linkedClassId));
                 }
 
                 setPopulatedClasses(teacherPopulated);
@@ -254,16 +258,11 @@ function Results() {
                 // on the separate `classes` fetch (which caused the original bug where
                 // Grade 2 Yellow's teacher saw nothing because `classes` hadn't loaded
                 // yet, or className/stream combos didn't resolve correctly).
-                const effectiveStream = classStream || linkedStream;
-                data = allExamResults.filter(r => {
-                    if (String(r.student?.schoolClass?.classId) === String(linkedClassId)) return true;
-                    if (r.student?.className === className) {
-                        const rStream = r.student?.schoolClass?.stream || r.student?.stream || null;
-                        if (!effectiveStream) return !rStream;
-                        return rStream === effectiveStream;
-                    }
-                    return false;
-                });
+                // ✅ FIXED: schoolClass not in API response, match by className only
+                // since all students in the same class share the same className.
+                // Stream is implicit — className uniquely identifies the class after
+                // the student table was updated to use full names ("Grade 2" not "G2Y").
+                data = allExamResults.filter(r => r.student?.className === linkedClassName);
             } else {
                 data = allExamResults.filter(r => r.student?.className === className);
             }
