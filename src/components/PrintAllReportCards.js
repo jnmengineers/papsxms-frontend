@@ -3,7 +3,7 @@ import { useReactToPrint } from 'react-to-print';
 import api from '../services/api';
 import logo1 from '../assets/logo1.png';
 import logo2 from '../assets/logo2.png';
-import { streamLabel } from '../utils/classUtils';
+import { classDisplayName } from '../utils/classUtils';
 
 // Single printable report card
 const SingleReportCard = ({ card, results }) => (
@@ -29,9 +29,7 @@ const SingleReportCard = ({ card, results }) => (
             </div>
             <div style={printStyles.infoRow}>
                 <span style={printStyles.infoLabel}>Class:</span>
-                <span style={printStyles.infoValue}>{card.student?.className}</span>
-                <span style={printStyles.infoLabel}>Stream:</span>
-                <span style={printStyles.infoValue}>{streamLabel(card.student?.stream) || '-'}</span>
+                <span style={printStyles.infoValue}>{classDisplayName({ className: card.student?.className, stream: card.student?.stream || card.student?.schoolClass?.stream })}</span>
             </div>
             <div style={printStyles.infoRow}>
                 <span style={printStyles.infoLabel}>Exam:</span>

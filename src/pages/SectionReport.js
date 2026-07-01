@@ -584,7 +584,7 @@ function SectionReport() {
                                                 const maxAvg = Math.max(...sorted.map(s => s.classAverage));
                                                 return (
                                                     <div key={i} style={styles.streamCompCard}>
-                                                        <h4 style={styles.subTitle}>📈 Grade {cls.className} — Stream Comparison</h4>
+                                                        <h4 style={styles.subTitle}>📈 {cls.className} — Stream Comparison</h4>
                                                         {sorted.map((stream, k) => (
                                                             <div key={k} style={styles.streamBarRow}>
                                                                 <div style={styles.streamBarLabel}>{classDisplayName(stream)}</div>
@@ -807,7 +807,7 @@ function SectionReport() {
                     reportCards={streamCards}
                     results={allResults}
                     subjects={classSubjects}
-                    title={`${selectedClassObj?.className || ''} STREAM MERIT LIST`}
+                    title={`${classDisplayName(selectedClassObj)} STREAM MERIT LIST`}
                     subtitle={`${selectedExamObj?.examName || ''} | Term ${selectedExamObj?.term || ''} ${selectedExamObj?.academicYear || ''}`}
                     level="stream"
                 />

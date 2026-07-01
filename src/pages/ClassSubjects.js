@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import api from '../services/api';
 import logo1 from '../assets/logo1.png';
+import { streamLabel, classDisplayName } from '../utils/classUtils';
 
 function ClassSubjects() {
     const [classes, setClasses] = useState([]);
@@ -351,7 +352,7 @@ function ClassSubjects() {
                                                                 ? 'rgba(255,255,255,0.3)'
                                                                 : 'rgba(0,0,0,0.1)'
                                                         }}>
-                                                            {s.stream || s.className}
+                                                            {streamLabel(s.stream) || classDisplayName(s)}
                                                         </span>
                                                     ))}
                                                 </div>

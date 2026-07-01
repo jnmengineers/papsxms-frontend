@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import api from '../services/api';
 import logo1 from '../assets/logo1.png';
 import '../index.css';
+import { classDisplayName } from '../utils/classUtils';
 import { useNavigate } from 'react-router-dom';
 import Spinner from '../components/Spinner';
 import Toast from '../components/Toast';
@@ -435,7 +436,7 @@ function Students() {
                                                             <td style={styles.td}>
                                                                 <span style={{ ...styles.genderBadge, backgroundColor: s.gender === 'Male' ? '#2E75B6' : '#e83e8c' }}>{s.gender}</span>
                                                             </td>
-                                                            <td style={styles.td}>{s.schoolClass?.className || s.className}</td>
+                                                            <td style={styles.td}>{classDisplayName({ className: s.schoolClass?.className || s.className, stream: s.schoolClass?.stream || s.stream })}</td>
                                                             <td style={styles.td}>
                                                                 <button onClick={() => navigate(`/student/${s.studentId}`)} style={styles.viewBtn}>👤</button>
                                                                 <button onClick={() => handleEdit(s)} style={styles.editBtn}>Edit</button>
@@ -475,7 +476,7 @@ function Students() {
                                                     style={{ ...styles.streamTile, borderTop: `5px solid ${streamColor}` }}
                                                     onClick={() => handleClassClick(cls)}>
                                                     <div style={{ ...styles.streamBadge, backgroundColor: streamColor }}>{cls.stream || 'SINGLE'}</div>
-                                                    <div style={styles.streamName}>{cls.className}</div>
+                                                    <div style={styles.streamName}>{classDisplayName(cls)}</div>
                                                     <div style={styles.streamStats}>
                                                         <div style={styles.streamStatItem}>
                                                             <span style={styles.streamStatNum}>{clsStudents.length}</span>

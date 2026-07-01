@@ -3,7 +3,7 @@ import { useReactToPrint } from 'react-to-print';
 import api from '../services/api';
 import logo1 from '../assets/logo1.png';
 import logo2 from '../assets/logo2.png';
-import { classDisplayName, gradeLabel, streamLabel } from '../utils/classUtils';
+import { classDisplayName } from '../utils/classUtils';
 
 // ── Grade helpers ─────────────────────────────────────────────────────────────
 const getGrade = (marks) => {
@@ -65,8 +65,7 @@ const PrintableProgressiveCard = React.forwardRef(({ data, examNames }, ref) => 
                 <div style={{ display: 'flex', gap: '20px', marginBottom: '5px' }}>
                     <span><strong>Name:</strong> {student?.firstName} {student?.lastName}</span>
                     <span><strong>Adm No:</strong> {student?.admissionNumber}</span>
-                    <span><strong>Class:</strong> {gradeLabel(student?.schoolClass?.gradeLevel) || student?.className}</span>
-                    <span><strong>Stream:</strong> {streamLabel(student?.stream) || '-'}</span>
+                    <span><strong>Class:</strong> {classDisplayName({ className: student?.schoolClass?.className || student?.className, stream: student?.schoolClass?.stream || student?.stream })}</span>
                 </div>
             </div>
 
@@ -376,7 +375,7 @@ function ProgressiveReport() {
                                         </h3>
                                         <p style={styles.studentMeta}>
                                             {progressiveData.student?.admissionNumber} •
-                                            {gradeLabel(progressiveData.student?.schoolClass?.gradeLevel) || progressiveData.student?.className} •
+                                            {classDisplayName({ className: progressiveData.student?.schoolClass?.className || progressiveData.student?.className, stream: progressiveData.student?.schoolClass?.stream || progressiveData.student?.stream })} •
                                             Term {progressiveData.term} {progressiveData.academicYear}
                                         </p>
                                     </div>

@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import logo1 from '../assets/logo1.png';
 import Spinner from '../components/Spinner';
-import { streamLabel } from '../utils/classUtils';
+import { classDisplayName, streamLabel } from '../utils/classUtils';
 
 function StudentProfile() {
     const { studentId } = useParams();
@@ -115,8 +115,7 @@ function StudentProfile() {
                                 <span style={{...styles.metaBadge, backgroundColor: student.gender === 'Male' ? '#2E75B6' : '#e83e8c'}}>
                                     {student.gender}
                                 </span>
-                                <span style={styles.metaBadge}>🏫 {student.className}</span>
-                                {student.stream && <span style={styles.metaBadge}>🎨 {streamLabel(student.stream)}</span>}
+                                <span style={styles.metaBadge}>🏫 {classDisplayName({ className: student.className, stream: student.stream })}</span>
                             </p>
                         </div>
                     </div>
