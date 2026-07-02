@@ -575,7 +575,7 @@ function ReportCards() {
                             </select>
                             <button onClick={() => { setSearch(''); setFilterExam(''); }} style={s.clearBtn}>Clear</button>
                             <span style={{ color: '#666', fontSize: '13px', alignSelf: 'center' }}>{filtered.length} card(s)</span>
-                            <span style={{ display: 'flex', gap: '3px', alignItems: 'center', marginLeft: 'auto' }}>
+                            <span className="no-print" style={{ display: 'flex', gap: '3px', alignItems: 'center', marginLeft: 'auto' }}>
                                 <span style={{ fontSize: '11px', color: '#666' }}>Print:</span>
                                 {['portrait', 'landscape'].map(o => (
                                     <button key={o} onClick={() => setCardPrintOrientation(o)} style={{ fontSize: '11px', padding: '3px 9px', borderRadius: '4px', cursor: 'pointer', border: `1.5px solid ${cardPrintOrientation === o ? '#1F3864' : '#ccc'}`, background: cardPrintOrientation === o ? '#1F3864' : 'white', color: cardPrintOrientation === o ? 'white' : '#666', fontWeight: cardPrintOrientation === o ? 'bold' : 'normal', textTransform: 'capitalize' }}>{o}</button>

@@ -8,7 +8,7 @@ import logo2 from '../assets/logo2.png';
 
 // ── Orientation Toggle ────────────────────────────────────────────────────────
 const OrientationToggle = ({ value, onChange }) => (
-    <span style={{ display: 'flex', gap: '3px' }}>
+    <span className="no-print" style={{ display: 'flex', gap: '3px' }}>
         {['portrait', 'landscape'].map(o => (
             <button key={o} onClick={() => onChange(o)} style={{ fontSize: '11px', padding: '3px 9px', borderRadius: '4px', cursor: 'pointer', border: `1.5px solid ${value === o ? '#1F3864' : '#ccc'}`, background: value === o ? '#1F3864' : 'white', color: value === o ? 'white' : '#666', fontWeight: value === o ? 'bold' : 'normal', textTransform: 'capitalize' }}>{o}</button>
         ))}
