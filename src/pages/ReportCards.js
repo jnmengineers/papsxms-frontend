@@ -8,7 +8,7 @@ const gradeLabel = (m) => m >= 75 ? 'EE' : m >= 55 ? 'ME' : m >= 40 ? 'AE' : 'BE
 const gradeColor = (m) => m >= 75 ? '#28a745' : m >= 55 ? '#2E75B6' : m >= 40 ? '#ffc107' : '#dc3545';
 const gradeRemarks = (m) => m >= 75 ? 'Exceeding Expectations' : m >= 55 ? 'Meeting Expectations' : m >= 40 ? 'Approaching Expectations' : 'Below Expectations';
 
-const printReportCard = (card, singleResults, progressiveData, orientation = 'portrait') => {
+const printReportCard = (card, singleResults, progressiveData) => {
     const student = card.student;
     const exam = card.exam;
     const term = exam?.term;
@@ -117,7 +117,7 @@ const printReportCard = (card, singleResults, progressiveData, orientation = 'po
     const html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">'
         + '<title>Report Card - ' + (student ? student.firstName + ' ' + student.lastName : '') + '</title>'
         + '<style>*{box-sizing:border-box;margin:0;padding:0;}body{font-family:"Times New Roman",Times,serif;font-size:12px;color:#000;padding:15px;max-width:800px;margin:0 auto;}'
-        + '@media print{@page{size:A4 ' + orientation + ';margin:10mm;}.no-print{display:none!important;}body{-webkit-print-color-adjust:exact;print-color-adjust:exact;}}</style>'
+        + '@media print{@page{size:A4;margin:10mm;}.no-print{display:none!important;}body{-webkit-print-color-adjust:exact;print-color-adjust:exact;}}</style>'
         + '</head><body>'
         + '<div class="no-print" style="background:#1F3864;color:white;padding:10px 15px;margin-bottom:15px;border-radius:8px;display:flex;justify-content:space-between;align-items:center;">'
         + '<span style="font-weight:bold;">Report Card - ' + (student ? student.firstName + ' ' + student.lastName : '') + '</span>'
@@ -141,8 +141,8 @@ const printReportCard = (card, singleResults, progressiveData, orientation = 'po
         + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">'
         + '<div style="font-size:12px;"><strong style="color:#1F3864;">Student Name:</strong> ' + (student ? student.firstName + ' ' + student.lastName : '-') + '</div>'
         + '<div style="font-size:12px;"><strong style="color:#1F3864;">Admission No:</strong> ' + (student ? (student.admissionNumber || '-') : '-') + '</div>'
-        + '<div style="font-size:12px;"><strong style="color:#1F3864;">Class:</strong> ' + (student ? classDisplayName({ className: student.schoolClass?.className || student.className, stream: student.schoolClass?.stream || student.stream }) || '-' : '-') + '</div>'
-        + '<div style="font-size:12px;"><strong style="color:#1F3864;">Stream:</strong> ' + (streamLabel(student?.schoolClass?.stream || student?.stream) || 'N/A') + '</div>'
+        + '<div style="font-size:12px;"><strong style="color:#1F3864;">Class:</strong> ' + (student ? (student.className || '-') : '-') + '</div>'
+        + '<div style="font-size:12px;"><strong style="color:#1F3864;">Stream:</strong> ' + (student?.stream ? (student.stream === 'YELLOW' ? 'Yellow' : student.stream === 'BLUE' ? 'Blue' : student.stream === 'RED' ? 'Red' : student.stream) : '-') + '</div>'
         + '<div style="font-size:12px;"><strong style="color:#1F3864;">Term:</strong> Term ' + term + '</div>'
         + '<div style="font-size:12px;"><strong style="color:#1F3864;">Academic Year:</strong> ' + academicYear + '</div>'
         + '<div style="font-size:12px;"><strong style="color:#1F3864;">Exam:</strong> ' + (exam ? exam.examName : '-') + '</div>'
@@ -194,7 +194,7 @@ function ReportCards() {
     const [reportCards, setReportCards] = useState([]);
     const [loading, setLoading] = useState(true);
     const [printing, setPrinting] = useState(null);
-    const [cardPrintOrientation, setCardPrintOrientation] = useState('portrait');
+    const [printingAll, setPrintingAll] = useState(false);
     const [error, setError] = useState('');
     const [successMsg, setSuccessMsg] = useState('');
     const [students, setStudents] = useState([]);
@@ -359,9 +359,121 @@ function ReportCards() {
                     progressiveData = progRes.data;
                 }
             } catch (e) {}
-            printReportCard(card, singleResults, progressiveData, cardPrintOrientation);
+            printReportCard(card, singleResults, progressiveData);
         } catch (e) { setError('Failed to load results for printing'); }
         setPrinting(null);
+    };
+
+
+    const handlePrintAll = async () => {
+        if (!filtered.length) return;
+        setPrintingAll(true); setError('');
+        const allPages = [];
+        for (const card of filtered) {
+            try {
+                const resultsRes = await api.get('/api/results/student/' + card.student?.studentId + '/exam/' + card.exam?.examId);
+                const singleResults = resultsRes.data;
+                let progressiveData = null;
+                try {
+                    const t2 = card.exam?.term; const y2 = card.exam?.academicYear;
+                    if (t2 && y2) {
+                        const pr = await api.get('/api/results/progressive/student/' + card.student?.studentId + '/term/' + t2 + '/year/' + y2);
+                        progressiveData = pr.data;
+                    }
+                } catch(e) {}
+                const student = card.student; const exam = card.exam;
+                const term = exam?.term; const academicYear = exam?.academicYear;
+                const subjects = progressiveData?.subjects || [];
+                const allTermExams = progressiveData?.exams || [];
+                const termExams = allTermExams.filter(e => {
+                    const type = e.examType;
+                    return subjects.some(sub => (type==='OPENING'&&sub.opening!=null)||(type==='MID_TERM'&&sub.midTerm!=null)||(type==='END_TERM'&&sub.endTerm!=null));
+                });
+                const isProgressive = termExams.length > 1 && subjects.length > 0;
+                const gc=(m)=>m>=75?'#28a745':m>=55?'#2E75B6':m>=40?'#ffc107':'#dc3545';
+                const gl=(m)=>m>=75?'EE':m>=55?'ME':m>=40?'AE':'BE';
+                const gr=(m)=>m>=75?'Exceeding Expectations':m>=55?'Meeting Expectations':m>=40?'Approaching Expectations':'Below Expectations';
+                let subjectRows=''; let totalMarks=0; let subjectCount=0;
+                if (isProgressive) {
+                    const etl={OPENING:'Opening',MID_TERM:'Mid Term',END_TERM:'End Term'};
+                    const etc={OPENING:'#28a745',MID_TERM:'#e07a2f',END_TERM:'#2E75B6'};
+                    const examCols=termExams.map(e=>e.examType).filter(Boolean);
+                    subjectRows=subjects.map((sub,i)=>{
+                        const op=sub.opening;const mt=sub.midTerm;const et=sub.endTerm;
+                        const cur=et!=null?et:(mt!=null?mt:op);
+                        const first=op!=null?op:mt;const latest=et!=null?et:(mt!=null?mt:op);
+                        const chg=(first!=null&&latest!=null&&first!==latest)?(latest-first).toFixed(1):null;
+                        const trend=chg?(parseFloat(chg)>0?'<span style="color:#28a745">+ '+chg+'</span>':'<span style="color:#dc3545">- '+chg+'</span>'):'<span style="color:#999">--</span>';
+                        if(cur!=null){totalMarks+=cur;subjectCount++;}
+                        const oc=op!=null?'<strong style="color:'+gc(op)+'">'+op+'</strong><br><small>'+gl(op)+'</small>':'<span style="color:#ccc">-</span>';
+                        const mc=mt!=null?'<strong style="color:'+gc(mt)+'">'+mt+'</strong><br><small>'+gl(mt)+'</small>':'<span style="color:#ccc">-</span>';
+                        const ec=et!=null?'<strong style="color:'+gc(et)+'">'+et+'</strong><br><small>'+gl(et)+'</small>':'<span style="color:#ccc">-</span>';
+                        return '<tr style="background:'+(i%2===0?'#f8f9fa':'white')+'"><td style="padding:6px;border:1px solid #ddd;font-size:12px;">'+(i+1)+'. '+sub.subjectName+'</td>'+(examCols.includes('OPENING')?'<td style="padding:6px;border:1px solid #ddd;text-align:center;">'+oc+'</td>':'')+(examCols.includes('MID_TERM')?'<td style="padding:6px;border:1px solid #ddd;text-align:center;">'+mc+'</td>':'')+(examCols.includes('END_TERM')?'<td style="padding:6px;border:1px solid #ddd;text-align:center;">'+ec+'</td>':'')+'<td style="padding:6px;border:1px solid #ddd;text-align:center;">'+trend+'</td></tr>';
+                    }).join('');
+                } else {
+                    singleResults.forEach((r,i)=>{
+                        totalMarks+=r.marksObtained;subjectCount++;
+                        subjectRows+='<tr style="background:'+(i%2===0?'#f8f9fa':'white')+'"><td style="padding:6px;border:1px solid #ddd;font-size:12px;">'+(i+1)+'. '+(r.subject?r.subject.subjectName:'')+'</td><td style="padding:6px;border:1px solid #ddd;text-align:center;font-weight:bold;color:'+gc(r.marksObtained)+'">'+r.marksObtained+'</td><td style="padding:6px;border:1px solid #ddd;text-align:center;"><span style="background:'+gc(r.marksObtained)+';color:white;padding:2px 8px;border-radius:3px;font-weight:bold;font-size:11px;">'+gl(r.marksObtained)+'</span></td><td style="padding:6px;border:1px solid #ddd;font-size:12px;color:#555">'+gr(r.marksObtained)+'</td></tr>';
+                    });
+                }
+                const avg=subjectCount>0?totalMarks/subjectCount:0;
+                const avgGrade=gl(avg);
+                const stStream=student?.stream?(student.stream==='YELLOW'?'Yellow':student.stream==='BLUE'?'Blue':student.stream==='RED'?'Red':student.stream):'-';
+                const rkHtml=card.termRank?'<div style="flex:1;text-align:center;"><div style="color:#FFD700;font-size:11px;">Term Rank</div><div style="color:white;font-size:20px;font-weight:bold;">'+card.termRank+'</div></div>':'';
+                allPages.push(
+                    '<div style="page-break-after:always;padding:15px;max-width:780px;margin:0 auto;">'
+                    +'<div style="border-bottom:3px solid #1F3864;padding-bottom:8px;margin-bottom:10px;text-align:center;">'
+                    +'<div style="color:#1F3864;font-size:13px;font-weight:bold;text-transform:uppercase;">PIPELINE ADVENTIST PRIMARY &amp; JUNIOR SECONDARY SCHOOL</div>'
+                    +'<div style="color:#2E75B6;font-style:italic;font-size:11px;margin:2px 0;">Abreast with the Best in Holistic Education</div>'
+                    +'<div style="font-size:10px;color:#666;">P.O. BOX 61774-00200, NAIROBI | Tel: 0713 301 521 / 0721 885 996</div>'
+                    +'<div style="background:#1F3864;padding:5px 12px;text-align:center;border-radius:4px;margin-top:6px;">'
+                    +'<div style="color:white;font-weight:bold;font-size:13px;">'+(isProgressive?'PROGRESSIVE TERM REPORT CARD':'REPORT CARD')+'</div>'
+                    +'<div style="color:#BDD7EE;font-size:11px;">Term '+term+' - '+academicYear+' - '+(exam?exam.examName:'')+'</div>'
+                    +'</div></div>'
+                    +'<div style="background:#f8f9fa;padding:10px;border-radius:6px;margin-bottom:10px;border-left:4px solid #1F3864;">'
+                    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">'
+                    +'<div style="font-size:12px;"><strong style="color:#1F3864;">Student Name:</strong> '+(student?student.firstName+' '+student.lastName:'-')+'</div>'
+                    +'<div style="font-size:12px;"><strong style="color:#1F3864;">Admission No:</strong> '+(student?(student.admissionNumber||'-'):'-')+'</div>'
+                    +'<div style="font-size:12px;"><strong style="color:#1F3864;">Class:</strong> '+(student?(student.className||'-'):'-')+'</div>'
+                    +'<div style="font-size:12px;"><strong style="color:#1F3864;">Stream:</strong> '+stStream+'</div>'
+                    +'<div style="font-size:12px;"><strong style="color:#1F3864;">Term:</strong> Term '+term+'</div>'
+                    +'<div style="font-size:12px;"><strong style="color:#1F3864;">Academic Year:</strong> '+academicYear+'</div>'
+                    +'</div></div>'
+                    +'<table style="width:100%;border-collapse:collapse;margin-bottom:10px;">'
+                    +'<thead><tr style="background:#1F3864;">'
+                    +(isProgressive
+                        ?'<th style="color:white;padding:6px;font-size:11px;text-align:left;">SUBJECT</th>'
+                        :'<th style="color:white;padding:6px;font-size:11px;text-align:left;">SUBJECT</th><th style="color:#FFD700;padding:6px;font-size:11px;text-align:center;">MARKS</th><th style="color:#FFD700;padding:6px;font-size:11px;text-align:center;">GRADE</th><th style="color:white;padding:6px;font-size:11px;text-align:left;">REMARKS</th>')
+                    +'</tr></thead><tbody>'+subjectRows+'</tbody></table>'
+                    +'<div style="display:flex;gap:10px;background:#1F3864;padding:10px;border-radius:6px;margin-bottom:10px;">'
+                    +'<div style="flex:1;text-align:center;"><div style="color:#FFD700;font-size:11px;">Total</div><div style="color:white;font-size:20px;font-weight:bold;">'+totalMarks.toFixed(0)+'</div></div>'
+                    +'<div style="flex:1;text-align:center;"><div style="color:#FFD700;font-size:11px;">Average</div><div style="color:white;font-size:20px;font-weight:bold;">'+avg.toFixed(1)+'%</div></div>'
+                    +'<div style="flex:1;text-align:center;"><div style="color:#FFD700;font-size:11px;">Grade</div><div style="color:white;font-size:20px;font-weight:bold;">'+avgGrade+'</div></div>'
+                    +rkHtml+'</div>'
+                    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:8px;">'
+                    +'<div style="border:1px solid #ddd;padding:10px;border-radius:6px;"><p style="font-weight:bold;color:#1F3864;margin:0 0 6px 0;font-size:11px;">Class Teacher Comment:</p><p style="margin:0 0 18px 0;min-height:28px;font-size:11px;color:#333;">'+(card.teacherComment||'.................................................')+'</p><p style="margin:0;color:#666;font-size:10px;">Signature: _____________ Date: _________</p></div>'
+                    +'<div style="border:1px solid #ddd;padding:10px;border-radius:6px;"><p style="font-weight:bold;color:#1F3864;margin:0 0 6px 0;font-size:11px;">Principal Comment:</p><p style="margin:0 0 18px 0;min-height:28px;font-size:11px;color:#333;">'+(card.principalComment||'.................................................')+'</p><p style="margin:0;color:#666;font-size:10px;">Signature: _____________ Date: _________</p></div>'
+                    +'</div>'
+                    +'<p style="text-align:center;font-size:10px;color:#999;border-top:2px solid #1F3864;padding-top:6px;">Pipeline Adventist School - Official Report Card - Issued: '+new Date().toLocaleDateString()+'</p>'
+                    +'</div>'
+                );
+            } catch(e) { console.error('Failed card:', card.reportId, e); }
+        }
+        if (!allPages.length) { alert('No report cards could be loaded.'); setPrintingAll(false); return; }
+        const html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Bulk Report Cards</title>'
+            +'<style>*{box-sizing:border-box;margin:0;padding:0;}body{font-family:"Times New Roman",Times,serif;font-size:12px;color:#000;}'
+            +'.no-print{background:#1F3864;color:white;padding:12px 20px;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:999;}'
+            +'@media print{@page{size:A4;margin:8mm;}.no-print{display:none!important;}body{-webkit-print-color-adjust:exact;print-color-adjust:exact;}'
+            +'div[style*="page-break-after"]:last-child{page-break-after:avoid!important;}}'
+            +'</style></head>'
+            +'<body onload="setTimeout(function(){window.print();},800);">'
+            +'<div class="no-print"><span style="font-weight:bold;">Bulk Print - '+allPages.length+' Report Card(s)</span>'
+            +'<button onclick="window.print()" style="background:#FFD700;color:#1F3864;border:none;padding:8px 20px;border-radius:5px;font-weight:bold;cursor:pointer;font-size:14px;">Print All / Save PDF</button></div>'
+            +allPages.join('')+'</body></html>';
+        const win = window.open('', '_blank');
+        if (win) { win.document.write(html); win.document.close(); win.focus(); }
+        else alert('Please allow popups to print.');
+        setPrintingAll(false);
     };
 
     const handleDelete = async (id) => {
@@ -528,7 +640,7 @@ function ReportCards() {
                                         onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-3px)'; }}
                                         onMouseLeave={e => { e.currentTarget.style.transform = 'none'; }}
                                         style={{ ...s.classTile, borderTop: '4px solid ' + color, outline: isSelected ? '3px solid ' + color : 'none' }}>
-                                        <div style={{ ...s.classTileName, color }}>{classDisplayName(cls)}</div>
+                                        <div style={{ ...s.classTileName, color }}>{cls.className}{cls.section && <div style={{fontSize:'11px',fontWeight:'normal',color:'#888',marginTop:'2px'}}>{cls.stream ? '(' + streamLabel(cls.stream) + ' Stream)' : ''}</div>}</div>
                                         <div style={s.classTileStats}>
                                             <div style={s.classTileStat}>
                                                 <span style={s.classTileNum}>{cls.count}</span>
@@ -575,12 +687,7 @@ function ReportCards() {
                             </select>
                             <button onClick={() => { setSearch(''); setFilterExam(''); }} style={s.clearBtn}>Clear</button>
                             <span style={{ color: '#666', fontSize: '13px', alignSelf: 'center' }}>{filtered.length} card(s)</span>
-                            <span className="no-print" style={{ display: 'flex', gap: '3px', alignItems: 'center', marginLeft: 'auto' }}>
-                                <span style={{ fontSize: '11px', color: '#666' }}>Print:</span>
-                                {['portrait', 'landscape'].map(o => (
-                                    <button key={o} onClick={() => setCardPrintOrientation(o)} style={{ fontSize: '11px', padding: '3px 9px', borderRadius: '4px', cursor: 'pointer', border: `1.5px solid ${cardPrintOrientation === o ? '#1F3864' : '#ccc'}`, background: cardPrintOrientation === o ? '#1F3864' : 'white', color: cardPrintOrientation === o ? 'white' : '#666', fontWeight: cardPrintOrientation === o ? 'bold' : 'normal', textTransform: 'capitalize' }}>{o}</button>
-                                ))}
-                            </span>
+                            <button onClick={handlePrintAll} disabled={printingAll || !filtered.length} style={{ backgroundColor: printingAll ? '#6c757d' : '#fd7e14', color: 'white', border: 'none', padding: '10px 16px', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold', fontSize: '13px', whiteSpace: 'nowrap' }}>{printingAll ? 'Loading...' : 'Print All (' + filtered.length + ')'}</button>
                         </div>
                         {loading ? (
                             <p style={{ textAlign: 'center', padding: '40px', color: '#666' }}>Loading...</p>
@@ -618,7 +725,7 @@ function ReportCards() {
                                                     <td style={s.td}>{index + 1}</td>
                                                     <td style={s.td}><strong>{card.student?.firstName} {card.student?.lastName}</strong></td>
                                                     <td style={s.td}><span style={s.admNo}>{card.student?.admissionNumber || '-'}</span></td>
-                                                    <td style={s.td}>{classDisplayName({ className: card.student?.className, stream: card.student?.stream || card.student?.schoolClass?.stream })}</td>
+                                                    <td style={s.td}>{card.student?.className}</td>
                                                     <td style={s.td}><span style={s.examBadge}>{card.exam?.examName}</span></td>
                                                     <td style={s.td}><strong>{card.totalMarks}</strong></td>
                                                     <td style={s.td}><span style={{ color: gc, fontWeight: 'bold' }}>{avg.toFixed(1)}%</span></td>
