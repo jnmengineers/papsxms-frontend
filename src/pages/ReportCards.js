@@ -121,7 +121,12 @@ const printReportCard = (card, singleResults, progressiveData) => {
         + '</head><body>'
         + '<div class="no-print" style="background:#1F3864;color:white;padding:10px 15px;margin-bottom:15px;border-radius:8px;display:flex;justify-content:space-between;align-items:center;">'
         + '<span style="font-weight:bold;">Report Card - ' + (student ? student.firstName + ' ' + student.lastName : '') + '</span>'
-        + '<button onclick="window.print()" style="background:#FFD700;color:#1F3864;border:none;padding:8px 20px;border-radius:5px;font-weight:bold;cursor:pointer;font-size:14px;">Print / Save PDF</button>'
+        + '<div style="display:flex;gap:6px;align-items:center;">'
+        + '<button onclick="setOrient(\'portrait\')" id="btnP" style="background:#FFD700;color:#1F3864;border:none;padding:6px 12px;border-radius:4px;cursor:pointer;font-size:12px;font-weight:bold;">Portrait</button>'
+        + '<button onclick="setOrient(\'landscape\')" id="btnL" style="background:rgba(255,255,255,0.2);color:white;border:none;padding:6px 12px;border-radius:4px;cursor:pointer;font-size:12px;">Landscape</button>'
+        + '<button onclick="window.print()" style="background:#28a745;color:white;border:none;padding:8px 20px;border-radius:5px;font-weight:bold;cursor:pointer;font-size:14px;">Print / Save PDF</button>'
+        + '</div>'
+        + '<script>function setOrient(o){document.getElementById(\'ps\').textContent=\'@page{size:A4 \'+o+\';margin:10mm;}\';document.getElementById(\'btnP\').style.background=o==='portrait'?'#FFD700':'rgba(255,255,255,0.2)';document.getElementById(\'btnL\').style.background=o==='landscape'?'#FFD700':'rgba(255,255,255,0.2)';}</script>
         + '</div>'
         + '<div style="border-bottom:3px solid #1F3864;padding-bottom:10px;margin-bottom:12px;">'
         + '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">'
@@ -213,6 +218,7 @@ function ReportCards() {
     const [selectedClassFilter, setSelectedClassFilter] = useState('');
     const [editForm, setEditForm] = useState({ termRank: '', Remarks: '', teacherComment: '', principalComment: '' });
     const [deleteConfirm, setDeleteConfirm] = useState(null);
+    const [deleteAllConfirm, setDeleteAllConfirm] = useState(false);
 
     const sections = [
         { value: 'PRE_SCHOOL', label: 'Pre-School', color: '#6f42c1' },
@@ -481,6 +487,16 @@ function ReportCards() {
         catch (e) { setError('Failed to delete'); }
     };
 
+    const handleDeleteAll = async () => {
+    try {
+        await Promise.all(filtered.map(card => api.delete('/api/reportCards/' + card.reportId)));
+        setSuccessMsg(`✅ ${filtered.length} report cards deleted`);
+        setDeleteAllConfirm(false);
+        fetchReportCards();
+        setTimeout(() => setSuccessMsg(''), 3000);
+    } catch(e) { setError('Failed to delete all report cards'); }
+    };
+
     const classTilesData = () => {
         const map = {};
         reportCards.filter(cardBelongsToTeacher).forEach(card => {
@@ -640,7 +656,7 @@ function ReportCards() {
                                         onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-3px)'; }}
                                         onMouseLeave={e => { e.currentTarget.style.transform = 'none'; }}
                                         style={{ ...s.classTile, borderTop: '4px solid ' + color, outline: isSelected ? '3px solid ' + color : 'none' }}>
-                                        <div style={{ ...s.classTileName, color }}>{cls.className}{cls.section && <div style={{fontSize:'11px',fontWeight:'normal',color:'#888',marginTop:'2px'}}>{cls.stream ? '(' + streamLabel(cls.stream) + ' Stream)' : ''}</div>}</div>
+                                        <div style={{ ...s.classTileName, color }}>{classDisplayName(cls)}</div>
                                         <div style={s.classTileStats}>
                                             <div style={s.classTileStat}>
                                                 <span style={s.classTileNum}>{cls.count}</span>
@@ -688,6 +704,11 @@ function ReportCards() {
                             <button onClick={() => { setSearch(''); setFilterExam(''); }} style={s.clearBtn}>Clear</button>
                             <span style={{ color: '#666', fontSize: '13px', alignSelf: 'center' }}>{filtered.length} card(s)</span>
                             <button onClick={handlePrintAll} disabled={printingAll || !filtered.length} style={{ backgroundColor: printingAll ? '#6c757d' : '#fd7e14', color: 'white', border: 'none', padding: '10px 16px', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold', fontSize: '13px', whiteSpace: 'nowrap' }}>{printingAll ? 'Loading...' : 'Print All (' + filtered.length + ')'}</button>
+                            <button onClick={() => setDeleteAllConfirm(true)} 
+                                disabled={!filtered.length}
+                                style={{ backgroundColor: '#dc3545', color: 'white', border: 'none', padding: '10px 16px', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold', fontSize: '13px', whiteSpace: 'nowrap' }}>
+                                🗑️ Delete All ({filtered.length})
+                            </button>
                         </div>
                         {loading ? (
                             <p style={{ textAlign: 'center', padding: '40px', color: '#666' }}>Loading...</p>
@@ -769,6 +790,21 @@ function ReportCards() {
                             <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
                                 <button onClick={() => setDeleteConfirm(null)} style={s.cancelBtn}>Cancel</button>
                                 <button onClick={() => handleDelete(deleteConfirm.reportId)} style={{ ...s.cancelBtn, backgroundColor: '#dc3545' }}>Delete</button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {deleteAllConfirm && (
+                    <div style={{ position:'fixed', top:0, left:0, right:0, bottom:0, backgroundColor:'rgba(0,0,0,0.5)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:10000 }}>
+                        <div style={{ backgroundColor:'white', padding:'25px 30px', borderRadius:'10px', maxWidth:'400px', width:'90%', boxShadow:'0 10px 30px rgba(0,0,0,0.3)' }}>
+                            <h3 style={{ color:'#dc3545', margin:'0 0 12px 0' }}>🗑️ Delete All Report Cards?</h3>
+                            <p style={{ color:'#555', marginBottom:'20px' }}>
+                                This will permanently delete <strong>{filtered.length} report cards</strong> for the selected class and exam. This cannot be undone.
+                            </p>
+                            <div style={{ display:'flex', gap:'10px', justifyContent:'flex-end' }}>
+                                <button onClick={() => setDeleteAllConfirm(false)} style={{ backgroundColor:'#6c757d', color:'white', border:'none', padding:'9px 20px', borderRadius:'5px', cursor:'pointer', fontWeight:'bold' }}>Cancel</button>
+                                <button onClick={handleDeleteAll} style={{ backgroundColor:'#dc3545', color:'white', border:'none', padding:'9px 20px', borderRadius:'5px', cursor:'pointer', fontWeight:'bold' }}>🗑️ Delete All</button>
                             </div>
                         </div>
                     </div>
