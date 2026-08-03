@@ -8,22 +8,16 @@ const gradeLabel = (m) => m >= 75 ? 'EE' : m >= 55 ? 'ME' : m >= 40 ? 'AE' : 'BE
 const gradeColor = (m) => m >= 75 ? '#28a745' : m >= 55 ? '#2E75B6' : m >= 40 ? '#ffc107' : '#dc3545';
 const gradeRemarks = (m) => m >= 75 ? 'Exceeding Expectations' : m >= 55 ? 'Meeting Expectations' : m >= 40 ? 'Approaching Expectations' : 'Below Expectations';
 
-const printReportCard = (card, singleResults, progressiveData) => {
+const printReportCard = (card, singleResults, progressiveData, allCards) => {
     const student = card.student;
     const exam = card.exam;
     const term = exam?.term;
     const academicYear = exam?.academicYear;
 
-    const allTermExams = progressiveData?.exams || [];
+    // progressiveData is now pre-anchored server-side to this exam's position
+    // (via /progressive/student/{id}/upto-exam/{examId}) — no client-side filtering needed.
+    const termExams = progressiveData?.exams || [];
     const subjects = progressiveData?.subjects || [];
-    const termExams = allTermExams.filter(e => {
-        const type = e.examType;
-        return subjects.some(sub =>
-            (type === 'OPENING' && sub.opening != null) ||
-            (type === 'MID_TERM' && sub.midTerm != null) ||
-            (type === 'END_TERM' && sub.endTerm != null)
-        );
-    });
     const isProgressive = termExams.length > 1 && subjects.length > 0;
 
     const gc = (m) => m >= 75 ? '#28a745' : m >= 55 ? '#2E75B6' : m >= 40 ? '#ffc107' : '#dc3545';
@@ -110,14 +104,23 @@ const printReportCard = (card, singleResults, progressiveData) => {
         ? '<th style="color:white;padding:7px 8px;text-align:left;font-size:12px;">SUBJECT</th>' + examHeaders + '<th style="color:white;padding:7px 8px;text-align:center;font-size:12px;">TREND</th>'
         : '<th style="color:white;padding:7px 8px;text-align:left;font-size:12px;">SUBJECT</th><th style="color:#FFD700;padding:7px 8px;text-align:center;font-size:12px;">MARKS</th><th style="color:#FFD700;padding:7px 8px;text-align:center;font-size:12px;">GRADE</th><th style="color:white;padding:7px 8px;text-align:left;font-size:12px;">REMARKS</th>';
 
-    const termRankHtml = card.termRank
-        ? '<div style="flex:1;text-align:center;"><div style="color:#FFD700;font-size:11px;">Term Rank</div><div style="color:white;font-size:22px;font-weight:bold;">' + card.termRank + '</div></div>'
+    const streamTotal = allCards ? allCards.filter(c => c.student?.className === card.student?.className && (c.student?.stream || null) === (card.student?.stream || null)).length : null;
+    const gradeTotal = allCards ? allCards.filter(c => c.student?.className === card.student?.className).length : null;
+    const streamRankHtml = card.classRank
+        ? '<div style="flex:1;text-align:center;"><div style="color:#FFD700;font-size:11px;">Stream Rank</div><div style="color:white;font-size:22px;font-weight:bold;">' + card.classRank + '</div><div style="color:rgba(255,255,255,0.7);font-size:10px;">out of ' + (streamTotal || '?') + '</div></div>'
+        : '';
+    const gradeRankHtml = card.termRank
+        ? '<div style="flex:1;text-align:center;"><div style="color:#FFD700;font-size:11px;">Grade Rank</div><div style="color:white;font-size:22px;font-weight:bold;">' + card.termRank + '</div><div style="color:rgba(255,255,255,0.7);font-size:10px;">out of ' + (gradeTotal || '?') + '</div></div>'
+        : '';
+    const termRankHtml = (card.exam?.examType === 'END_TERM' && card.termRank)
+        ? '<div style="flex:1;text-align:center;"><div style="color:#FFD700;font-size:11px;">Term Rank</div><div style="color:white;font-size:22px;font-weight:bold;">' + card.termRank + '</div><div style="color:rgba(255,255,255,0.7);font-size:10px;">out of ' + (gradeTotal || '?') + '</div></div>'
         : '';
 
     const html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">'
         + '<title>Report Card - ' + (student ? student.firstName + ' ' + student.lastName : '') + '</title>'
         + '<style>*{box-sizing:border-box;margin:0;padding:0;}body{font-family:"Times New Roman",Times,serif;font-size:12px;color:#000;padding:15px;max-width:800px;margin:0 auto;}'
         + '@media print{@page{size:A4;margin:10mm;}.no-print{display:none!important;}body{-webkit-print-color-adjust:exact;print-color-adjust:exact;}}</style>'
+        + '<style id="pageStyle">@page{size:A4 portrait;margin:10mm;}</style>'
         + '</head><body>'
         + '<div class="no-print" style="background:#1F3864;color:white;padding:10px 15px;margin-bottom:15px;border-radius:8px;display:flex;justify-content:space-between;align-items:center;">'
         + '<span style="font-weight:bold;">Report Card - ' + (student ? student.firstName + ' ' + student.lastName : '') + '</span>'
@@ -125,8 +128,10 @@ const printReportCard = (card, singleResults, progressiveData) => {
         + '<button onclick="setOrient(\'portrait\')" id="btnP" style="background:#FFD700;color:#1F3864;border:none;padding:6px 12px;border-radius:4px;cursor:pointer;font-size:12px;font-weight:bold;">Portrait</button>'
         + '<button onclick="setOrient(\'landscape\')" id="btnL" style="background:rgba(255,255,255,0.2);color:white;border:none;padding:6px 12px;border-radius:4px;cursor:pointer;font-size:12px;">Landscape</button>'
         + '<button onclick="window.print()" style="background:#28a745;color:white;border:none;padding:8px 20px;border-radius:5px;font-weight:bold;cursor:pointer;font-size:14px;">Print / Save PDF</button>'
+        + '<button onclick="document.getElementById(\'pageStyle\').innerHTML=\'@page{size:A4 portrait;margin:10mm;}\';this.style.background=\'#FFD700\';this.style.color=\'#1F3864\';this.nextElementSibling.style.background=\'transparent\';this.nextElementSibling.style.color=\'white\'" style="background:#FFD700;color:#1F3864;border:none;padding:6px 14px;border-radius:4px;cursor:pointer;font-size:12px;font-weight:bold;margin-left:8px;">Portrait</button>'
+        + '<button onclick="document.getElementById(\'pageStyle\').innerHTML=\'@page{size:A4 landscape;margin:8mm;}\';this.style.background=\'#FFD700\';this.style.color=\'#1F3864\';this.previousElementSibling.style.background=\'transparent\';this.previousElementSibling.style.color=\'white\'" style="background:transparent;color:white;border:1px solid white;padding:6px 14px;border-radius:4px;cursor:pointer;font-size:12px;font-weight:bold;margin-left:4px;">Landscape</button>'
         + '</div>'
-        + '<script>function setOrient(o){document.getElementById(\'ps\').textContent=\'@page{size:A4 \'+o+\';margin:10mm;}\';document.getElementById(\'btnP\').style.background=o==='portrait'?'#FFD700':'rgba(255,255,255,0.2)';document.getElementById(\'btnL\').style.background=o==='landscape'?'#FFD700':'rgba(255,255,255,0.2)';}</script>
+
         + '</div>'
         + '<div style="border-bottom:3px solid #1F3864;padding-bottom:10px;margin-bottom:12px;">'
         + '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">'
@@ -160,7 +165,7 @@ const printReportCard = (card, singleResults, progressiveData) => {
         + '<div style="flex:1;text-align:center;"><div style="color:#FFD700;font-size:11px;">Average</div><div style="color:white;font-size:22px;font-weight:bold;">' + avg.toFixed(1) + '%</div></div>'
         + '<div style="flex:1;text-align:center;"><div style="color:#FFD700;font-size:11px;">Grade</div><div style="color:white;font-size:22px;font-weight:bold;">' + avgGrade + '</div></div>'
         + '<div style="flex:1;text-align:center;"><div style="color:#FFD700;font-size:11px;">Subjects</div><div style="color:white;font-size:22px;font-weight:bold;">' + subjectCount + '</div></div>'
-        + termRankHtml
+        + streamRankHtml + gradeRankHtml + termRankHtml
         + '</div>'
         + overallChange
         + '<div style="background:#f8f9fa;padding:8px 12px;border-radius:4px;margin-bottom:12px;font-size:11px;">'
@@ -213,6 +218,7 @@ function ReportCards() {
     const [genMode, setGenMode] = useState('class');
     const [genExam, setGenExam] = useState('');
     const [genClassId, setGenClassId] = useState(isTeacher && linkedClassId ? linkedClassId : '');
+    const [classesWithResults, setClassesWithResults] = useState([]);
     const [genStudent, setGenStudent] = useState('');
     const [bulkProgress, setBulkProgress] = useState(null);
     const [selectedClassFilter, setSelectedClassFilter] = useState('');
@@ -233,6 +239,7 @@ function ReportCards() {
     };
 
     useEffect(() => { fetchReportCards(); fetchStudents(); fetchClasses(); fetchExams(); }, []);
+    useEffect(() => { fetchClassesWithResults(genExam); }, [genExam]);
 
     useEffect(() => {
         let data = reportCards.filter(cardBelongsToTeacher);
@@ -242,10 +249,13 @@ function ReportCards() {
             c.student?.admissionNumber?.toLowerCase().includes(search.toLowerCase())
         );
         if (filterExam) data = data.filter(c => String(c.exam?.examId) === String(filterExam));
-        if (selectedClassFilter) data = data.filter(c =>
-            String(c.student?.className) === String(selectedClassFilter) ||
-            String(c.student?.schoolClass?.className) === String(selectedClassFilter)
-        );
+        if (selectedClassFilter) {
+            const [filterCls, filterStr] = selectedClassFilter.split('|');
+            data = data.filter(c =>
+                (c.student?.className === filterCls || c.student?.schoolClass?.className === filterCls) &&
+                (!filterStr || (c.student?.stream || c.student?.schoolClass?.stream) === filterStr)
+            );
+        }
         setFiltered(data);
     }, [search, filterExam, selectedClassFilter, reportCards, classes]);
 
@@ -272,6 +282,21 @@ function ReportCards() {
     const fetchStudents = async () => { try { const r = await api.get('/api/students'); setStudents(r.data); } catch (e) {} };
     const fetchClasses = async () => { try { const r = await api.get('/api/classes'); setClasses(r.data); } catch (e) {} };
     const fetchExams = async () => { try { const r = await api.get('/api/exams'); setExams(r.data); } catch (e) {} };
+
+    const fetchClassesWithResults = async (examId) => {
+        if (!examId) { setClassesWithResults([]); return; }
+        try {
+            const r = await api.get('/api/results');
+            const data = r.data.filter(res => String(res.exam?.examId) === String(examId));
+            // schoolClass.classId is null in API — match classes by className+stream instead
+            const classKeys = [...new Set(data.map(res => {
+                const cn = res.student?.className;
+                const st = res.student?.stream || res.student?.schoolClass?.stream;
+                return cn ? (st ? cn + '|' + st : cn) : null;
+            }).filter(Boolean))];
+            setClassesWithResults(classKeys);
+        } catch(e) {}
+    };
 
     const getServerError = (err) => {
         const data = err.response?.data;
@@ -361,11 +386,11 @@ function ReportCards() {
                 const term = card.exam?.term;
                 const year = card.exam?.academicYear;
                 if (term && year) {
-                    const progRes = await api.get('/api/results/progressive/student/' + card.student?.studentId + '/term/' + term + '/year/' + year);
+                    const progRes = await api.get('/api/results/progressive/student/' + card.student?.studentId + '/upto-exam/' + card.exam?.examId);
                     progressiveData = progRes.data;
                 }
             } catch (e) {}
-            printReportCard(card, singleResults, progressiveData);
+            printReportCard(card, singleResults, progressiveData, reportCards);
         } catch (e) { setError('Failed to load results for printing'); }
         setPrinting(null);
     };
@@ -383,18 +408,14 @@ function ReportCards() {
                 try {
                     const t2 = card.exam?.term; const y2 = card.exam?.academicYear;
                     if (t2 && y2) {
-                        const pr = await api.get('/api/results/progressive/student/' + card.student?.studentId + '/term/' + t2 + '/year/' + y2);
+                        const pr = await api.get('/api/results/progressive/student/' + card.student?.studentId + '/upto-exam/' + card.exam?.examId);
                         progressiveData = pr.data;
                     }
                 } catch(e) {}
                 const student = card.student; const exam = card.exam;
                 const term = exam?.term; const academicYear = exam?.academicYear;
                 const subjects = progressiveData?.subjects || [];
-                const allTermExams = progressiveData?.exams || [];
-                const termExams = allTermExams.filter(e => {
-                    const type = e.examType;
-                    return subjects.some(sub => (type==='OPENING'&&sub.opening!=null)||(type==='MID_TERM'&&sub.midTerm!=null)||(type==='END_TERM'&&sub.endTerm!=null));
-                });
+                const termExams = progressiveData?.exams || [];
                 const isProgressive = termExams.length > 1 && subjects.length > 0;
                 const gc=(m)=>m>=75?'#28a745':m>=55?'#2E75B6':m>=40?'#ffc107':'#dc3545';
                 const gl=(m)=>m>=75?'EE':m>=55?'ME':m>=40?'AE':'BE';
@@ -472,7 +493,7 @@ function ReportCards() {
             +'@media print{@page{size:A4;margin:8mm;}.no-print{display:none!important;}body{-webkit-print-color-adjust:exact;print-color-adjust:exact;}'
             +'div[style*="page-break-after"]:last-child{page-break-after:avoid!important;}}'
             +'</style></head>'
-            +'<body onload="setTimeout(function(){window.print();},800);">'
+            +'<body>'
             +'<div class="no-print"><span style="font-weight:bold;">Bulk Print - '+allPages.length+' Report Card(s)</span>'
             +'<button onclick="window.print()" style="background:#FFD700;color:#1F3864;border:none;padding:8px 20px;border-radius:5px;font-weight:bold;cursor:pointer;font-size:14px;">Print All / Save PDF</button></div>'
             +allPages.join('')+'</body></html>';
@@ -501,14 +522,16 @@ function ReportCards() {
         const map = {};
         reportCards.filter(cardBelongsToTeacher).forEach(card => {
             const cls = card.student?.className || card.student?.schoolClass?.className;
+            const stream = card.student?.stream || card.student?.schoolClass?.stream || null;
             const section = card.student?.schoolClass?.section || '';
             if (!cls) return;
-            if (!map[cls]) map[cls] = { className: cls, section, count: 0, exams: new Set(), avgSum: 0, avgCount: 0 };
-            map[cls].count++;
-            if (card.exam?.examId) map[cls].exams.add(card.exam.examId);
-            if (card.averageMarks) { map[cls].avgSum += card.averageMarks; map[cls].avgCount++; }
+            const key = stream ? cls + '|' + stream : cls;
+            if (!map[key]) map[key] = { className: cls, stream, section, count: 0, exams: new Set(), avgSum: 0, avgCount: 0 };
+            map[key].count++;
+            if (card.exam?.examId) map[key].exams.add(card.exam.examId);
+            if (card.averageMarks) { map[key].avgSum += card.averageMarks; map[key].avgCount++; }
         });
-        return Object.values(map).sort((a, b) => a.className.localeCompare(b.className));
+        return Object.values(map).sort((a, b) => a.className.localeCompare(b.className) || (a.stream||'').localeCompare(b.stream||''));
     };
 
     const classStudentsCount = students.filter(s => String(s.schoolClass?.classId) === String(genClassId)).length;
@@ -561,7 +584,12 @@ function ReportCards() {
                                         <option value="">-- Select Class --</option>
                                         {sections.map(sec => (
                                             <optgroup key={sec.value} label={sec.label}>
-                                                {classes.filter(c => c.section === sec.value).map(cls => (
+                                                {classes.filter(cls => {
+                                                    if (cls.section !== sec.value) return false;
+                                                    if (!genExam || !classesWithResults.length) return true;
+                                                    const key = cls.stream ? cls.className + '|' + cls.stream : cls.className;
+                                                    return classesWithResults.includes(key);
+                                                }).map(cls => (
                                                     <option key={cls.classId} value={cls.classId}>{classDisplayName(cls)}</option>
                                                 ))}
                                             </optgroup>
@@ -649,10 +677,10 @@ function ReportCards() {
                             {classTiles.map((cls, i) => {
                                 const color = sectionColor(cls.section);
                                 const avg = cls.avgCount > 0 ? (cls.avgSum / cls.avgCount).toFixed(1) : null;
-                                const isSelected = selectedClassFilter === cls.className;
+                                const isSelected = selectedClassFilter === (cls.stream ? cls.className + '|' + cls.stream : cls.className);
                                 return (
                                     <div key={i}
-                                        onClick={() => setSelectedClassFilter(isSelected ? '' : cls.className)}
+                                        onClick={() => setSelectedClassFilter(isSelected ? '' : (cls.stream ? cls.className + '|' + cls.stream : cls.className))}
                                         onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-3px)'; }}
                                         onMouseLeave={e => { e.currentTarget.style.transform = 'none'; }}
                                         style={{ ...s.classTile, borderTop: '4px solid ' + color, outline: isSelected ? '3px solid ' + color : 'none' }}>
@@ -691,8 +719,8 @@ function ReportCards() {
                     <React.Fragment>
                         <div style={s.filterRow}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1 }}>
-                                <span style={{ backgroundColor: sectionColor(classTiles.find(c => c.className === selectedClassFilter)?.section), color: 'white', padding: '5px 12px', borderRadius: '20px', fontWeight: 'bold', fontSize: '13px' }}>
-                                    {selectedClassFilter}
+                                <span style={{ backgroundColor: sectionColor(classTiles.find(c => (c.stream ? c.className + '|' + c.stream : c.className) === selectedClassFilter)?.section), color: 'white', padding: '5px 12px', borderRadius: '20px', fontWeight: 'bold', fontSize: '13px' }}>
+                                    {selectedClassFilter.replace('|', ' (') + (selectedClassFilter.includes('|') ? ')' : '')}
                                 </span>
                                 <button onClick={() => setSelectedClassFilter('')} style={{ backgroundColor: '#6c757d', color: 'white', border: 'none', padding: '5px 10px', borderRadius: '5px', cursor: 'pointer', fontSize: '12px' }}>Close</button>
                             </div>
