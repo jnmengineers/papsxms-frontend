@@ -55,6 +55,7 @@ const ExamForm = ({ formData, setFormData, academicYears, onSubmit, onCancel, su
                         <option value="OPENING">🟢 Opening Exam</option>
                         <option value="MID_TERM">🟡 Mid Term Exam</option>
                         <option value="END_TERM">🔵 End Term Exam</option>
+			<option value="EXTRA">🟣 Extra Assessment</option>
                     </select>
                 </div>
 
@@ -127,8 +128,8 @@ function Exams() {
         term: '', startDate: '', endDate: '', classLevel: '', examType: ''
     });
 
-    const examTypeColors = { OPENING: '#28a745', MID_TERM: '#ffc107', END_TERM: '#2E75B6' };
-    const examTypeLabels = { OPENING: '🟢 Opening', MID_TERM: '🟡 Mid Term', END_TERM: '🔵 End Term' };
+    const examTypeColors = { OPENING: '#28a745', MID_TERM: '#ffc107', END_TERM: '#2E75B6', EXTRA: '#6f42c1' };
+    const examTypeLabels = { OPENING: '🟢 Opening', MID_TERM: '🟡 Mid Term', END_TERM: '🔵 End Term', EXTRA: '🟣 Extra Assessment' };
 
     const sections = [
         { value: 'PRE_SCHOOL', label: 'Pre-School', grades: ['PG', 'PP1', 'PP2'], color: '#6f42c1' },
