@@ -9,21 +9,20 @@ function Login() {
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
-    const [wakingUp, setWakingUp] = useState(false); // backend wakeup state
+    const [wakingUp, setWakingUp] = useState(false);
 
     const handleLogin = async (e) => {
         e.preventDefault();
         setLoading(true);
         setError('');
 
-        // Show wakeup screen after 3 seconds if still loading
         const wakeupTimer = setTimeout(() => setWakingUp(true), 3000);
 
         try {
             const response = await axios.post(
                 `${process.env.REACT_APP_API_URL || 'http://localhost:8080'}/api/auth/login`,
                 { username, password },
-                { timeout: 90000 } // 90 second timeout for wakeup
+                { timeout: 90000 }
             );
 
             clearTimeout(wakeupTimer);
@@ -35,7 +34,7 @@ function Login() {
             localStorage.setItem('role', data.role);
             localStorage.setItem('linkedClassId', data.linkedClassId || '');
             localStorage.setItem('linkedClassName', data.linkedClassName || '');
-            localStorage.setItem('linkedStream', data.linkedStream || ''); // ✅ NEW
+            localStorage.setItem('linkedStream', data.linkedStream || '');
 
             if (data.mustChangePassword) {
                 localStorage.setItem('mustChangePassword', 'true');
@@ -60,71 +59,135 @@ function Login() {
         }
     };
 
-    // Show full-screen loading while backend is waking up
     if (wakingUp) {
         return <LoadingScreen message="Connecting to server" />;
     }
 
     return (
-        <div style={styles.container}>
+        <div style={styles.page}>
             <div style={styles.card}>
-                <div style={styles.logoRow}>
-                    <img src={logo1} alt="Logo 1" style={styles.logo} />
-                    <img src={logo2} alt="Logo 2" style={styles.logo} />
+                <div style={styles.leftPanel}>
+                    <div style={styles.logoBadge}>
+                        <img src={logo1} alt="Pipeline Adventist School" style={styles.logo} />
+                    </div>
+                    <h1 style={styles.schoolName}>Pipeline Adventist School</h1>
+                    <p style={styles.motto}>Abreast with the Best in Holistic Education</p>
+                    <div style={styles.leftFooter}>
+                        Exam Management System
+                    </div>
                 </div>
-                <h2 style={styles.schoolName}>PIPELINE ADVENTIST SCHOOL</h2>
-                <h3 style={styles.subtitle}>Exam Management System</h3>
-                <p style={styles.motto}>Abreast with the Best in Holistic Education</p>
 
-                {error && <p style={styles.error}>{error}</p>}
+                <div style={styles.rightPanel}>
+                    <h2 style={styles.formTitle}>Welcome back</h2>
+                    <p style={styles.formSubtitle}>Sign in to continue to your dashboard</p>
 
-                <form onSubmit={handleLogin}>
-                    <div style={styles.formGroup}>
-                        <label style={styles.label}>Username</label>
-                        <input type="text" value={username}
-                            onChange={e => setUsername(e.target.value)}
-                            style={styles.input} placeholder="Enter username" required />
-                    </div>
-                    <div style={styles.formGroup}>
-                        <label style={styles.label}>Password</label>
-                        <input type="password" value={password}
-                            onChange={e => setPassword(e.target.value)}
-                            style={styles.input} placeholder="Enter password" required />
-                    </div>
-                    <button type="submit" style={styles.button} disabled={loading}>
-                        {loading ? '⏳ Connecting...' : 'Login →'}
-                    </button>
-                </form>
+                    {error && <p style={styles.error}>{error}</p>}
 
-                {loading && !wakingUp && (
-                    <p style={styles.loadingHint}>
-                        ⏳ Connecting to server, please wait...
+                    <form onSubmit={handleLogin}>
+                        <div style={styles.formGroup}>
+                            <label style={styles.label}>Username</label>
+                            <input type="text" value={username}
+                                onChange={e => setUsername(e.target.value)}
+                                style={styles.input} placeholder="Enter your username" required
+                                onFocus={e => e.target.style.borderColor = '#1F3864'}
+                                onBlur={e => e.target.style.borderColor = '#e0e0e0'} />
+                        </div>
+                        <div style={styles.formGroup}>
+                            <label style={styles.label}>Password</label>
+                            <input type="password" value={password}
+                                onChange={e => setPassword(e.target.value)}
+                                style={styles.input} placeholder="Enter your password" required
+                                onFocus={e => e.target.style.borderColor = '#1F3864'}
+                                onBlur={e => e.target.style.borderColor = '#e0e0e0'} />
+                        </div>
+                        <button type="submit" style={styles.button} disabled={loading}>
+                            {loading ? 'Connecting…' : 'Sign in →'}
+                        </button>
+                    </form>
+
+                    {loading && !wakingUp && (
+                        <p style={styles.loadingHint}>Connecting to server, please wait…</p>
+                    )}
+
+                    <p style={styles.footer}>
+                        © {new Date().getFullYear()} Pipeline Adventist School
                     </p>
-                )}
-
-                <p style={styles.footer}>
-                    © {new Date().getFullYear()} Pipeline Adventist School
-                </p>
+                </div>
             </div>
         </div>
     );
 }
 
 const styles = {
-    container: { display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', backgroundColor: '#f0f2f5', padding: '20px' },
-    card: { backgroundColor: 'white', padding: '40px', borderRadius: '10px', boxShadow: '0 4px 20px rgba(0,0,0,0.15)', width: '100%', maxWidth: '420px' },
-    logoRow: { display: 'flex', justifyContent: 'center', gap: '20px', marginBottom: '15px' },
-    logo: { width: '70px', height: '70px', objectFit: 'contain' },
-    schoolName: { textAlign: 'center', color: '#1F3864', fontSize: '16px', margin: '0 0 5px 0' },
-    subtitle: { textAlign: 'center', color: '#2E75B6', fontSize: '14px', fontWeight: 'normal', margin: '0 0 5px 0' },
-    motto: { textAlign: 'center', color: '#666', fontSize: '12px', fontStyle: 'italic', margin: '0 0 25px 0' },
-    error: { color: 'red', textAlign: 'center', marginBottom: '15px', padding: '10px', backgroundColor: '#fff3f3', borderRadius: '5px', fontSize: '14px' },
-    formGroup: { marginBottom: '20px' },
-    label: { display: 'block', marginBottom: '6px', fontWeight: 'bold', color: '#1F3864', fontSize: '13px' },
-    input: { width: '100%', padding: '12px', borderRadius: '5px', border: '2px solid #ddd', fontSize: '14px', boxSizing: 'border-box', outline: 'none' },
-    button: { width: '100%', padding: '13px', backgroundColor: '#1F3864', color: 'white', border: 'none', borderRadius: '5px', fontSize: '16px', cursor: 'pointer', fontWeight: 'bold', marginTop: '5px' },
-    loadingHint: { textAlign: 'center', color: '#666', fontSize: '13px', marginTop: '15px', fontStyle: 'italic' },
-    footer: { textAlign: 'center', color: '#999', fontSize: '12px', marginTop: '20px', marginBottom: 0 }
+    page: {
+        display: 'flex', justifyContent: 'center', alignItems: 'center',
+        minHeight: '100vh', backgroundColor: '#f0f2f5', padding: '20px'
+    },
+    card: {
+        display: 'flex', width: '100%', maxWidth: '860px',
+        borderRadius: '16px', overflow: 'hidden',
+        boxShadow: '0 10px 40px rgba(0,0,0,0.15)',
+        backgroundColor: 'white'
+    },
+    leftPanel: {
+        flex: '1 1 45%', backgroundColor: '#1F3864',
+        padding: '48px 36px', display: 'flex', flexDirection: 'column',
+        alignItems: 'center', justifyContent: 'center', textAlign: 'center'
+    },
+    logoBadge: {
+        width: '96px', height: '96px', borderRadius: '50%',
+        backgroundColor: 'white', display: 'flex', alignItems: 'center',
+        justifyContent: 'center', marginBottom: '28px',
+        boxShadow: '0 4px 16px rgba(0,0,0,0.25)'
+    },
+    logo: { width: '68px', height: '68px', objectFit: 'contain' },
+    schoolName: {
+        color: 'white', fontSize: '24px', fontWeight: 700,
+        margin: '0 0 12px 0', lineHeight: 1.35, letterSpacing: '0.3px'
+    },
+    motto: {
+        color: '#BDD7EE', fontSize: '14px', fontStyle: 'italic',
+        margin: 0, maxWidth: '260px'
+    },
+    leftFooter: {
+        marginTop: '40px', color: 'rgba(255,255,255,0.65)',
+        fontSize: '13px', letterSpacing: '0.5px', textTransform: 'uppercase'
+    },
+    rightPanel: {
+        flex: '1 1 55%', padding: '48px 40px',
+        display: 'flex', flexDirection: 'column', justifyContent: 'center'
+    },
+    formTitle: { color: '#1F3864', fontSize: '24px', fontWeight: 500, margin: '0 0 6px 0' },
+    formSubtitle: { color: '#666', fontSize: '14px', margin: '0 0 24px 0' },
+    error: {
+        color: '#dc3545', padding: '10px 14px', backgroundColor: '#fff3f3',
+        borderRadius: '8px', fontSize: '14px', marginBottom: '18px'
+    },
+    formGroup: { marginBottom: '18px' },
+    label: {
+        display: 'block', marginBottom: '6px', fontWeight: 500,
+        color: '#333', fontSize: '13px'
+    },
+    input: {
+        width: '100%', padding: '12px 14px', borderRadius: '8px',
+        border: '1.5px solid #e0e0e0', fontSize: '14px',
+        boxSizing: 'border-box', outline: 'none', fontFamily: 'inherit',
+        transition: 'border-color 0.15s'
+    },
+    button: {
+        width: '100%', padding: '13px', backgroundColor: '#1F3864',
+        color: 'white', border: 'none', borderRadius: '8px',
+        fontSize: '15px', cursor: 'pointer', fontWeight: 500,
+        marginTop: '8px', fontFamily: 'inherit'
+    },
+    loadingHint: {
+        textAlign: 'center', color: '#666', fontSize: '13px',
+        marginTop: '14px', fontStyle: 'italic'
+    },
+    footer: {
+        textAlign: 'center', color: '#999', fontSize: '12px',
+        marginTop: '28px', marginBottom: 0
+    }
 };
 
 export default Login;
