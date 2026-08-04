@@ -12,27 +12,7 @@ function ClassSubjects() {
     const [selectedGrade, setSelectedGrade] = useState('');
     const [gradeSubjects, setGradeSubjects] = useState([]);
     const [selectedSubjectTiles, setSelectedSubjectTiles] = useState([]);
-
-    // Pre-defined subjects per section
-    const sectionSubjects = {
-        PRE_SCHOOL: [
-            'Number Work', 'Language', 'Literacy', 'Integrated',
-            'Kiswahili', 'Environmental', 'Religious', 'Creative Activities'
-        ],
-        LOWER_PRIMARY: [
-            'Mathematics', 'English', 'Kiswahili', 'Integrated',
-            'CRE', 'Environmental', 'Creative Activities'
-        ],
-        UPPER_PRIMARY: [
-            'Mathematics', 'English', 'Kiswahili', 'Science & Technology',
-            'Agriculture & Nutrition', 'Social Studies', 'CRE', 'Creative Arts'
-        ],
-        JUNIOR_SCHOOL: [
-            'Mathematics', 'English', 'Kiswahili', 'Integrated Science',
-            'Pre-Technical Studies', 'Agriculture & Nutrition',
-            'Social Studies', 'CRE', 'Creative Arts'
-        ]
-    };
+    const [allSubjects, setAllSubjects] = useState([]);
 
     const sectionColors = {
         PRE_SCHOOL: { bg: '#6f42c1', light: '#f3e5f5' },
@@ -72,6 +52,7 @@ function ClassSubjects() {
 
     useEffect(() => {
         fetchClasses();
+        fetchAllSubjects();
     }, []);
 
     useEffect(() => {
@@ -84,6 +65,9 @@ function ClassSubjects() {
     const fetchClasses = async () => {
         const response = await api.get('/api/classes');
         setClasses(response.data);
+    };
+    const fetchAllSubjects = async () => {
+        try { const response = await api.get('/api/subjects'); setAllSubjects(response.data); } catch (err) {}
     };
 
     // ✅ Get all classes for a grade level — uses gradeLevel or extracts from className
@@ -138,10 +122,9 @@ function ClassSubjects() {
     };
 
     const selectAllSubjects = () => {
-        const section = getSectionForGrade(selectedGrade);
-        const allSubjects = sectionSubjects[section] || [];
+        const subjectNames = [...new Set(allSubjects.filter(s => s.gradeLevel === selectedGrade).map(s => s.subjectName))];
         const assignedNames = gradeSubjects.map(cs => cs.subject?.subjectName?.toLowerCase());
-        const unassigned = allSubjects.filter(s => !assignedNames.includes(s.toLowerCase()));
+        const unassigned = subjectNames.filter(s => !assignedNames.includes(s.toLowerCase()));
         setSelectedSubjectTiles(unassigned);
     };
 
@@ -280,9 +263,8 @@ function ClassSubjects() {
     return grouped;
 };
 
-    const gradesBySection = getGradesBySection();
     const currentSection = getSectionForGrade(selectedGrade);
-    const availableSubjects = sectionSubjects[currentSection] || [];
+    const availableSubjects = [...new Set(allSubjects.filter(s => s.gradeLevel === selectedGrade).map(s => s.subjectName))];
     const assignedSubjectNames = gradeSubjects.map(cs => cs.subject?.subjectName?.toLowerCase());
     const selectedGradeStreams = getClassesForGrade(selectedGrade);
 
