@@ -7,6 +7,7 @@ import { useNavigate } from 'react-router-dom';
 import Spinner from '../components/Spinner';
 import Toast from '../components/Toast';
 import useToast from '../hooks/useToast';
+import Navbar from '../components/Navbar';
 
 // Outside parent — prevents keyboard dismiss on re-render
 const StudentFormFields = ({ formData, setFormData, classId, setClassId, sections, classes, onSubmit, onCancel, submitLabel, showClassField = false }) => (
@@ -274,17 +275,10 @@ function Students() {
         <div style={styles.container}>
             {toast && <Toast message={toast.message} type={toast.type} onClose={hideToast} />}
 
-            <div style={styles.navbar}>
-                <div style={styles.navLeft}>
-                    <img src={logo1} alt="Logo" style={styles.navLogo} />
-                    <h2 style={styles.navTitle}>Pipeline Adventist School</h2>
-                </div>
-                <div style={styles.navRight}>
-                    <button onClick={() => window.location.href = '/dashboard'} style={styles.navBtn}>← Dashboard</button>
-                    <button onClick={() => { localStorage.clear(); window.location.href = '/'; }} style={styles.logoutBtn}>Logout</button>
-                </div>
-            </div>
-
+            <Navbar rightContent={
+                <button onClick={() => window.location.href = '/dashboard'} style={{ backgroundColor: 'transparent', color: 'white', border: '1.5px solid rgba(255,255,255,0.4)', padding: '7px 14px', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: 500, fontFamily: 'inherit' }}>← Dashboard</button>
+            } />
+            
             <div style={styles.content}>
                 <div style={styles.header}>
                     <div style={styles.headerLeft}>

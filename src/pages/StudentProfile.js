@@ -4,6 +4,7 @@ import api from '../services/api';
 import logo1 from '../assets/logo1.png';
 import Spinner from '../components/Spinner';
 import { classDisplayName, streamLabel } from '../utils/classUtils';
+import Navbar from '../components/Navbar';
 
 function StudentProfile() {
     const { studentId } = useParams();
@@ -84,17 +85,9 @@ function StudentProfile() {
 
     return (
         <div style={styles.container}>
-            <div style={styles.navbar}>
-                <div style={styles.navLeft}>
-                    <img src={logo1} alt="Logo" style={styles.navLogo} />
-                    <h2 style={styles.navTitle}>Pipeline Adventist School</h2>
-                </div>
-                <div style={styles.navRight}>
-                    <button onClick={() => navigate('/students')} style={styles.navBtn}>← Students</button>
-                    <button onClick={() => navigate('/dashboard')} style={styles.navBtn}>Dashboard</button>
-                    <button onClick={() => { localStorage.clear(); navigate('/'); }} style={styles.logoutBtn}>Logout</button>
-                </div>
-            </div>
+           <Navbar rightContent={
+                <button onClick={() => window.location.href = '/dashboard'} style={{ backgroundColor: 'transparent', color: 'white', border: '1.5px solid rgba(255,255,255,0.4)', padding: '7px 14px', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: 500, fontFamily: 'inherit' }}>← Dashboard</button>
+            } />
 
             <div style={styles.content}>
                 {error && <p style={styles.error}>{error}</p>}

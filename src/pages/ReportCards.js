@@ -3,6 +3,7 @@ import api from '../services/api';
 import logo1 from '../assets/logo1.png';
 import logo2 from '../assets/logo2.png';
 import { classDisplayName, classPrintLabel, classShortCode, streamLabel } from '../utils/classUtils';
+import Navbar from '../components/Navbar';
 
 const gradeLabel = (m) => m >= 75 ? 'EE' : m >= 55 ? 'ME' : m >= 40 ? 'AE' : 'BE';
 const gradeColor = (m) => m >= 75 ? '#28a745' : m >= 55 ? '#2E75B6' : m >= 40 ? '#ffc107' : '#dc3545';
@@ -507,16 +508,9 @@ function ReportCards() {
 
     return (
         <div style={s.container}>
-            <div style={s.navbar}>
-                <div style={s.navLeft}>
-                    <img src={logo1} alt="Logo" style={s.navLogo} />
-                    <h2 style={s.navTitle}>Pipeline Adventist School</h2>
-                </div>
-                <div style={s.navRight}>
-                    <button onClick={() => window.location.href = '/dashboard'} style={s.navBtn}>Back to Dashboard</button>
-                    <button onClick={() => { localStorage.clear(); window.location.href = '/'; }} style={s.logoutBtn}>Logout</button>
-                </div>
-            </div>
+            <Navbar rightContent={
+                <button onClick={() => window.location.href = '/dashboard'} style={{ backgroundColor: 'transparent', color: 'white', border: '1.5px solid rgba(255,255,255,0.4)', padding: '7px 14px', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: 500, fontFamily: 'inherit' }}>← Dashboard</button>
+            } />
 
             <div style={s.content}>
                 <h2 style={s.title}>Report Cards</h2>

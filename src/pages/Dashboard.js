@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import logo1 from '../assets/logo1.png';
+import Navbar from '../components/Navbar';
 
 function Dashboard() {
     const navigate = useNavigate();
@@ -110,17 +111,8 @@ function Dashboard() {
 
     return (
         <div style={styles.container}>
-            <div style={styles.navbar}>
-                <div style={styles.navLeft}>
-                    <img src={logo1} alt="Logo" style={styles.navLogo} />
-                    <h2 style={styles.navTitle}>Pipeline Adventist School</h2>
-                </div>
-                <div style={styles.navRight}>
-                    <span style={styles.navUser}>👤 {username} ({role})</span>
-                    <button onClick={() => navigate('/change-password')} style={styles.pwdBtn}>🔐 Password</button>
-                    <button onClick={handleLogout} style={styles.logoutBtn}>Logout</button>
-                </div>
-            </div>
+            <Navbar />
+        
 
             <div style={styles.content}>
                 <h2 style={styles.welcome}>Welcome, {username}! 👋</h2>
