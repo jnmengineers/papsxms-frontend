@@ -14,179 +14,145 @@ const printReportCard = (card, singleResults, progressiveData, allCards) => {
     const term = exam?.term;
     const academicYear = exam?.academicYear;
 
-    // progressiveData is now pre-anchored server-side to this exam's position
-    // (via /progressive/student/{id}/upto-exam/{examId}) — no client-side filtering needed.
+    // progressiveData is pre-anchored server-side to this exam's position
     const termExams = progressiveData?.exams || [];
-    const subjects = progressiveData?.subjects || [];
-    const isProgressive = termExams.length > 1 && subjects.length > 0;
+    const rawSubjects = progressiveData?.subjects || [];
+    const isProgressive = termExams.length > 1 && rawSubjects.length > 0;
 
     const gc = (m) => m >= 75 ? '#28a745' : m >= 55 ? '#2E75B6' : m >= 40 ? '#ffc107' : '#dc3545';
-    const gl = (m) => m >= 75 ? 'EE' : m >= 55 ? 'ME' : m >= 40 ? 'AE' : 'BE';
-    const gr = (m) => m >= 75 ? 'Exceeding Expectations' : m >= 55 ? 'Meeting Expectations' : m >= 40 ? 'Approaching Expectations' : 'Below Expectations';
+    const gl = (m) => m == null ? '-' : m >= 75 ? 'EE' : m >= 55 ? 'ME' : m >= 40 ? 'AE' : 'BE';
+    const badge = (m) => m == null
+        ? '<span style="color:#ccc;">-</span>'
+        : '<span style="display:inline-block;padding:2px 10px;border-radius:10px;font-weight:bold;font-size:11px;color:white;background:' + gc(m) + ';">' + gl(m) + '</span>';
 
     const examTypeLabels = { OPENING: 'Opening', MID_TERM: 'Mid Term', END_TERM: 'End Term' };
     const examTypeColors = { OPENING: '#28a745', MID_TERM: '#e07a2f', END_TERM: '#2E75B6' };
 
     let subjectRows = '';
-    let totalMarks = 0;
-    let subjectCount = 0;
     let examHeaders = '';
+    let examCols = [];
+    let colSums = {};
+    let colCounts = {};
 
     if (isProgressive) {
-        const examCols = termExams.map(e => e.examType).filter(Boolean);
+        examCols = termExams.map(e => e.examType).filter(Boolean);
+        colSums = { OPENING: 0, MID_TERM: 0, END_TERM: 0 };
+        colCounts = { OPENING: 0, MID_TERM: 0, END_TERM: 0 };
+
         examHeaders = examCols.map(type =>
             '<th style="color:white;padding:6px 8px;text-align:center;background:' + (examTypeColors[type] || '#1F3864') + ';font-size:11px;">' + (examTypeLabels[type] || type) + '</th>'
         ).join('');
 
-        subjectRows = subjects.map((sub, i) => {
-            const opening = sub.opening;
-            const midTerm = sub.midTerm;
-            const endTerm = sub.endTerm;
-            const current = endTerm != null ? endTerm : (midTerm != null ? midTerm : opening);
-            const first = opening != null ? opening : midTerm;
-            const latest = endTerm != null ? endTerm : (midTerm != null ? midTerm : opening);
-            const change = (first != null && latest != null && first !== latest) ? (latest - first).toFixed(1) : null;
-            const trend = change
-                ? (parseFloat(change) > 0
-                    ? '<span style="color:#28a745">&#8593; +' + change + '</span>'
-                    : '<span style="color:#dc3545">&#8595; ' + change + '</span>')
-                : '<span style="color:#999">&#8596;</span>';
-            if (current != null) { totalMarks += current; subjectCount++; }
+        subjectRows = rawSubjects.map((sub, i) => {
+            if (sub.opening != null) { colSums.OPENING += sub.opening; colCounts.OPENING++; }
+            if (sub.midTerm != null) { colSums.MID_TERM += sub.midTerm; colCounts.MID_TERM++; }
+            if (sub.endTerm != null) { colSums.END_TERM += sub.endTerm; colCounts.END_TERM++; }
 
-            const openCell = opening != null
-                ? '<strong style="color:' + gc(opening) + '">' + opening + '</strong><br><small>' + gl(opening) + '</small>'
-                : '<span style="color:#ccc">-</span>';
-            const midCell = midTerm != null
-                ? '<strong style="color:' + gc(midTerm) + '">' + midTerm + '</strong><br><small>' + gl(midTerm) + '</small>'
-                : '<span style="color:#ccc">-</span>';
-            const endCell = endTerm != null
-                ? '<strong style="color:' + gc(endTerm) + '">' + endTerm + '</strong><br><small>' + gl(endTerm) + '</small>'
-                : '<span style="color:#ccc">-</span>';
+            const cells = examCols.map(type => {
+                const val = type === 'OPENING' ? sub.opening : type === 'MID_TERM' ? sub.midTerm : sub.endTerm;
+                return '<td style="padding:6px 8px;border:1px solid #ddd;text-align:center;">' + badge(val) + '</td>';
+            }).join('');
 
             return '<tr style="background:' + (i % 2 === 0 ? '#f8f9fa' : 'white') + '">'
                 + '<td style="padding:6px 8px;border:1px solid #ddd;font-weight:bold;font-size:12px;">' + (i + 1) + '. ' + sub.subjectName + '</td>'
-                + (examCols.includes('OPENING') ? '<td style="padding:6px 8px;border:1px solid #ddd;text-align:center;font-size:12px;">' + openCell + '</td>' : '')
-                + (examCols.includes('MID_TERM') ? '<td style="padding:6px 8px;border:1px solid #ddd;text-align:center;font-size:12px;">' + midCell + '</td>' : '')
-                + (examCols.includes('END_TERM') ? '<td style="padding:6px 8px;border:1px solid #ddd;text-align:center;font-size:12px;">' + endCell + '</td>' : '')
-                + '<td style="padding:6px 8px;border:1px solid #ddd;text-align:center;font-size:14px;">' + trend + '</td>'
+                + cells
                 + '</tr>';
         }).join('');
     } else {
-        singleResults.forEach((r, i) => {
-            totalMarks += r.marksObtained;
-            subjectCount++;
-            subjectRows += '<tr style="background:' + (i % 2 === 0 ? '#f8f9fa' : 'white') + '">'
+        subjectRows = singleResults.map((r, i) => {
+            return '<tr style="background:' + (i % 2 === 0 ? '#f8f9fa' : 'white') + '">'
                 + '<td style="padding:6px 8px;border:1px solid #ddd;font-size:12px;">' + (i + 1) + '. ' + (r.subject ? r.subject.subjectName : '') + '</td>'
-                + '<td style="padding:6px 8px;border:1px solid #ddd;text-align:center;font-weight:bold;font-size:14px;color:' + gc(r.marksObtained) + '">' + r.marksObtained + '</td>'
-                + '<td style="padding:6px 8px;border:1px solid #ddd;text-align:center;"><span style="background:' + gc(r.marksObtained) + ';color:white;padding:2px 8px;border-radius:3px;font-weight:bold;font-size:11px;">' + gl(r.marksObtained) + '</span></td>'
-                + '<td style="padding:6px 8px;border:1px solid #ddd;font-size:12px;color:#555">' + gr(r.marksObtained) + '</td>'
+                + '<td style="padding:6px 8px;border:1px solid #ddd;text-align:center;">' + badge(r.marksObtained) + '</td>'
                 + '</tr>';
+        }).join('');
+    }
+
+    const avgRowHtml = isProgressive
+        ? '<tr style="background:#1F3864;">'
+            + '<td style="padding:6px 8px;font-weight:bold;color:white;font-size:12px;">Average</td>'
+            + examCols.map(type => {
+                const avg = colCounts[type] > 0 ? colSums[type] / colCounts[type] : null;
+                return '<td style="padding:6px 8px;text-align:center;">' + badge(avg) + '</td>';
+            }).join('')
+            + '</tr>'
+        : '';
+
+    // Overall term average — across every mark visible on this card, regardless of column
+    let termAvgSum = 0, termAvgCount = 0;
+    if (isProgressive) {
+        rawSubjects.forEach(sub => {
+            [sub.opening, sub.midTerm, sub.endTerm].forEach(v => { if (v != null) { termAvgSum += v; termAvgCount++; } });
         });
+    } else {
+        singleResults.forEach(r => { termAvgSum += r.marksObtained; termAvgCount++; });
     }
+    const termAvg = termAvgCount > 0 ? termAvgSum / termAvgCount : null;
 
-    const avg = subjectCount > 0 ? totalMarks / subjectCount : 0;
-    const avgGrade = gl(avg);
-
-    let overallChange = '';
-    if (isProgressive && subjects.length > 0) {
-        const total = subjects.reduce((s, sub) => s + (parseFloat(sub.change) || 0), 0);
-        const avgChg = (total / subjects.length).toFixed(1);
-        const improved = subjects.filter(s => parseFloat(s.change) > 0).length;
-        const trendSymbol = parseFloat(avgChg) > 2 ? '&#8593;&#8593;' : parseFloat(avgChg) > 0 ? '&#8593;' : parseFloat(avgChg) < -2 ? '&#8595;&#8595;' : parseFloat(avgChg) < 0 ? '&#8595;' : '&#8596;';
-        overallChange = '<div style="display:flex;gap:15px;background:#f8f9fa;padding:10px 15px;border-radius:6px;margin-top:8px;flex-wrap:wrap;">'
-            + '<span style="font-size:12px;"><strong>Overall Change:</strong> <span style="color:' + (parseFloat(avgChg) >= 0 ? '#28a745' : '#dc3545') + ';font-weight:bold;">' + (parseFloat(avgChg) >= 0 ? '+' : '') + avgChg + ' pts</span></span>'
-            + '<span style="font-size:12px;"><strong>Subjects Improved:</strong> <span style="color:#28a745;font-weight:bold;">' + improved + '/' + subjects.length + '</span></span>'
-            + '<span style="font-size:12px;"><strong>Trend:</strong> <span style="font-size:16px;">' + trendSymbol + '</span></span>'
-            + '</div>';
-    }
+    const subjectCount = isProgressive ? rawSubjects.length : singleResults.length;
+    const overallGrade = isProgressive
+        ? gl(termAvgCount > 0 ? termAvgSum / termAvgCount : null)
+        : gl(singleResults.length > 0 ? singleResults.reduce((s, r) => s + r.marksObtained, 0) / singleResults.length : null);
 
     const theadCols = isProgressive
-        ? '<th style="color:white;padding:7px 8px;text-align:left;font-size:12px;">SUBJECT</th>' + examHeaders + '<th style="color:white;padding:7px 8px;text-align:center;font-size:12px;">TREND</th>'
-        : '<th style="color:white;padding:7px 8px;text-align:left;font-size:12px;">SUBJECT</th><th style="color:#FFD700;padding:7px 8px;text-align:center;font-size:12px;">MARKS</th><th style="color:#FFD700;padding:7px 8px;text-align:center;font-size:12px;">GRADE</th><th style="color:white;padding:7px 8px;text-align:left;font-size:12px;">REMARKS</th>';
-
-    const streamTotal = allCards ? allCards.filter(c => c.student?.className === card.student?.className && (c.student?.stream || null) === (card.student?.stream || null)).length : null;
-    const gradeTotal = allCards ? allCards.filter(c => c.student?.className === card.student?.className).length : null;
-    const streamRankHtml = card.classRank
-        ? '<div style="flex:1;text-align:center;"><div style="color:#FFD700;font-size:11px;">Stream Rank</div><div style="color:white;font-size:22px;font-weight:bold;">' + card.classRank + '</div><div style="color:rgba(255,255,255,0.7);font-size:10px;">out of ' + (streamTotal || '?') + '</div></div>'
-        : '';
-    const gradeRankHtml = card.termRank
-        ? '<div style="flex:1;text-align:center;"><div style="color:#FFD700;font-size:11px;">Grade Rank</div><div style="color:white;font-size:22px;font-weight:bold;">' + card.termRank + '</div><div style="color:rgba(255,255,255,0.7);font-size:10px;">out of ' + (gradeTotal || '?') + '</div></div>'
-        : '';
-    const termRankHtml = (card.exam?.examType === 'END_TERM' && card.termRank)
-        ? '<div style="flex:1;text-align:center;"><div style="color:#FFD700;font-size:11px;">Term Rank</div><div style="color:white;font-size:22px;font-weight:bold;">' + card.termRank + '</div><div style="color:rgba(255,255,255,0.7);font-size:10px;">out of ' + (gradeTotal || '?') + '</div></div>'
-        : '';
+        ? '<th style="color:white;padding:7px 8px;text-align:left;font-size:12px;">SUBJECT</th>' + examHeaders
+        : '<th style="color:white;padding:7px 8px;text-align:left;font-size:12px;">SUBJECT</th><th style="color:#FFD700;padding:7px 8px;text-align:center;font-size:12px;">GRADE</th>';
 
     const html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">'
         + '<title>Report Card - ' + (student ? student.firstName + ' ' + student.lastName : '') + '</title>'
-        + '<style>*{box-sizing:border-box;margin:0;padding:0;}body{font-family:"Times New Roman",Times,serif;font-size:12px;color:#000;padding:15px;max-width:800px;margin:0 auto;}'
-        + '@media print{@page{size:A4;margin:10mm;}.no-print{display:none!important;}body{-webkit-print-color-adjust:exact;print-color-adjust:exact;}}</style>'
-        + '<style id="pageStyle">@page{size:A4 portrait;margin:10mm;}</style>'
+        + '<style>*{box-sizing:border-box;margin:0;padding:0;}body{font-family:"Times New Roman",Times,serif;font-size:12px;color:#000;padding:12px;max-width:800px;margin:0 auto;}'
+        + '@media print{@page{size:A4;margin:8mm;}.no-print{display:none!important;}body{-webkit-print-color-adjust:exact;print-color-adjust:exact;}}</style>'
         + '</head><body>'
-        + '<div class="no-print" style="background:#1F3864;color:white;padding:10px 15px;margin-bottom:15px;border-radius:8px;display:flex;justify-content:space-between;align-items:center;">'
+        + '<div class="no-print" style="background:#1F3864;color:white;padding:10px 15px;margin-bottom:12px;border-radius:8px;display:flex;justify-content:space-between;align-items:center;">'
         + '<span style="font-weight:bold;">Report Card - ' + (student ? student.firstName + ' ' + student.lastName : '') + '</span>'
-        + '<div style="display:flex;gap:6px;align-items:center;">'
-        + '<button onclick="setOrient(\'portrait\')" id="btnP" style="background:#FFD700;color:#1F3864;border:none;padding:6px 12px;border-radius:4px;cursor:pointer;font-size:12px;font-weight:bold;">Portrait</button>'
-        + '<button onclick="setOrient(\'landscape\')" id="btnL" style="background:rgba(255,255,255,0.2);color:white;border:none;padding:6px 12px;border-radius:4px;cursor:pointer;font-size:12px;">Landscape</button>'
         + '<button onclick="window.print()" style="background:#28a745;color:white;border:none;padding:8px 20px;border-radius:5px;font-weight:bold;cursor:pointer;font-size:14px;">Print / Save PDF</button>'
-        + '<button onclick="document.getElementById(\'pageStyle\').innerHTML=\'@page{size:A4 portrait;margin:10mm;}\';this.style.background=\'#FFD700\';this.style.color=\'#1F3864\';this.nextElementSibling.style.background=\'transparent\';this.nextElementSibling.style.color=\'white\'" style="background:#FFD700;color:#1F3864;border:none;padding:6px 14px;border-radius:4px;cursor:pointer;font-size:12px;font-weight:bold;margin-left:8px;">Portrait</button>'
-        + '<button onclick="document.getElementById(\'pageStyle\').innerHTML=\'@page{size:A4 landscape;margin:8mm;}\';this.style.background=\'#FFD700\';this.style.color=\'#1F3864\';this.previousElementSibling.style.background=\'transparent\';this.previousElementSibling.style.color=\'white\'" style="background:transparent;color:white;border:1px solid white;padding:6px 14px;border-radius:4px;cursor:pointer;font-size:12px;font-weight:bold;margin-left:4px;">Landscape</button>'
         + '</div>'
-
-        + '</div>'
-        + '<div style="border-bottom:3px solid #1F3864;padding-bottom:10px;margin-bottom:12px;">'
-        + '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">'
-        + '<img src="/logo1.png" onerror="this.style.display=\'none\'" style="width:70px;height:70px;object-fit:contain;">'
+        + '<div style="border-bottom:3px solid #1F3864;padding-bottom:8px;margin-bottom:10px;">'
+        + '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">'
+        + '<img src="/logo1.png" onerror="this.style.display=\'none\'" style="width:55px;height:55px;object-fit:contain;">'
         + '<div style="text-align:center;flex:1;padding:0 10px;">'
-        + '<div style="color:#1F3864;font-size:14px;font-weight:bold;text-transform:uppercase;">PIPELINE ADVENTIST PRIMARY &amp; JUNIOR SECONDARY SCHOOL</div>'
-        + '<div style="color:#2E75B6;font-style:italic;font-size:12px;margin:3px 0;">Abreast with the Best in Holistic Education</div>'
-        + '<div style="font-size:11px;color:#666;">P.O. BOX 61774-00200, NAIROBI | Tel: 0713 301 521 / 0721 885 996</div>'
+        + '<div style="color:#1F3864;font-size:13px;font-weight:bold;text-transform:uppercase;">PIPELINE ADVENTIST PRIMARY &amp; JUNIOR SECONDARY SCHOOL</div>'
+        + '<div style="color:#2E75B6;font-style:italic;font-size:11px;margin:2px 0;">Abreast with the Best in Holistic Education</div>'
         + '</div>'
-        + '<img src="/logo2.png" onerror="this.style.display=\'none\'" style="width:70px;height:70px;object-fit:contain;">'
+        + '<img src="/logo2.png" onerror="this.style.display=\'none\'" style="width:55px;height:55px;object-fit:contain;">'
         + '</div>'
-        + '<div style="background:#1F3864;padding:6px 12px;text-align:center;border-radius:4px;">'
-        + '<div style="color:white;font-weight:bold;font-size:14px;">' + (isProgressive ? 'PROGRESSIVE TERM REPORT CARD' : 'REPORT CARD') + '</div>'
-        + '<div style="color:#BDD7EE;font-size:11px;">Term ' + term + ' - ' + academicYear + ' - ' + (exam ? exam.examName : '') + '</div>'
+        + '<div style="background:#1F3864;padding:5px 10px;text-align:center;border-radius:4px;">'
+        + '<div style="color:white;font-weight:bold;font-size:13px;">' + (isProgressive ? 'PROGRESSIVE TERM REPORT CARD' : 'REPORT CARD') + '</div>'
+        + '<div style="color:#BDD7EE;font-size:10px;">Term ' + term + ' - ' + academicYear + ' - ' + (exam ? exam.examName : '') + '</div>'
         + '</div></div>'
-        + '<div style="background:#f8f9fa;padding:12px 15px;border-radius:6px;margin-bottom:12px;border-left:4px solid #1F3864;">'
-        + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">'
-        + '<div style="font-size:12px;"><strong style="color:#1F3864;">Student Name:</strong> ' + (student ? student.firstName + ' ' + student.lastName : '-') + '</div>'
-        + '<div style="font-size:12px;"><strong style="color:#1F3864;">Admission No:</strong> ' + (student ? (student.admissionNumber || '-') : '-') + '</div>'
-        + '<div style="font-size:12px;"><strong style="color:#1F3864;">Class:</strong> ' + (student ? (student.className || '-') : '-') + '</div>'
-        + '<div style="font-size:12px;"><strong style="color:#1F3864;">Stream:</strong> ' + (student?.stream ? (student.stream === 'YELLOW' ? 'Yellow' : student.stream === 'BLUE' ? 'Blue' : student.stream === 'RED' ? 'Red' : student.stream) : '-') + '</div>'
-        + '<div style="font-size:12px;"><strong style="color:#1F3864;">Term:</strong> Term ' + term + '</div>'
-        + '<div style="font-size:12px;"><strong style="color:#1F3864;">Academic Year:</strong> ' + academicYear + '</div>'
-        + '<div style="font-size:12px;"><strong style="color:#1F3864;">Exam:</strong> ' + (exam ? exam.examName : '-') + '</div>'
+        + '<div style="background:#f8f9fa;padding:8px 12px;border-radius:6px;margin-bottom:10px;border-left:4px solid #1F3864;">'
+        + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;">'
+        + '<div style="font-size:11px;"><strong style="color:#1F3864;">Student Name:</strong> ' + (student ? student.firstName + ' ' + student.lastName : '-') + '</div>'
+        + '<div style="font-size:11px;"><strong style="color:#1F3864;">Admission No:</strong> ' + (student ? (student.admissionNumber || '-') : '-') + '</div>'
+        + '<div style="font-size:11px;"><strong style="color:#1F3864;">Class:</strong> ' + (student ? (student.className || '-') : '-') + '</div>'
+        + '<div style="font-size:11px;"><strong style="color:#1F3864;">Stream:</strong> ' + (student?.stream ? (student.stream === 'YELLOW' ? 'Yellow' : student.stream === 'BLUE' ? 'Blue' : student.stream === 'RED' ? 'Red' : student.stream) : '-') + '</div>'
         + '</div></div>'
-        + '<table style="width:100%;border-collapse:collapse;margin-bottom:12px;"><thead>'
+        + '<table style="width:100%;border-collapse:collapse;margin-bottom:10px;"><thead>'
         + '<tr style="background:#1F3864;">' + theadCols + '</tr>'
-        + '</thead><tbody>' + subjectRows + '</tbody></table>'
-        + '<div style="display:flex;gap:15px;background:#1F3864;padding:12px 15px;border-radius:6px;margin-bottom:12px;flex-wrap:wrap;">'
-        + '<div style="flex:1;text-align:center;"><div style="color:#FFD700;font-size:11px;">Total Marks</div><div style="color:white;font-size:22px;font-weight:bold;">' + totalMarks.toFixed(0) + '</div></div>'
-        + '<div style="flex:1;text-align:center;"><div style="color:#FFD700;font-size:11px;">Average</div><div style="color:white;font-size:22px;font-weight:bold;">' + avg.toFixed(1) + '%</div></div>'
-        + '<div style="flex:1;text-align:center;"><div style="color:#FFD700;font-size:11px;">Grade</div><div style="color:white;font-size:22px;font-weight:bold;">' + avgGrade + '</div></div>'
-        + '<div style="flex:1;text-align:center;"><div style="color:#FFD700;font-size:11px;">Subjects</div><div style="color:white;font-size:22px;font-weight:bold;">' + subjectCount + '</div></div>'
-        + streamRankHtml + gradeRankHtml + termRankHtml
+        + '</thead><tbody>' + subjectRows + avgRowHtml + '</tbody></table>'
+        + '<div style="display:flex;gap:12px;background:#1F3864;padding:10px 12px;border-radius:6px;margin-bottom:10px;">'
+        + '<div style="flex:1;text-align:center;"><div style="color:#FFD700;font-size:10px;">Grade</div><div style="color:white;font-size:20px;font-weight:bold;">' + overallGrade + '</div></div>'
+        + '<div style="flex:1;text-align:center;"><div style="color:#FFD700;font-size:10px;">Subjects</div><div style="color:white;font-size:20px;font-weight:bold;">' + subjectCount + '</div></div>'
+        + '<div style="flex:1;text-align:center;"><div style="color:#FFD700;font-size:10px;">Term Average</div><div style="color:white;font-size:20px;font-weight:bold;">' + gl(termAvg) + '</div></div>'
         + '</div>'
-        + overallChange
-        + '<div style="background:#f8f9fa;padding:8px 12px;border-radius:4px;margin-bottom:12px;font-size:11px;">'
+        + '<div style="background:#f8f9fa;padding:6px 10px;border-radius:4px;margin-bottom:10px;font-size:10px;">'
         + '<strong>Grade Key: </strong>'
         + '<span style="color:#28a745;">EE = 75-100 (Exceeding)</span> &nbsp;|&nbsp;'
         + '<span style="color:#2E75B6;">ME = 55-74 (Meeting)</span> &nbsp;|&nbsp;'
         + '<span style="color:#ffc107;">AE = 40-54 (Approaching)</span> &nbsp;|&nbsp;'
         + '<span style="color:#dc3545;">BE = 0-39 (Below Expectations)</span>'
         + '</div>'
-        + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:15px;margin-bottom:15px;">'
-        + '<div style="border:1px solid #ddd;padding:12px;border-radius:6px;">'
-        + '<p style="font-weight:bold;color:#1F3864;margin:0 0 8px 0;font-size:12px;">Class Teacher\'s Comment:</p>'
-        + '<p style="margin:0 0 20px 0;min-height:35px;font-size:12px;color:#333;">' + (card.teacherComment || '.................................................................') + '</p>'
-        + '<p style="margin:0;color:#666;font-size:11px;">Signature: _________________ Date: _________</p>'
+        + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">'
+        + '<div style="border:1px solid #ddd;padding:10px;border-radius:6px;">'
+        + '<p style="font-weight:bold;color:#1F3864;margin:0 0 6px 0;font-size:11px;">Class Teacher\'s Comment:</p>'
+        + '<p style="margin:0 0 16px 0;min-height:28px;font-size:11px;color:#333;">' + (card.teacherComment || '.................................................................') + '</p>'
+        + '<p style="margin:0;color:#666;font-size:10px;">Signature: _________________ Date: _________</p>'
         + '</div>'
-        + '<div style="border:1px solid #ddd;padding:12px;border-radius:6px;">'
-        + '<p style="font-weight:bold;color:#1F3864;margin:0 0 8px 0;font-size:12px;">Principal\'s Comment:</p>'
-        + '<p style="margin:0 0 20px 0;min-height:35px;font-size:12px;color:#333;">' + (card.principalComment || '.................................................................') + '</p>'
-        + '<p style="margin:0;color:#666;font-size:11px;">Signature: _________________ Date: _________</p>'
+        + '<div style="border:1px solid #ddd;padding:10px;border-radius:6px;">'
+        + '<p style="font-weight:bold;color:#1F3864;margin:0 0 6px 0;font-size:11px;">Principal\'s Comment:</p>'
+        + '<p style="margin:0 0 16px 0;min-height:28px;font-size:11px;color:#333;">' + (card.principalComment || '.................................................................') + '</p>'
+        + '<p style="margin:0;color:#666;font-size:10px;">Signature: _________________ Date: _________</p>'
         + '</div></div>'
-        + '<p style="text-align:center;font-size:10px;color:#999;border-top:2px solid #1F3864;padding-top:8px;">'
+        + '<p style="text-align:center;font-size:9px;color:#999;border-top:2px solid #1F3864;padding-top:6px;">'
         + 'Pipeline Adventist School - Official Report Card - Issued: ' + new Date().toLocaleDateString()
         + '</p></body></html>';
 
@@ -396,6 +362,7 @@ function ReportCards() {
     };
 
 
+
     const handlePrintAll = async () => {
         if (!filtered.length) return;
         setPrintingAll(true); setError('');
@@ -406,82 +373,84 @@ function ReportCards() {
                 const singleResults = resultsRes.data;
                 let progressiveData = null;
                 try {
-                    const t2 = card.exam?.term; const y2 = card.exam?.academicYear;
-                    if (t2 && y2) {
-                        const pr = await api.get('/api/results/progressive/student/' + card.student?.studentId + '/upto-exam/' + card.exam?.examId);
-                        progressiveData = pr.data;
-                    }
+                    const pr = await api.get('/api/results/progressive/student/' + card.student?.studentId + '/upto-exam/' + card.exam?.examId);
+                    progressiveData = pr.data;
                 } catch(e) {}
                 const student = card.student; const exam = card.exam;
                 const term = exam?.term; const academicYear = exam?.academicYear;
-                const subjects = progressiveData?.subjects || [];
                 const termExams = progressiveData?.exams || [];
-                const isProgressive = termExams.length > 1 && subjects.length > 0;
+                const rawSubjects = progressiveData?.subjects || [];
+                const isProgressive = termExams.length > 1 && rawSubjects.length > 0;
                 const gc=(m)=>m>=75?'#28a745':m>=55?'#2E75B6':m>=40?'#ffc107':'#dc3545';
-                const gl=(m)=>m>=75?'EE':m>=55?'ME':m>=40?'AE':'BE';
-                const gr=(m)=>m>=75?'Exceeding Expectations':m>=55?'Meeting Expectations':m>=40?'Approaching Expectations':'Below Expectations';
-                let subjectRows=''; let totalMarks=0; let subjectCount=0;
+                const gl=(m)=>m==null?'-':m>=75?'EE':m>=55?'ME':m>=40?'AE':'BE';
+                const badge=(m)=>m==null?'<span style="color:#ccc;">-</span>':'<span style="display:inline-block;padding:2px 10px;border-radius:10px;font-weight:bold;font-size:11px;color:white;background:'+gc(m)+';">'+gl(m)+'</span>';
+                let subjectRows=''; let examCols=[]; let colSums={}; let colCounts={};
                 if (isProgressive) {
                     const etl={OPENING:'Opening',MID_TERM:'Mid Term',END_TERM:'End Term'};
                     const etc={OPENING:'#28a745',MID_TERM:'#e07a2f',END_TERM:'#2E75B6'};
-                    const examCols=termExams.map(e=>e.examType).filter(Boolean);
-                    subjectRows=subjects.map((sub,i)=>{
-                        const op=sub.opening;const mt=sub.midTerm;const et=sub.endTerm;
-                        const cur=et!=null?et:(mt!=null?mt:op);
-                        const first=op!=null?op:mt;const latest=et!=null?et:(mt!=null?mt:op);
-                        const chg=(first!=null&&latest!=null&&first!==latest)?(latest-first).toFixed(1):null;
-                        const trend=chg?(parseFloat(chg)>0?'<span style="color:#28a745">+ '+chg+'</span>':'<span style="color:#dc3545">- '+chg+'</span>'):'<span style="color:#999">--</span>';
-                        if(cur!=null){totalMarks+=cur;subjectCount++;}
-                        const oc=op!=null?'<strong style="color:'+gc(op)+'">'+op+'</strong><br><small>'+gl(op)+'</small>':'<span style="color:#ccc">-</span>';
-                        const mc=mt!=null?'<strong style="color:'+gc(mt)+'">'+mt+'</strong><br><small>'+gl(mt)+'</small>':'<span style="color:#ccc">-</span>';
-                        const ec=et!=null?'<strong style="color:'+gc(et)+'">'+et+'</strong><br><small>'+gl(et)+'</small>':'<span style="color:#ccc">-</span>';
-                        return '<tr style="background:'+(i%2===0?'#f8f9fa':'white')+'"><td style="padding:6px;border:1px solid #ddd;font-size:12px;">'+(i+1)+'. '+sub.subjectName+'</td>'+(examCols.includes('OPENING')?'<td style="padding:6px;border:1px solid #ddd;text-align:center;">'+oc+'</td>':'')+(examCols.includes('MID_TERM')?'<td style="padding:6px;border:1px solid #ddd;text-align:center;">'+mc+'</td>':'')+(examCols.includes('END_TERM')?'<td style="padding:6px;border:1px solid #ddd;text-align:center;">'+ec+'</td>':'')+'<td style="padding:6px;border:1px solid #ddd;text-align:center;">'+trend+'</td></tr>';
+                    examCols=termExams.map(e=>e.examType).filter(Boolean);
+                    colSums={OPENING:0,MID_TERM:0,END_TERM:0}; colCounts={OPENING:0,MID_TERM:0,END_TERM:0};
+                    subjectRows=rawSubjects.map((sub,i)=>{
+                        if(sub.opening!=null){colSums.OPENING+=sub.opening;colCounts.OPENING++;}
+                        if(sub.midTerm!=null){colSums.MID_TERM+=sub.midTerm;colCounts.MID_TERM++;}
+                        if(sub.endTerm!=null){colSums.END_TERM+=sub.endTerm;colCounts.END_TERM++;}
+                        const cells=examCols.map(type=>{
+                            const val=type==='OPENING'?sub.opening:type==='MID_TERM'?sub.midTerm:sub.endTerm;
+                            return '<td style="padding:6px;border:1px solid #ddd;text-align:center;">'+badge(val)+'</td>';
+                        }).join('');
+                        return '<tr style="background:'+(i%2===0?'#f8f9fa':'white')+'"><td style="padding:6px;border:1px solid #ddd;font-size:12px;">'+(i+1)+'. '+sub.subjectName+'</td>'+cells+'</tr>';
                     }).join('');
                 } else {
-                    singleResults.forEach((r,i)=>{
-                        totalMarks+=r.marksObtained;subjectCount++;
-                        subjectRows+='<tr style="background:'+(i%2===0?'#f8f9fa':'white')+'"><td style="padding:6px;border:1px solid #ddd;font-size:12px;">'+(i+1)+'. '+(r.subject?r.subject.subjectName:'')+'</td><td style="padding:6px;border:1px solid #ddd;text-align:center;font-weight:bold;color:'+gc(r.marksObtained)+'">'+r.marksObtained+'</td><td style="padding:6px;border:1px solid #ddd;text-align:center;"><span style="background:'+gc(r.marksObtained)+';color:white;padding:2px 8px;border-radius:3px;font-weight:bold;font-size:11px;">'+gl(r.marksObtained)+'</span></td><td style="padding:6px;border:1px solid #ddd;font-size:12px;color:#555">'+gr(r.marksObtained)+'</td></tr>';
-                    });
+                    subjectRows = singleResults.map((r,i) =>
+                        '<tr style="background:'+(i%2===0?'#f8f9fa':'white')+'"><td style="padding:6px;border:1px solid #ddd;font-size:12px;">'+(i+1)+'. '+(r.subject?r.subject.subjectName:'')+'</td><td style="padding:6px;border:1px solid #ddd;text-align:center;">'+badge(r.marksObtained)+'</td></tr>'
+                    ).join('');
                 }
-                const avg=subjectCount>0?totalMarks/subjectCount:0;
-                const avgGrade=gl(avg);
+                const avgRowHtml = isProgressive
+                    ? '<tr style="background:#1F3864;"><td style="padding:6px;font-weight:bold;color:white;font-size:12px;">Average</td>'
+                        + examCols.map(type=>{const avg=colCounts[type]>0?colSums[type]/colCounts[type]:null;return '<td style="padding:6px;text-align:center;">'+badge(avg)+'</td>';}).join('')
+                        + '</tr>'
+                    : '';
+                let termAvgSum=0, termAvgCount=0;
+                if (isProgressive) {
+                    rawSubjects.forEach(sub=>{[sub.opening,sub.midTerm,sub.endTerm].forEach(v=>{if(v!=null){termAvgSum+=v;termAvgCount++;}});});
+                } else {
+                    singleResults.forEach(r=>{termAvgSum+=r.marksObtained;termAvgCount++;});
+                }
+                const termAvg = termAvgCount>0 ? termAvgSum/termAvgCount : null;
+                const subjectCount = isProgressive ? rawSubjects.length : singleResults.length;
+                const overallGrade = gl(termAvg);
                 const stStream=student?.stream?(student.stream==='YELLOW'?'Yellow':student.stream==='BLUE'?'Blue':student.stream==='RED'?'Red':student.stream):'-';
-                const rkHtml=card.termRank?'<div style="flex:1;text-align:center;"><div style="color:#FFD700;font-size:11px;">Term Rank</div><div style="color:white;font-size:20px;font-weight:bold;">'+card.termRank+'</div></div>':'';
+                const theadCols = isProgressive
+                    ? '<th style="color:white;padding:6px;font-size:11px;text-align:left;">SUBJECT</th>'+examCols.map(type=>{const etl={OPENING:'Opening',MID_TERM:'Mid Term',END_TERM:'End Term'};const etc={OPENING:'#28a745',MID_TERM:'#e07a2f',END_TERM:'#2E75B6'};return '<th style="color:white;padding:6px;font-size:11px;text-align:center;background:'+(etc[type]||'#1F3864')+';">'+(etl[type]||type)+'</th>';}).join('')
+                    : '<th style="color:white;padding:6px;font-size:11px;text-align:left;">SUBJECT</th><th style="color:#FFD700;padding:6px;font-size:11px;text-align:center;">GRADE</th>';
                 allPages.push(
-                    '<div style="page-break-after:always;padding:15px;max-width:780px;margin:0 auto;">'
+                    '<div style="page-break-after:always;padding:12px;max-width:780px;margin:0 auto;">'
                     +'<div style="border-bottom:3px solid #1F3864;padding-bottom:8px;margin-bottom:10px;text-align:center;">'
                     +'<div style="color:#1F3864;font-size:13px;font-weight:bold;text-transform:uppercase;">PIPELINE ADVENTIST PRIMARY &amp; JUNIOR SECONDARY SCHOOL</div>'
                     +'<div style="color:#2E75B6;font-style:italic;font-size:11px;margin:2px 0;">Abreast with the Best in Holistic Education</div>'
-                    +'<div style="font-size:10px;color:#666;">P.O. BOX 61774-00200, NAIROBI | Tel: 0713 301 521 / 0721 885 996</div>'
                     +'<div style="background:#1F3864;padding:5px 12px;text-align:center;border-radius:4px;margin-top:6px;">'
                     +'<div style="color:white;font-weight:bold;font-size:13px;">'+(isProgressive?'PROGRESSIVE TERM REPORT CARD':'REPORT CARD')+'</div>'
                     +'<div style="color:#BDD7EE;font-size:11px;">Term '+term+' - '+academicYear+' - '+(exam?exam.examName:'')+'</div>'
                     +'</div></div>'
-                    +'<div style="background:#f8f9fa;padding:10px;border-radius:6px;margin-bottom:10px;border-left:4px solid #1F3864;">'
-                    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">'
-                    +'<div style="font-size:12px;"><strong style="color:#1F3864;">Student Name:</strong> '+(student?student.firstName+' '+student.lastName:'-')+'</div>'
-                    +'<div style="font-size:12px;"><strong style="color:#1F3864;">Admission No:</strong> '+(student?(student.admissionNumber||'-'):'-')+'</div>'
-                    +'<div style="font-size:12px;"><strong style="color:#1F3864;">Class:</strong> '+(student?(student.className||'-'):'-')+'</div>'
-                    +'<div style="font-size:12px;"><strong style="color:#1F3864;">Stream:</strong> '+stStream+'</div>'
-                    +'<div style="font-size:12px;"><strong style="color:#1F3864;">Term:</strong> Term '+term+'</div>'
-                    +'<div style="font-size:12px;"><strong style="color:#1F3864;">Academic Year:</strong> '+academicYear+'</div>'
+                    +'<div style="background:#f8f9fa;padding:8px;border-radius:6px;margin-bottom:10px;border-left:4px solid #1F3864;">'
+                    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;">'
+                    +'<div style="font-size:11px;"><strong style="color:#1F3864;">Student Name:</strong> '+(student?student.firstName+' '+student.lastName:'-')+'</div>'
+                    +'<div style="font-size:11px;"><strong style="color:#1F3864;">Admission No:</strong> '+(student?(student.admissionNumber||'-'):'-')+'</div>'
+                    +'<div style="font-size:11px;"><strong style="color:#1F3864;">Class:</strong> '+(student?(student.className||'-'):'-')+'</div>'
+                    +'<div style="font-size:11px;"><strong style="color:#1F3864;">Stream:</strong> '+stStream+'</div>'
                     +'</div></div>'
                     +'<table style="width:100%;border-collapse:collapse;margin-bottom:10px;">'
-                    +'<thead><tr style="background:#1F3864;">'
-                    +(isProgressive
-                        ?'<th style="color:white;padding:6px;font-size:11px;text-align:left;">SUBJECT</th>'
-                        :'<th style="color:white;padding:6px;font-size:11px;text-align:left;">SUBJECT</th><th style="color:#FFD700;padding:6px;font-size:11px;text-align:center;">MARKS</th><th style="color:#FFD700;padding:6px;font-size:11px;text-align:center;">GRADE</th><th style="color:white;padding:6px;font-size:11px;text-align:left;">REMARKS</th>')
-                    +'</tr></thead><tbody>'+subjectRows+'</tbody></table>'
-                    +'<div style="display:flex;gap:10px;background:#1F3864;padding:10px;border-radius:6px;margin-bottom:10px;">'
-                    +'<div style="flex:1;text-align:center;"><div style="color:#FFD700;font-size:11px;">Total</div><div style="color:white;font-size:20px;font-weight:bold;">'+totalMarks.toFixed(0)+'</div></div>'
-                    +'<div style="flex:1;text-align:center;"><div style="color:#FFD700;font-size:11px;">Average</div><div style="color:white;font-size:20px;font-weight:bold;">'+avg.toFixed(1)+'%</div></div>'
-                    +'<div style="flex:1;text-align:center;"><div style="color:#FFD700;font-size:11px;">Grade</div><div style="color:white;font-size:20px;font-weight:bold;">'+avgGrade+'</div></div>'
-                    +rkHtml+'</div>'
-                    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:8px;">'
-                    +'<div style="border:1px solid #ddd;padding:10px;border-radius:6px;"><p style="font-weight:bold;color:#1F3864;margin:0 0 6px 0;font-size:11px;">Class Teacher Comment:</p><p style="margin:0 0 18px 0;min-height:28px;font-size:11px;color:#333;">'+(card.teacherComment||'.................................................')+'</p><p style="margin:0;color:#666;font-size:10px;">Signature: _____________ Date: _________</p></div>'
-                    +'<div style="border:1px solid #ddd;padding:10px;border-radius:6px;"><p style="font-weight:bold;color:#1F3864;margin:0 0 6px 0;font-size:11px;">Principal Comment:</p><p style="margin:0 0 18px 0;min-height:28px;font-size:11px;color:#333;">'+(card.principalComment||'.................................................')+'</p><p style="margin:0;color:#666;font-size:10px;">Signature: _____________ Date: _________</p></div>'
+                    +'<thead><tr style="background:#1F3864;">'+theadCols+'</tr></thead><tbody>'+subjectRows+avgRowHtml+'</tbody></table>'
+                    +'<div style="display:flex;gap:10px;background:#1F3864;padding:8px;border-radius:6px;margin-bottom:10px;">'
+                    +'<div style="flex:1;text-align:center;"><div style="color:#FFD700;font-size:10px;">Grade</div><div style="color:white;font-size:18px;font-weight:bold;">'+overallGrade+'</div></div>'
+                    +'<div style="flex:1;text-align:center;"><div style="color:#FFD700;font-size:10px;">Subjects</div><div style="color:white;font-size:18px;font-weight:bold;">'+subjectCount+'</div></div>'
+                    +'<div style="flex:1;text-align:center;"><div style="color:#FFD700;font-size:10px;">Term Average</div><div style="color:white;font-size:18px;font-weight:bold;">'+gl(termAvg)+'</div></div>'
                     +'</div>'
-                    +'<p style="text-align:center;font-size:10px;color:#999;border-top:2px solid #1F3864;padding-top:6px;">Pipeline Adventist School - Official Report Card - Issued: '+new Date().toLocaleDateString()+'</p>'
+                    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:8px;">'
+                    +'<div style="border:1px solid #ddd;padding:10px;border-radius:6px;"><p style="font-weight:bold;color:#1F3864;margin:0 0 6px 0;font-size:11px;">Class Teacher Comment:</p><p style="margin:0 0 16px 0;min-height:26px;font-size:11px;color:#333;">'+(card.teacherComment||'.................................................')+'</p><p style="margin:0;color:#666;font-size:10px;">Signature: _____________ Date: _________</p></div>'
+                    +'<div style="border:1px solid #ddd;padding:10px;border-radius:6px;"><p style="font-weight:bold;color:#1F3864;margin:0 0 6px 0;font-size:11px;">Principal Comment:</p><p style="margin:0 0 16px 0;min-height:26px;font-size:11px;color:#333;">'+(card.principalComment||'.................................................')+'</p><p style="margin:0;color:#666;font-size:10px;">Signature: _____________ Date: _________</p></div>'
+                    +'</div>'
+                    +'<p style="text-align:center;font-size:9px;color:#999;border-top:2px solid #1F3864;padding-top:6px;">Pipeline Adventist School - Official Report Card - Issued: '+new Date().toLocaleDateString()+'</p>'
                     +'</div>'
                 );
             } catch(e) { console.error('Failed card:', card.reportId, e); }
@@ -502,7 +471,6 @@ function ReportCards() {
         else alert('Please allow popups to print.');
         setPrintingAll(false);
     };
-
     const handleDelete = async (id) => {
         try { await api.delete('/api/reportCards/' + id); fetchReportCards(); setDeleteConfirm(null); }
         catch (e) { setError('Failed to delete'); }
