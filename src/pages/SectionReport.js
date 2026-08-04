@@ -56,7 +56,7 @@ const PrintableMeritList = React.forwardRef(({ reportCards, results, title, subt
                         {subjects.map(sub => (
                             <th key={sub.subjectId} style={pStyles.thSubject}>{sub.subjectName.toUpperCase()}</th>
                         ))}
-                        <th style={pStyles.thTotal}>TOTAL</th>
+                        <th style={pStyles.thTotal}>TOTAL MEAN</th>
                         <th style={pStyles.thTotal}>AVG %</th>
                     </tr>
                 </thead>
@@ -102,7 +102,10 @@ const PrintableSectionReport = React.forwardRef(({ report, examName, term, year 
             title="ACADEMIC PERFORMANCE REPORT"
             subtitle={`${examName} — Term ${term} ${year}`}
         />
-        {report && Object.entries(report).map(([key, section]) => (
+        {report && Object.entries(report).sort(([a], [b]) => {
+            const order = ['PRE_SCHOOL','LOWER_PRIMARY','UPPER_PRIMARY','JUNIOR_SCHOOL'];
+            return (order.indexOf(a) === -1 ? 99 : order.indexOf(a)) - (order.indexOf(b) === -1 ? 99 : order.indexOf(b));
+        }).map(([key, section]) => (
             <div key={key} style={{ marginBottom: '16px' }}>
                 {/* Section banner */}
                 <div style={{ backgroundColor: '#1F3864', color: 'white', padding: '6px 10px', marginBottom: '6px' }}>
@@ -115,63 +118,47 @@ const PrintableSectionReport = React.forwardRef(({ report, examName, term, year 
                 </div>
 
                 {/* Class averages table — like cover page */}
-                {section.classBreakdown?.length > 0 && (
+                {section.classBreakdown?.length > 0 && (() => {
+                    const gradeOrder = ['PG','PP1','PP2','G1','G2','G3','G4','G5','G6','G7','G8','G9'];
+                    const sortedClasses = [...section.classBreakdown].sort((a, b) =>
+                        (gradeOrder.indexOf(a.className) === -1 ? 99 : gradeOrder.indexOf(a.className)) -
+                        (gradeOrder.indexOf(b.className) === -1 ? 99 : gradeOrder.indexOf(b.className)));
+                    const sectionSubjects = [...new Set(sortedClasses.flatMap(cl => (cl.subjectPerformance || []).map(s => s.subjectName)))];
+                    return (
                     <table style={{ ...pStyles.table, marginBottom: '8px' }}>
                         <thead>
                             <tr style={pStyles.thead}>
                                 <th style={pStyles.th}>CLASS</th>
-                                {section.classBreakdown[0]?.subjectPerformance?.map(sub => (
-                                    <th key={sub.subjectName} style={pStyles.thSubject}>{sub.subjectName.toUpperCase()}</th>
+                                {sectionSubjects.map(name => (
+                                    <th key={name} style={pStyles.thSubject}>{name.toUpperCase()}</th>
                                 ))}
-                                <th style={pStyles.thTotal}>AVG %</th>
+                                <th style={pStyles.thTotal}>TOTAL MEAN</th>
                                 <th style={pStyles.thTotal}>STATUS</th>
                             </tr>
                         </thead>
                         <tbody>
-                            {section.classBreakdown.map((cls, i) => (
+                            {sortedClasses.map((cls, i) => (
                                 <tr key={i} style={i % 2 === 0 ? pStyles.trEven : pStyles.trOdd}>
                                     <td style={{ ...pStyles.td, fontWeight: 'bold' }}>{classDisplayName(cls)}</td>
-                                    {cls.subjectPerformance?.map((sub, j) => (
-                                        <td key={j} style={{ ...pStyles.tdCenter, color: sub.meetingTarget ? '#155724' : '#721c24' }}>
-                                            {sub.average}
-                                        </td>
-                                    ))}
+                                    {sectionSubjects.map((name, j) => {
+                                        const sub = cls.subjectPerformance?.find(s => s.subjectName === name);
+                                        return (
+                                            <td key={j} style={{ ...pStyles.tdCenter, color: sub ? (sub.meetingTarget ? '#155724' : '#721c24') : '#999' }}>
+                                                {sub ? sub.average : '-'}
+                                            </td>
+                                        );
+                                    })}
                                     <td style={{ ...pStyles.tdTotal, color: cls.meetingTarget ? '#155724' : '#721c24' }}>
-                                        <strong>{cls.classAverage}%</strong>
+                                        <strong>{cls.classAverage}</strong>
                                     </td>
                                     <td style={pStyles.tdCenter}>{cls.meetingTarget ? '✅' : '❌'}</td>
                                 </tr>
                             ))}
                         </tbody>
                     </table>
-                )}
+                    );
+                })()}
 
-                {/* Top performers */}
-                {section.topPerformers?.length > 0 && (
-                    <div style={{ marginBottom: '8px' }}>
-                        <p style={{ fontWeight: 'bold', fontSize: '10px', margin: '4px 0' }}>🏆 Top Performers</p>
-                        <table style={pStyles.table}>
-                            <thead>
-                                <tr style={pStyles.thead}>
-                                    <th style={pStyles.th}>Rank</th>
-                                    <th style={pStyles.th}>Name</th>
-                                    <th style={pStyles.th}>Class</th>
-                                    <th style={pStyles.th}>Average (%)</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {section.topPerformers.slice(0, 5).map((p, i) => (
-                                    <tr key={i} style={i % 2 === 0 ? pStyles.trEven : pStyles.trOdd}>
-                                        <td style={pStyles.tdCenter}>{i + 1}</td>
-                                        <td style={pStyles.td}><strong>{p.name}</strong></td>
-                                        <td style={pStyles.td}>{p.class}</td>
-                                        <td style={pStyles.td}>{p.average?.toFixed(2)}%</td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-                )}
             </div>
         ))}
         <div style={pStyles.footer}>
@@ -333,7 +320,7 @@ function SectionReport() {
     const uniqueGrades = [...new Map(
         classes.filter(c => c.gradeLevel).map(c => [c.gradeLevel, c])
     ).values()].sort((a, b) => {
-        const order = ['PG','PP1','PP2','GRADE_1','GRADE_2','GRADE_3','GRADE_4','GRADE_5','GRADE_6','GRADE_7','GRADE_8','GRADE_9'];
+        const order = ['PG','PP1','PP2','G1','G2','G3','G4','G5','G6','G7','G8','G9'];
         return (order.indexOf(a.gradeLevel) ?? 99) - (order.indexOf(b.gradeLevel) ?? 99);
     });
 
@@ -486,7 +473,10 @@ function SectionReport() {
                             </div>
                         )}
 
-                        {report ? Object.entries(report).map(([key, section]) => (
+                        {report ? Object.entries(report).sort(([a], [b]) => {
+                            const order = ['PRE_SCHOOL','LOWER_PRIMARY','UPPER_PRIMARY','JUNIOR_SCHOOL'];
+                            return (order.indexOf(a) === -1 ? 99 : order.indexOf(a)) - (order.indexOf(b) === -1 ? 99 : order.indexOf(b));
+                        }).map(([key, section]) => (
                             <div key={key} style={styles.sectionCard}>
                                 {/* Section header */}
                                 <div style={{ ...styles.sectionHeader, backgroundColor: section.meetingTarget ? '#1F3864' : '#7b1c1c' }}>
@@ -569,25 +559,6 @@ function SectionReport() {
                                         </div>
                                     )}
 
-                                    {/* Top performers */}
-                                    {section.topPerformers?.length > 0 && (
-                                        <div style={styles.topCard}>
-                                            <h4 style={styles.subTitle}>🏆 Top 5 Performers</h4>
-                                            <div style={styles.topGrid}>
-                                                {section.topPerformers.slice(0, 5).map((p, i) => (
-                                                    <div key={i} style={styles.topItem}>
-                                                        <div style={{ ...styles.topRank, backgroundColor: i === 0 ? '#FFD700' : i === 1 ? '#C0C0C0' : i === 2 ? '#CD7F32' : '#2E75B6' }}>
-                                                            {i + 1}
-                                                        </div>
-                                                        <div>
-                                                            <div style={styles.topName}>{p.name}</div>
-                                                            <div style={styles.topMeta}>{p.class} • {p.average?.toFixed(1)}%</div>
-                                                        </div>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        </div>
-                                    )}
 
                                     {/* Stream comparison bars */}
                                     {section.classBreakdown?.some(c => c.streams?.length > 1) && (

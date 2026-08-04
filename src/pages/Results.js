@@ -88,11 +88,14 @@ const printResults = ({ filterClass, examObj, pivotStudents, pivotSubjects, pivo
         '<title>' + filterClass + ' Results</title>' +
         '<style>*{box-sizing:border-box;margin:0;padding:0;}body{font-family:\'Times New Roman\',Times,serif;font-size:12px;color:#000;padding:10px;}' +
         '@media print{@page{size:A4 landscape;margin:8mm;}.no-print{display:none!important;}body{-webkit-print-color-adjust:exact;print-color-adjust:exact;}}' +
+        '<style id="pageStyle">@page{size:A4 landscape;margin:8mm;}</style>' +
         '</style></head>' +
         '<body onload="setTimeout(function(){window.print();},400);">' +
         '<div class="no-print" style="background:#1F3864;color:white;padding:10px;margin-bottom:10px;border-radius:5px;display:flex;justify-content:space-between;align-items:center;">' +
         '<span style="font-weight:bold;">' + filterClass + ' — ' + (examObj ? examObj.examName : '') + '</span>' +
-        '<button onclick="window.print()" style="background:#FFD700;color:#1F3864;border:none;padding:8px 20px;border-radius:5px;font-weight:bold;cursor:pointer;font-size:14px;">Print / Save PDF</button>' +
+        '<button onclick="document.getElementById(\'pageStyle\').innerHTML=\'@page{size:A4 portrait;margin:10mm;}\';this.style.background=\'#FFD700\';this.style.color=\'#1F3864\';this.nextElementSibling.style.background=\'transparent\';this.nextElementSibling.style.color=\'white\'" style="background:transparent;color:white;border:1px solid white;padding:6px 14px;border-radius:4px;cursor:pointer;font-size:12px;font-weight:bold;margin-right:4px;">Portrait</button>' +
+        '<button onclick="document.getElementById(\'pageStyle\').innerHTML=\'@page{size:A4 landscape;margin:8mm;}\';this.style.background=\'#FFD700\';this.style.color=\'#1F3864\';this.previousElementSibling.style.background=\'transparent\';this.previousElementSibling.style.color=\'white\'" style="background:#FFD700;color:#1F3864;border:none;padding:6px 14px;border-radius:4px;cursor:pointer;font-size:12px;font-weight:bold;margin-right:8px;">Landscape</button>' +
+        '<button onclick="window.print()" style="background:#28a745;color:white;border:none;padding:8px 20px;border-radius:5px;font-weight:bold;cursor:pointer;font-size:14px;">Print / Save PDF</button>' +
         '</div>' +
         '<div style="text-align:center;border-bottom:3px solid #1F3864;padding-bottom:8px;margin-bottom:8px;">' +
         '<div style="color:#1F3864;font-size:13px;font-weight:bold;text-transform:uppercase;">PIPELINE ADVENTIST PRIMARY &amp; JUNIOR SECONDARY SCHOOL</div>' +

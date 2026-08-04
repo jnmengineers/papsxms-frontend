@@ -122,7 +122,7 @@ function ClassSubjects() {
     };
 
     const selectAllSubjects = () => {
-        const subjectNames = [...new Set(allSubjects.filter(s => s.gradeLevel === selectedGrade).map(s => s.subjectName))];
+        const subjectNames = [...new Set(allSubjects.filter(s => extractSection(s.gradeLevel) === currentSection).map(s => s.subjectName))];
         const assignedNames = gradeSubjects.map(cs => cs.subject?.subjectName?.toLowerCase());
         const unassigned = subjectNames.filter(s => !assignedNames.includes(s.toLowerCase()));
         setSelectedSubjectTiles(unassigned);
@@ -259,12 +259,11 @@ function ClassSubjects() {
     Object.keys(grouped).forEach(section => {
         grouped[section].sort((a, b) => a.gradeLevel.localeCompare(b.gradeLevel));
     });
-
     return grouped;
 };
-
+    const gradesBySection = getGradesBySection();
     const currentSection = getSectionForGrade(selectedGrade);
-    const availableSubjects = [...new Set(allSubjects.filter(s => s.gradeLevel === selectedGrade).map(s => s.subjectName))];
+    const availableSubjects = [...new Set(allSubjects.filter(s => extractSection(s.gradeLevel) === currentSection).map(s => s.subjectName))];
     const assignedSubjectNames = gradeSubjects.map(cs => cs.subject?.subjectName?.toLowerCase());
     const selectedGradeStreams = getClassesForGrade(selectedGrade);
 
