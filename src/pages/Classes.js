@@ -437,10 +437,10 @@ function Classes() {
                         )}
                     </>
                 )}
-                 <Footer/> 
+               
             </div>
           </div>
-              
+              <Footer/>   
         </div>
     );
 }
@@ -455,7 +455,7 @@ const styles = {
     navRight: { display:'flex', gap:'10px' },
     navBtn: { backgroundColor:'transparent', color:'white', border:'1px solid white', padding:'8px 16px', borderRadius:'5px', cursor:'pointer' },
     logoutBtn: { backgroundColor:'transparent', color:'white', border:'1px solid white', padding:'8px 16px', borderRadius:'5px', cursor:'pointer' },
-    content: { padding: '30px', flex: 1, display: 'flex', flexDirection: 'column', minHeight: 'calc(100vh - 63px)' },
+    content: { padding: '30px', flex: 1 },
     header: { display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'20px', flexWrap:'wrap', gap:'10px' },
     headerLeft: { display:'flex', alignItems:'center', gap:'15px' },
     backBtn: { backgroundColor:'#6c757d', color:'white', border:'none', padding:'8px 16px', borderRadius:'5px', cursor:'pointer', fontSize:'14px' },

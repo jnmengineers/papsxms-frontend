@@ -427,10 +427,10 @@ function Teachers() {
                         })}
                     </div>
                 )}
-                  <Footer />
+                
             </div>
         </div>
-      
+        <Footer />
     </div>
     );
 }

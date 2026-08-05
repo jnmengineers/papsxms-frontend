@@ -786,15 +786,6 @@ function SectionReport() {
                     year={selectedExamObj?.academicYear || ''}
                 />
                 <PrintableMeritList
-                    ref={streamMeritRef}
-                    reportCards={streamCards}
-                    results={allResults}
-                    subjects={classSubjects}
-                    title={`${classDisplayName(selectedClassObj)} STREAM MERIT LIST`}
-                    subtitle={`${selectedExamObj?.examName || ''} | Term ${selectedExamObj?.term || ''} ${selectedExamObj?.academicYear || ''}`}
-                    level="stream"
-                />
-                <PrintableMeritList
                     ref={gradeMeritRef}
                     reportCards={selectedGradeCards}
                     results={allResults}
@@ -803,14 +794,10 @@ function SectionReport() {
                     subtitle={`${selectedExamObj?.examName || ''} | Term ${selectedExamObj?.term || ''} ${selectedExamObj?.academicYear || ''} | ${selectedGradeClassNames.join(', ')}`}
                     level="grade"
                 />
-
-               
             </div>
-            <Footer /> 
-          </div>
-                           
         </div>
-        
+        <Footer />
+        </div>
     );
 }
 

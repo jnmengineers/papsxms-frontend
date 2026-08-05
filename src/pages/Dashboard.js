@@ -196,15 +196,16 @@ function Dashboard() {
                         </div>
                     ))}
                 </div>
-                <Footer />
+              
             </div>
         </div>
+          <Footer />
         </div>
     );
 }
 
 const styles = {
-    content: { padding: '30px', flex: 1, display: 'flex', flexDirection: 'column', minHeight: 'calc(100vh - 63px)' },
+    content: { padding: '30px', flex: 1 },
     layoutRow: { display: 'flex' },
     navbar: { backgroundColor: '#1F3864', padding: '15px 30px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
     navLeft: { display: 'flex', alignItems: 'center', gap: '10px' },

@@ -5,7 +5,7 @@ import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
 import Footer from '../components/Footer';
 
-// Outside parent — prevents keyboard dismiss on re-render
+// Outside parent � prevents keyboard dismiss on re-render
 const SubjectFormFields = ({ formData, setFormData, onSubmit, onCancel, submitLabel }) => (
     <form onSubmit={onSubmit} style={styles.inlineForm}>
         <div style={styles.formGrid}>
@@ -35,7 +35,7 @@ const SubjectFormFields = ({ formData, setFormData, onSubmit, onCancel, submitLa
         </div>
         <div style={styles.btnGroup}>
             <button type="submit" style={styles.submitBtn}>{submitLabel}</button>
-            <button type="button" onClick={onCancel} style={styles.cancelBtn}>✕ Cancel</button>
+            <button type="button" onClick={onCancel} style={styles.cancelBtn}>? Cancel</button>
         </div>
     </form>
 );
@@ -58,7 +58,7 @@ function Subjects() {
     const sections = ['PRE_SCHOOL','LOWER_PRIMARY','UPPER_PRIMARY','JUNIOR_SCHOOL'];
     const sectionGrades = { PRE_SCHOOL: ['PG','PP1','PP2'], LOWER_PRIMARY: ['G1','G2','G3'], UPPER_PRIMARY: ['G4','G5','G6'], JUNIOR_SCHOOL: ['G7','G8','G9'] };
     const sectionColors = { PRE_SCHOOL: '#6f42c1', LOWER_PRIMARY: '#2E75B6', UPPER_PRIMARY: '#fd7e14', JUNIOR_SCHOOL: '#20c997' };
-    const sectionNames = { PRE_SCHOOL: '🟣 Pre-School (PG, PP1, PP2)', LOWER_PRIMARY: '🔵 Lower Primary (G1-G3)', UPPER_PRIMARY: '🟠 Upper Primary (G4-G6)', JUNIOR_SCHOOL: '🟢 Junior Secondary (G7-G9)' };
+    const sectionNames = { PRE_SCHOOL: '?? Pre-School (PG, PP1, PP2)', LOWER_PRIMARY: '?? Lower Primary (G1-G3)', UPPER_PRIMARY: '?? Upper Primary (G4-G6)', JUNIOR_SCHOOL: '?? Junior Secondary (G7-G9)' };
 
     useEffect(() => {
         if (!seeded.current) { seeded.current = true; fetchSubjects(); fetchTeachers(); }
@@ -104,7 +104,7 @@ function Subjects() {
         e.preventDefault();
         try {
             await api.post('/api/subjects', formData);
-            setSuccessMsg('✅ Subject added!');
+            setSuccessMsg('? Subject added!');
             setShowAddForm(false);
             setFormData({ subjectName: '', subjectCode: '', gradeLevel: '' });
             fetchSubjects(true);
@@ -116,7 +116,7 @@ function Subjects() {
         e.preventDefault();
         try {
             await api.put(`/api/subjects/${editingSubject.subjectId}`, formData);
-            setSuccessMsg('✅ Subject updated!');
+            setSuccessMsg('? Subject updated!');
             setEditingSubject(null);
             setFormData({ subjectName: '', subjectCode: '', gradeLevel: '' });
             fetchSubjects(true);
@@ -155,11 +155,11 @@ function Subjects() {
                 <div style={styles.content}>
                 <div style={styles.header}>
                     <div>
-                        <h2 style={styles.title}>📚 Subjects</h2>
-                        <p style={styles.subtitle}>Subject pool — {subjects.length} subjects across all sections</p>
+                        <h2 style={styles.title}>?? Subjects</h2>
+                        <p style={styles.subtitle}>Subject pool � {subjects.length} subjects across all sections</p>
                     </div>
                     <button onClick={() => { setShowAddForm(!showAddForm); setEditingSubject(null); }} style={styles.addBtn}>
-                        {showAddForm ? '✕ Cancel' : '+ Add Subject'}
+                        {showAddForm ? '? Cancel' : '+ Add Subject'}
                     </button>
                 </div>
 
@@ -169,21 +169,21 @@ function Subjects() {
                 {/* Add Form */}
                 {showAddForm && (
                     <div style={styles.addFormCard}>
-                        <h3 style={styles.formTitle}>➕ Add New Subject</h3>
+                        <h3 style={styles.formTitle}>? Add New Subject</h3>
                         <SubjectFormFields
                             formData={formData} setFormData={setFormData}
                             onSubmit={handleSubmitAdd}
                             onCancel={() => { setShowAddForm(false); setFormData({ subjectName: '', subjectCode: '', gradeLevel: '' }); }}
-                            submitLabel="💾 Save Subject"
+                            submitLabel="?? Save Subject"
                         />
                     </div>
                 )}
 
-                {/* TAB 1 — Subject Pool */}
+                {/* TAB 1 � Subject Pool */}
                 {activeTab === 'pool' && (
                     <>
                         <div style={styles.searchBar}>
-                            <input style={styles.searchInput} placeholder="🔍 Search subjects..."
+                            <input style={styles.searchInput} placeholder="?? Search subjects..."
                                 value={search} onChange={e => setSearch(e.target.value)} />
                             <button onClick={() => setSearch('')} style={styles.clearBtn}>Clear</button>
                         </div>
@@ -209,7 +209,7 @@ function Subjects() {
                                                 <React.Fragment key={section}>
                                                     <tr>
                                                         <td colSpan="7" style={{ backgroundColor: sectionColors[section], color: 'white', padding: '8px 15px', fontWeight: 'bold', fontSize: '13px' }}>
-                                                            {sectionNames[section]} — {sectionFiltered.length} subjects
+                                                            {sectionNames[section]} � {sectionFiltered.length} subjects
                                                         </td>
                                                     </tr>
                                                     {sectionFiltered.map((subject, index) => {
@@ -243,25 +243,25 @@ function Subjects() {
                                                                     <td style={styles.td}>
                                                                         <button onClick={() => handleEdit(subject)}
                                                                             style={isEditing ? styles.cancelEditBtn : styles.editBtn}>
-                                                                            {isEditing ? '✕ Cancel' : 'Edit'}
+                                                                            {isEditing ? '? Cancel' : 'Edit'}
                                                                         </button>
                                                                         <button onClick={() => handleDelete(subject.subjectId)} style={styles.deleteBtn}>Delete</button>
                                                                     </td>
                                                                 </tr>
-                                                                {/* ── Inline Edit Row ── */}
+                                                                {/* -- Inline Edit Row -- */}
                                                                 {isEditing && (
                                                                     <tr>
                                                                         <td colSpan="7" style={styles.inlineEditTd}>
                                                                             <div style={styles.inlineEditCard}>
                                                                                 <div style={styles.inlineEditHeader}>
-                                                                                    <h4 style={styles.inlineEditTitle}>✏️ Editing: {subject.subjectName}</h4>
-                                                                                    <button onClick={handleCancelEdit} style={styles.closeBtn}>✕</button>
+                                                                                    <h4 style={styles.inlineEditTitle}>?? Editing: {subject.subjectName}</h4>
+                                                                                    <button onClick={handleCancelEdit} style={styles.closeBtn}>?</button>
                                                                                 </div>
                                                                                 <SubjectFormFields
                                                                                     formData={formData} setFormData={setFormData}
                                                                                     onSubmit={handleSubmitEdit}
                                                                                     onCancel={handleCancelEdit}
-                                                                                    submitLabel="✅ Update Subject"
+                                                                                    submitLabel="? Update Subject"
                                                                                 />
                                                                             </div>
                                                                         </td>
@@ -282,10 +282,10 @@ function Subjects() {
                         )}
                     </>
                 )}
-                 <Footer />
+                
             </div>
         </div>
-       
+        <Footer />
     </div>
     );
 }
@@ -300,7 +300,7 @@ const styles = {
     navRight: { display: 'flex', gap: '10px' },
     navBtn: { backgroundColor: 'transparent', color: 'white', border: '1px solid white', padding: '8px 16px', borderRadius: '5px', cursor: 'pointer' },
     logoutBtn: { backgroundColor: 'transparent', color: 'white', border: '1px solid white', padding: '8px 16px', borderRadius: '5px', cursor: 'pointer' },
-   content: { padding: '30px', flex: 1, display: 'flex', flexDirection: 'column', minHeight: 'calc(100vh - 63px)' },
+   content: { padding: '30px', flex: 1 },
     header: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' },
     title: { color: '#1F3864', margin: '0 0 5px 0' },
     subtitle: { color: '#666', margin: 0, fontSize: '14px' },

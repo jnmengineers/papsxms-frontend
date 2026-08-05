@@ -412,10 +412,10 @@ function Exams() {
                         </div>
                     ))
                 )}
-                 <Footer/>
+               
             </div>
         </div>
-      
+        <Footer/>
      </div>
     );
 }
@@ -430,7 +430,7 @@ const styles = {
     navRight: { display:'flex', gap:'10px' },
     navBtn: { backgroundColor:'transparent', color:'white', border:'1px solid white', padding:'8px 16px', borderRadius:'5px', cursor:'pointer' },
     logoutBtn: { backgroundColor:'transparent', color:'white', border:'1px solid white', padding:'8px 16px', borderRadius:'5px', cursor:'pointer' },
-    content: { padding: '30px', flex: 1, display: 'flex', flexDirection: 'column', minHeight: 'calc(100vh - 63px)' }, 
+    content: { padding: '30px', flex: 1 }, 
     header: { display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:'20px', flexWrap:'wrap', gap:'10px' },
     title: { color:'#1F3864', margin:'0 0 5px 0', fontSize:'24px' },
     subtitle: { color:'#666', margin:0, fontSize:'14px' },

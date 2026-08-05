@@ -885,10 +885,10 @@ function MarkEntry() {
                     academicYear={currentExamObj?.academicYear || ''}
                     term={currentExamObj?.term || ''}
                 />
-                <Footer />
-
+               
             </div>
         </div>
+         <Footer />
     </div>
     );
 }
@@ -903,7 +903,7 @@ const styles = {
     navRight: { display: 'flex', gap: '10px' },
     navBtn: { backgroundColor: 'transparent', color: 'white', border: '1px solid white', padding: '8px 16px', borderRadius: '5px', cursor: 'pointer' },
     logoutBtn: { backgroundColor: 'transparent', color: 'white', border: '1px solid white', padding: '8px 16px', borderRadius: '5px', cursor: 'pointer' },
-    content: { padding: '30px', flex: 1, display: 'flex', flexDirection: 'column', minHeight: 'calc(100vh - 63px)' },
+    content: { padding: '30px', flex: 1 },
     pageHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px', flexWrap: 'wrap', gap: '10px' },
     headerBtns: { display: 'flex', gap: '10px', flexWrap: 'wrap' },
     title: { color: '#1F3864', margin: '0 0 5px 0', fontSize: '24px' },
