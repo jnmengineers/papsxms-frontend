@@ -441,3 +441,30 @@ body {
     }
 }
 @import './mobile.css';
+/* ── Sidebar mobile responsiveness ── */
+@media (max-width: 768px) {
+    .app-sidebar {
+        position: fixed !important;
+        left: -260px;
+        top: 63px;
+        height: calc(100vh - 63px);
+        transition: left 0.25s ease;
+        z-index: 999;
+    }
+    .app-sidebar.open {
+        left: 0;
+    }
+    .app-backdrop {
+        display: block !important;
+    }
+}
+@media (min-width: 769px) {
+    .app-backdrop {
+        display: none !important;
+    }
+}
+@media (max-width: 768px) {
+    .app-hamburger {
+        display: block !important;
+    }
+}

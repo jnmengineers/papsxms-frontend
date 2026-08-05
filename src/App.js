@@ -24,9 +24,11 @@ import Import from './pages/Import';
 import ProgressiveReport from './pages/ProgressiveReport';
 import InactivityTimeout from './components/InactivityTimeout';
 import UpdateChecker from './components/UpdateChecker';
+import { SidebarProvider } from './context/SidebarContext';
 
 function App() {
     return (
+        <SidebarProvider>
         <Router>
             <InactivityTimeout />
             <UpdateChecker />
@@ -141,6 +143,7 @@ function App() {
                 } />
             </Routes>
         </Router>
+        </SidebarProvider>
     );
 }
 

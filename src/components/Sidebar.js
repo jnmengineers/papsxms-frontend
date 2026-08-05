@@ -1,10 +1,12 @@
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { useSidebar } from '../context/SidebarContext';
 
 function Sidebar() {
     const navigate = useNavigate();
     const location = useLocation();
     const role = localStorage.getItem('role');
+    const { isOpen, setIsOpen } = useSidebar();
 
     const groups = [
         {
@@ -58,39 +60,54 @@ function Sidebar() {
         }))
         .filter(group => group.items.length > 0);
 
+    const handleNavigate = (path) => {
+        navigate(path);
+        setIsOpen(false); // auto-close on mobile after navigating
+    };
+
     return (
-        <div style={styles.sidebar}>
-            {visibleGroups.map((group, gi) => (
-                <div key={gi} style={styles.group}>
-                    <div style={styles.groupLabel}>{group.label}</div>
-                    {group.items.map((item, ii) => {
-                        const isActive = location.pathname === item.path;
-                        return (
-                            <div key={ii}
-                                onClick={() => navigate(item.path)}
-                                style={{
-                                    ...styles.item,
-                                    backgroundColor: isActive ? 'rgba(255,255,255,0.12)' : 'transparent',
-                                    borderLeft: isActive ? '3px solid #FFD700' : '3px solid transparent',
-                                    color: isActive ? 'white' : 'rgba(255,255,255,0.75)'
-                                }}>
-                                <span style={styles.itemIcon}>{item.icon}</span>
-                                <span>{item.label}</span>
-                            </div>
-                        );
-                    })}
-                </div>
-            ))}
-        </div>
+        <>
+            {/* Mobile backdrop — only visible when sidebar is open on small screens */}
+            <div className="app-backdrop" style={styles.backdrop} onClick={() => setIsOpen(false)} />
+            <div className={`app-sidebar${isOpen ? ' open' : ''}`} style={styles.sidebar}>
+                {visibleGroups.map((group, gi) => (
+                    <div key={gi} style={styles.group}>
+                        <div style={styles.groupLabel}>{group.label}</div>
+                        {group.items.map((item, ii) => {
+                            const isActive = location.pathname === item.path;
+                            return (
+                                <div key={ii}
+                                    onClick={() => handleNavigate(item.path)}
+                                    style={{
+                                        ...styles.item,
+                                        backgroundColor: isActive ? 'rgba(255,255,255,0.12)' : 'transparent',
+                                        borderLeft: isActive ? '3px solid #FFD700' : '3px solid transparent',
+                                        color: isActive ? 'white' : 'rgba(255,255,255,0.75)'
+                                    }}>
+                                    <span style={styles.itemIcon}>{item.icon}</span>
+                                    <span>{item.label}</span>
+                                </div>
+                            );
+                        })}
+                    </div>
+                ))}
+            </div>
+        </>
     );
 }
 
 const styles = {
+    backdrop: {
+        display: 'none', // overridden by media query below via className approach — see note
+        position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+        backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 998
+    },
     sidebar: {
         width: '230px', backgroundColor: '#16294d', minHeight: 'calc(100vh - 63px)',
         padding: '20px 0', position: 'sticky', top: '63px', flexShrink: 0,
         overflowY: 'auto'
     },
+    sidebarOpenMobile: {},
     group: { marginBottom: '22px' },
     groupLabel: {
         color: 'rgba(255,255,255,0.4)', fontSize: '11px', fontWeight: 700,

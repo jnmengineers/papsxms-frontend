@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import logo1 from '../assets/logo1.png';
+import { useSidebar } from '../context/SidebarContext';
 
 function Navbar({ rightContent }) {
     const navigate = useNavigate();
@@ -8,6 +9,7 @@ function Navbar({ rightContent }) {
     const role = localStorage.getItem('role');
     const [menuOpen, setMenuOpen] = useState(false);
     const menuRef = useRef(null);
+    const { isOpen, setIsOpen } = useSidebar();
 
     useEffect(() => {
         const handleClickOutside = (e) => {
@@ -23,11 +25,16 @@ function Navbar({ rightContent }) {
 
     return (
         <div style={styles.navbar}>
-            <div style={styles.navLeft} onClick={() => navigate('/dashboard')}>
-                <div style={styles.logoBadge}>
-                    <img src={logo1} alt="Logo" style={styles.navLogo} />
+            <div style={styles.navLeftGroup}>
+                <button className="app-hamburger" style={styles.hamburger} onClick={() => setIsOpen(!isOpen)}>
+                    ☰
+                </button>
+                <div style={styles.navLeft} onClick={() => navigate('/dashboard')}>
+                    <div style={styles.logoBadge}>
+                        <img src={logo1} alt="Logo" style={styles.navLogo} />
+                    </div>
+                    <span style={styles.navTitle}>Pipeline Adventist School</span>
                 </div>
-                <span style={styles.navTitle}>Pipeline Adventist School</span>
             </div>
             <div style={styles.navRight}>
                 {rightContent}
@@ -71,6 +78,11 @@ const styles = {
         width: '38px', height: '38px', borderRadius: '50%',
         backgroundColor: 'white', display: 'flex', alignItems: 'center',
         justifyContent: 'center', flexShrink: 0
+    },
+    navLeftGroup: { display: 'flex', alignItems: 'center', gap: '10px' },
+    hamburger: {
+        display: 'none', background: 'none', border: 'none', color: 'white',
+        fontSize: '22px', cursor: 'pointer', padding: '4px 8px'
     },
     navLogo: { width: '26px', height: '26px', objectFit: 'contain' },
     navTitle: { color: 'white', fontSize: '17px', fontWeight: 700, letterSpacing: '0.2px' },
