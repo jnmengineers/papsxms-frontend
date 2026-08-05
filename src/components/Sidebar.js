@@ -76,7 +76,8 @@ function Sidebar() {
                     <div key={gi} style={styles.group}>
                         <div style={styles.groupLabel}>{group.label}</div>
                         {group.items.map((item, ii) => {
-                            const isActive = location.pathname === item.path;
+                          const isActive = location.pathname === item.path ||
+                             (item.path === '/students' && location.pathname.startsWith('/student/'));
                             return (
                                 <div key={ii}
                                     onClick={() => handleNavigate(item.path)}
