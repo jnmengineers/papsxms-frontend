@@ -6,6 +6,7 @@ import logo2 from '../assets/logo2.png';
 import { classDisplayName, streamLabel, gradeLabel } from '../utils/classUtils';
 import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
+import Footer from '../components/Footer';
 
 
 // ─── Orientation Toggle ───────────────────────────────────────────────────────
@@ -802,9 +803,14 @@ function SectionReport() {
                     subtitle={`${selectedExamObj?.examName || ''} | Term ${selectedExamObj?.term || ''} ${selectedExamObj?.academicYear || ''} | ${selectedGradeClassNames.join(', ')}`}
                     level="grade"
                 />
+
+               
             </div>
+            <Footer /> 
           </div>
+                           
         </div>
+        
     );
 }
 
@@ -818,7 +824,7 @@ const styles = {
     navRight: { display: 'flex', gap: '10px' },
     navBtn: { backgroundColor: 'transparent', color: 'white', border: '1px solid white', padding: '8px 16px', borderRadius: '5px', cursor: 'pointer' },
     logoutBtn: { backgroundColor: 'transparent', color: 'white', border: '1px solid white', padding: '8px 16px', borderRadius: '5px', cursor: 'pointer' },
-    content: { padding: 'clamp(12px, 3vw, 30px)' },
+    content: { padding: '30px', flex: 1 },
     pageHeader: { marginBottom: '20px' },
     title: { color: '#1F3864', margin: '0 0 5px 0', fontSize: '24px' },
     subtitle: { color: '#666', margin: 0 },

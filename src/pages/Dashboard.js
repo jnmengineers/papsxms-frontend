@@ -4,6 +4,7 @@ import api from '../services/api';
 import logo1 from '../assets/logo1.png';
 import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
+import Footer from '../components/Footer';
 
 function Dashboard() {
     const navigate = useNavigate();
@@ -180,7 +181,7 @@ function Dashboard() {
                 )}
 
                 <h3 style={styles.sectionTitle}>Quick Access</h3>
-                <div style={styles.cardGrid}>
+               <div style={styles.cardGrid}>
                     {menuItems.map((item, index) => (
                         <div key={index}
                             style={{...styles.card, borderTop: `4px solid ${item.color}`}}
@@ -195,6 +196,7 @@ function Dashboard() {
                         </div>
                     ))}
                 </div>
+                <Footer />
             </div>
         </div>
         </div>
@@ -202,7 +204,7 @@ function Dashboard() {
 }
 
 const styles = {
-    container: { minHeight: '100vh', backgroundColor: '#f0f2f5' },
+    content: { padding: '30px', flex: 1, display: 'flex', flexDirection: 'column', minHeight: 'calc(100vh - 63px)' },
     layoutRow: { display: 'flex' },
     navbar: { backgroundColor: '#1F3864', padding: '15px 30px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
     navLeft: { display: 'flex', alignItems: 'center', gap: '10px' },

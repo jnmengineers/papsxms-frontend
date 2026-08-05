@@ -5,6 +5,7 @@ import logo2 from '../assets/logo2.png';
 import { classDisplayName, classPrintLabel, classShortCode, streamLabel } from '../utils/classUtils';
 import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
+import Footer from '../components/Footer';
 
 const gradeLabel = (m) => m >= 75 ? 'EE' : m >= 55 ? 'ME' : m >= 40 ? 'AE' : 'BE';
 const gradeColor = (m) => m >= 75 ? '#28a745' : m >= 55 ? '#2E75B6' : m >= 40 ? '#ffc107' : '#dc3545';
@@ -800,8 +801,11 @@ function ReportCards() {
                         </div>
                     </div>
                 )}
+
+                 <Footer />
             </div>
         </div>
+       
     </div>
     );
 }
@@ -816,7 +820,7 @@ const s = {
     navRight: { display: 'flex', gap: '10px' },
     navBtn: { backgroundColor: 'transparent', color: 'white', border: '1px solid white', padding: '8px 16px', borderRadius: '5px', cursor: 'pointer' },
     logoutBtn: { backgroundColor: 'transparent', color: 'white', border: '1px solid white', padding: '8px 16px', borderRadius: '5px', cursor: 'pointer' },
-    content: { padding: 'clamp(15px,3vw,30px)' },
+   content: { padding: '30px', flex: 1, display: 'flex', flexDirection: 'column', minHeight: 'calc(100vh - 63px)' },
     title: { color: '#1F3864', margin: '0 0 5px 0', fontSize: '24px' },
     subtitle: { color: '#666', margin: '0 0 20px 0', fontSize: '14px' },
     error: { color: 'red', padding: '10px', backgroundColor: '#fff3f3', borderRadius: '5px', marginBottom: '15px', whiteSpace: 'pre-line' },

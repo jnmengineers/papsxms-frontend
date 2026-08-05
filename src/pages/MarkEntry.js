@@ -7,6 +7,7 @@ import { classDisplayName, gradeLabel, streamLabel } from '../utils/classUtils';
 import logo2 from '../assets/logo2.png';
 import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
+import Footer from '../components/Footer';
 
 // ── Orientation Toggle ────────────────────────────────────────────────────────
 const OrientationToggle = ({ value, onChange }) => (
@@ -884,6 +885,8 @@ function MarkEntry() {
                     academicYear={currentExamObj?.academicYear || ''}
                     term={currentExamObj?.term || ''}
                 />
+                <Footer />
+
             </div>
         </div>
     </div>
@@ -900,7 +903,7 @@ const styles = {
     navRight: { display: 'flex', gap: '10px' },
     navBtn: { backgroundColor: 'transparent', color: 'white', border: '1px solid white', padding: '8px 16px', borderRadius: '5px', cursor: 'pointer' },
     logoutBtn: { backgroundColor: 'transparent', color: 'white', border: '1px solid white', padding: '8px 16px', borderRadius: '5px', cursor: 'pointer' },
-    content: { padding: 'clamp(12px, 3vw, 30px)' },
+    content: { padding: '30px', flex: 1, display: 'flex', flexDirection: 'column', minHeight: 'calc(100vh - 63px)' },
     pageHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px', flexWrap: 'wrap', gap: '10px' },
     headerBtns: { display: 'flex', gap: '10px', flexWrap: 'wrap' },
     title: { color: '#1F3864', margin: '0 0 5px 0', fontSize: '24px' },

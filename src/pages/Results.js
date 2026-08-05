@@ -4,6 +4,7 @@ import logo1 from '../assets/logo1.png';
 import { classDisplayName, classShortCode } from '../utils/classUtils';
 import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
+import Footer from '../components/Footer';
 
 // ── Loading Overlay ───────────────────────────────────────────────────────────
 const LoadingOverlay = ({ message = 'Loading...' }) => (
@@ -705,7 +706,9 @@ function Results() {
                     </div>
                 </div>
             )}
+             <Footer />
         </div>
+       
         </div>
     );
 }
@@ -720,7 +723,7 @@ const styles = {
     navRight: { display:'flex', gap:'10px' },
     navBtn: { backgroundColor:'transparent', color:'white', border:'1px solid white', padding:'8px 16px', borderRadius:'5px', cursor:'pointer' },
     logoutBtn: { backgroundColor:'transparent', color:'white', border:'1px solid white', padding:'8px 16px', borderRadius:'5px', cursor:'pointer' },
-    content: { padding:'clamp(12px,3vw,30px)' },
+    content: { padding: '30px', flex: 1, display: 'flex', flexDirection: 'column', minHeight: 'calc(100vh - 63px)' },
     title: { color:'#1F3864', margin:'0 0 5px 0', fontSize:'24px' },
     subtitle: { color:'#666', marginBottom:'20px' },
     error: { color:'red', padding:'10px', backgroundColor:'#fff3f3', borderRadius:'5px', marginBottom:'15px' },

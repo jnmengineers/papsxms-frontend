@@ -3,6 +3,7 @@ import api from '../services/api';
 import logo1 from '../assets/logo1.png';
 import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
+import Footer from '../components/Footer';
 
 // ✅ Outside parent — prevents keyboard dismiss on mobile
 const YearForm = ({ formData, setFormData, onSubmit, onCancel, submitLabel }) => (
@@ -367,8 +368,11 @@ function AcademicYears() {
                         ))
                     )
                 }
+                 <Footer />
             </div>
+           
         </div>
+        
         </div>
     );
 }
@@ -383,7 +387,7 @@ const styles = {
     navRight: { display:'flex', gap:'10px' },
     navBtn: { backgroundColor:'transparent', color:'white', border:'1px solid white', padding:'8px 16px', borderRadius:'5px', cursor:'pointer' },
     logoutBtn: { backgroundColor:'transparent', color:'white', border:'1px solid white', padding:'8px 16px', borderRadius:'5px', cursor:'pointer' },
-    content: { padding:'clamp(15px,3vw,30px)' },
+   content: { padding: '30px', flex: 1, display: 'flex', flexDirection: 'column', minHeight: 'calc(100vh - 63px)' },
     header: { display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:'20px', flexWrap:'wrap', gap:'10px' },
     headerBtns: { display:'flex', gap:'10px', flexWrap:'wrap' },
     title: { color:'#1F3864', margin:'0 0 5px 0', fontSize:'24px' },

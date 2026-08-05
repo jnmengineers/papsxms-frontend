@@ -4,6 +4,7 @@ import logo1 from '../assets/logo1.png';
 import { classDisplayName, classReportName, gradeLabel, streamLabel, streamColor } from '../utils/classUtils';
 import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
+import Footer from '../components/Footer';
 
 // Outside parent — prevents keyboard dismiss on re-render
 const TeacherFormFields = ({ formData, setFormData, onSubmit, onCancel, submitLabel }) => (
@@ -426,8 +427,10 @@ function Teachers() {
                         })}
                     </div>
                 )}
+                  <Footer />
             </div>
         </div>
+      
     </div>
     );
 }
