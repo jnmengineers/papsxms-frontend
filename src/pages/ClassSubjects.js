@@ -3,6 +3,7 @@ import api from '../services/api';
 import logo1 from '../assets/logo1.png';
 import { streamLabel, classDisplayName } from '../utils/classUtils';
 import Navbar from '../components/Navbar';
+import Sidebar from '../components/Sidebar';
 
 function ClassSubjects() {
     const [classes, setClasses] = useState([]);
@@ -270,12 +271,10 @@ function ClassSubjects() {
 
     return (
         <div style={styles.container}>
-            {/* Navbar */}
-            <Navbar rightContent={
-                <button onClick={() => window.location.href = '/dashboard'} style={{ backgroundColor: 'transparent', color: 'white', border: '1.5px solid rgba(255,255,255,0.4)', padding: '7px 14px', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: 500, fontFamily: 'inherit' }}>← Dashboard</button>
-            } />
-
-            <div style={styles.content}>
+            <Navbar />
+            <div style={styles.layoutRow}>
+                <Sidebar />
+                <div style={styles.content}>
                 <h2 style={styles.title}>📚 Class Subject Assignment</h2>
                 <p style={styles.subtitle}>
                     Assign subjects by grade level — all streams inherit automatically
@@ -517,12 +516,14 @@ function ClassSubjects() {
                     </div>
                 </div>
             </div>
+           </div> 
         </div>
     );
 }
 
 const styles = {
     container: { minHeight: '100vh', backgroundColor: '#f0f2f5' },
+    layoutRow: { display: 'flex' },
     navbar: { backgroundColor: '#1F3864', padding: '15px 30px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
     navLeft: { display: 'flex', alignItems: 'center', gap: '10px' },
     navLogo: { width: '45px', height: '45px', objectFit: 'contain' },

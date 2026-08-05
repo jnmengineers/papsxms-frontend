@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import logo1 from '../assets/logo1.png';
 import Navbar from '../components/Navbar';
+import Sidebar from '../components/Sidebar';
 
 function Dashboard() {
     const navigate = useNavigate();
@@ -112,9 +113,9 @@ function Dashboard() {
     return (
         <div style={styles.container}>
             <Navbar />
-        
-
-            <div style={styles.content}>
+            <div style={styles.layoutRow}>
+                <Sidebar />
+                <div style={styles.content}>
                 <h2 style={styles.welcome}>Welcome, {username}! 👋</h2>
                 <p style={styles.subtitle}>Exam Management System — Dashboard</p>
 
@@ -196,11 +197,13 @@ function Dashboard() {
                 </div>
             </div>
         </div>
+        </div>
     );
 }
 
 const styles = {
     container: { minHeight: '100vh', backgroundColor: '#f0f2f5' },
+    layoutRow: { display: 'flex' },
     navbar: { backgroundColor: '#1F3864', padding: '15px 30px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
     navLeft: { display: 'flex', alignItems: 'center', gap: '10px' },
     navLogo: { width: '45px', height: '45px', objectFit: 'contain' },

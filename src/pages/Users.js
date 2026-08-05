@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import api from '../services/api';
 import logo1 from '../assets/logo1.png';
 import { classDisplayName } from '../utils/classUtils';
+import Sidebar from '../components/Sidebar';
+import Navbar from '../components/Navbar';
 
 function Users() {
     const [users, setUsers] = useState([]);
@@ -118,18 +120,10 @@ function Users() {
 
     return (
         <div style={styles.container}>
-            <div style={styles.navbar}>
-                <div style={styles.navLeft}>
-                    <img src={logo1} alt="Logo" style={styles.navLogo} />
-                    <h2 style={styles.navTitle}>Pipeline Adventist School</h2>
-                </div>
-                <div style={styles.navRight}>
-                    <button onClick={() => window.location.href = '/dashboard'} style={styles.navBtn}>← Dashboard</button>
-                    <button onClick={() => { localStorage.clear(); window.location.href = '/'; }} style={styles.logoutBtn}>Logout</button>
-                </div>
-            </div>
-
-            <div style={styles.content}>
+            <Navbar />
+            <div style={styles.layoutRow}>
+                <Sidebar />
+                <div style={styles.content}>
                 <div style={styles.pageHeader}>
                     <div>
                         <h2 style={styles.title}>👤 User Management</h2>
@@ -343,11 +337,13 @@ function Users() {
                 )}
             </div>
         </div>
+    </div>
     );
 }
 
 const styles = {
     container: { minHeight: '100vh', backgroundColor: '#f0f2f5' },
+    layoutRow: {display: 'flex'},
     navbar: { backgroundColor: '#1F3864', padding: '15px 30px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
     navLeft: { display: 'flex', alignItems: 'center', gap: '10px' },
     navLogo: { width: '45px', height: '45px', objectFit: 'contain' },

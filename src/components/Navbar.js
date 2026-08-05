@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import logo1 from '../assets/logo1.png';
 
@@ -6,6 +6,18 @@ function Navbar({ rightContent }) {
     const navigate = useNavigate();
     const username = localStorage.getItem('username');
     const role = localStorage.getItem('role');
+    const [menuOpen, setMenuOpen] = useState(false);
+    const menuRef = useRef(null);
+
+    useEffect(() => {
+        const handleClickOutside = (e) => {
+            if (menuRef.current && !menuRef.current.contains(e.target)) {
+                setMenuOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
 
     const handleLogout = () => { localStorage.clear(); navigate('/'); };
 
@@ -20,13 +32,26 @@ function Navbar({ rightContent }) {
             <div style={styles.navRight}>
                 {rightContent}
                 {username && (
-                    <span style={styles.navUser}>{username} <span style={styles.roleTag}>{role}</span></span>
-                )}
-                {username && (
-                    <button onClick={() => navigate('/change-password')} style={styles.pwdBtn}>Password</button>
-                )}
-                {username && (
-                    <button onClick={handleLogout} style={styles.logoutBtn}>Logout</button>
+                    <div style={styles.userMenuWrap} ref={menuRef}>
+                        <div style={styles.userTrigger} onClick={() => setMenuOpen(!menuOpen)}>
+                            <div style={styles.avatar}>{username.charAt(0).toUpperCase()}</div>
+                            <span style={styles.navUser}>{username}</span>
+                            <span style={styles.roleTag}>{role}</span>
+                            <span style={styles.chevron}>{menuOpen ? '▲' : '▼'}</span>
+                        </div>
+                        {menuOpen && (
+                            <div style={styles.dropdown}>
+                                <div style={styles.dropdownItem}
+                                    onClick={() => { setMenuOpen(false); navigate('/change-password'); }}>
+                                    Change Password
+                                </div>
+                                <div style={{ ...styles.dropdownItem, color: '#dc3545' }}
+                                    onClick={handleLogout}>
+                                    Logout
+                                </div>
+                            </div>
+                        )}
+                    </div>
                 )}
             </div>
         </div>
@@ -34,7 +59,7 @@ function Navbar({ rightContent }) {
 }
 
 const styles = {
-   navbar: {
+    navbar: {
         backgroundColor: '#1F3864', padding: '12px 28px',
         display: 'flex', justifyContent: 'space-between', alignItems: 'center',
         flexWrap: 'wrap', gap: '10px',
@@ -50,24 +75,31 @@ const styles = {
     navLogo: { width: '26px', height: '26px', objectFit: 'contain' },
     navTitle: { color: 'white', fontSize: '17px', fontWeight: 700, letterSpacing: '0.2px' },
     navRight: { display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' },
-    navUser: {
-        color: 'white', fontSize: '13px', fontWeight: 500,
-        display: 'flex', alignItems: 'center', gap: '6px'
+    userMenuWrap: { position: 'relative' },
+    userTrigger: {
+        display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer',
+        padding: '6px 10px', borderRadius: '8px', transition: 'background-color 0.15s'
     },
+    avatar: {
+        width: '28px', height: '28px', borderRadius: '50%',
+        backgroundColor: '#FFD700', color: '#1F3864', display: 'flex',
+        alignItems: 'center', justifyContent: 'center', fontSize: '13px',
+        fontWeight: 700, flexShrink: 0
+    },
+    navUser: { color: 'white', fontSize: '13px', fontWeight: 500 },
     roleTag: {
         backgroundColor: 'rgba(255,215,0,0.15)', color: '#FFD700',
         padding: '2px 8px', borderRadius: '10px', fontSize: '11px', fontWeight: 700
     },
-    pwdBtn: {
-        backgroundColor: 'transparent', color: 'white',
-        border: '1.5px solid rgba(255,255,255,0.4)', padding: '7px 14px',
-        borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: 500,
-        fontFamily: 'inherit'
+    chevron: { color: 'rgba(255,255,255,0.6)', fontSize: '9px', marginLeft: '2px' },
+    dropdown: {
+        position: 'absolute', top: 'calc(100% + 8px)', right: 0,
+        backgroundColor: 'white', borderRadius: '10px', minWidth: '180px',
+        boxShadow: '0 8px 24px rgba(0,0,0,0.18)', overflow: 'hidden', zIndex: 1001
     },
-    logoutBtn: {
-        backgroundColor: 'rgba(255,255,255,0.12)', color: 'white', border: 'none',
-        padding: '7px 14px', borderRadius: '8px', cursor: 'pointer',
-        fontSize: '13px', fontWeight: 500, fontFamily: 'inherit'
+    dropdownItem: {
+        padding: '12px 16px', fontSize: '14px', color: '#333',
+        cursor: 'pointer', fontWeight: 500, transition: 'background-color 0.15s'
     }
 };
 

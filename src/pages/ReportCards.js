@@ -4,6 +4,7 @@ import logo1 from '../assets/logo1.png';
 import logo2 from '../assets/logo2.png';
 import { classDisplayName, classPrintLabel, classShortCode, streamLabel } from '../utils/classUtils';
 import Navbar from '../components/Navbar';
+import Sidebar from '../components/Sidebar';
 
 const gradeLabel = (m) => m >= 75 ? 'EE' : m >= 55 ? 'ME' : m >= 40 ? 'AE' : 'BE';
 const gradeColor = (m) => m >= 75 ? '#28a745' : m >= 55 ? '#2E75B6' : m >= 40 ? '#ffc107' : '#dc3545';
@@ -511,8 +512,9 @@ function ReportCards() {
             <Navbar rightContent={
                 <button onClick={() => window.location.href = '/dashboard'} style={{ backgroundColor: 'transparent', color: 'white', border: '1.5px solid rgba(255,255,255,0.4)', padding: '7px 14px', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: 500, fontFamily: 'inherit' }}>← Dashboard</button>
             } />
-
-            <div style={s.content}>
+            <div style={s.layoutRow}>
+                <Sidebar />
+                <div style={s.content}>
                 <h2 style={s.title}>Report Cards</h2>
                 <p style={s.subtitle}>Generate, view and print student report cards with progressive term tracking</p>
 
@@ -594,7 +596,6 @@ function ReportCards() {
                             <p style={{ fontSize: '12px', color: '#666', margin: 0 }}>{bulkProgress.done}/{bulkProgress.total} done</p>
                         </div>
                     )}
-                </div>
                 </div>
 
                 {editingCard && (
@@ -799,12 +800,15 @@ function ReportCards() {
                         </div>
                     </div>
                 )}
+            </div>
         </div>
+    </div>
     );
 }
 
 const s = {
     container: { minHeight: '100vh', backgroundColor: '#f0f2f5' },
+    layoutRow:{display: 'flex'},
     navbar: { backgroundColor: '#1F3864', padding: '15px 30px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
     navLeft: { display: 'flex', alignItems: 'center', gap: '10px' },
     navLogo: { width: '45px', height: '45px', objectFit: 'contain' },

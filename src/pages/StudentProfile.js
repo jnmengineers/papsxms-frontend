@@ -5,6 +5,7 @@ import logo1 from '../assets/logo1.png';
 import Spinner from '../components/Spinner';
 import { classDisplayName, streamLabel } from '../utils/classUtils';
 import Navbar from '../components/Navbar';
+import Sidebar from '../components/Sidebar';
 
 function StudentProfile() {
     const { studentId } = useParams();
@@ -67,13 +68,13 @@ function StudentProfile() {
 
     if (loading) return (
         <div style={styles.container}>
-            <div style={styles.navbar}>
-                <div style={styles.navLeft}>
-                    <img src={logo1} alt="Logo" style={styles.navLogo} />
-                    <h2 style={styles.navTitle}>Pipeline Adventist School</h2>
-                </div>
+            <Navbar />
+            <div style={styles.layoutRow}>
+                <Sidebar />
+                <div style={styles.content}>
             </div>
             <Spinner message="Loading student profile..." size="large" />
+        </div>
         </div>
     );
 
@@ -316,6 +317,7 @@ function StudentProfile() {
 
 const styles = {
     container: { minHeight: '100vh', backgroundColor: '#f0f2f5' },
+    layoutRow: { display: 'flex' },
     navbar: { backgroundColor: '#1F3864', padding: '15px 30px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
     navLeft: { display: 'flex', alignItems: 'center', gap: '10px' },
     navLogo: { width: '45px', height: '45px', objectFit: 'contain' },
