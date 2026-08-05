@@ -6,18 +6,26 @@ import Sidebar from '../components/Sidebar';
 import Footer from '../components/Footer';
 
 // ✅ Outside parent — prevents keyboard dismiss on mobile
-const ExamForm = ({ formData, setFormData, academicYears, onSubmit, onCancel, submitLabel }) => {
+const ExamForm = ({ formData, setFormData, academicYears, exams, onSubmit, onCancel, submitLabel }) => {
 
     const handleAcademicYearChange = (yearId) => {
         const selected = academicYears.find(ay => Number(ay.yearId) === Number(yearId));
         if (selected) {
+            // Find another exam in the same academic year + term that already has term dates set
+            const sibling = (exams || []).find(e =>
+                e.academicYear === selected.yearLabel &&
+                String(e.term) === String(selected.term) &&
+                (e.termOpeningDate || e.termClosingDate)
+            );
             setFormData(prev => ({
                 ...prev,
                 academicYearId: Number(yearId),
                 academicYear: selected.yearLabel,
                 term: String(selected.term),
                 startDate: selected.startDate,
-                endDate: selected.endDate
+                endDate: selected.endDate,
+                termOpeningDate: sibling?.termOpeningDate || prev.termOpeningDate || '',
+                termClosingDate: sibling?.termClosingDate || prev.termClosingDate || ''
             }));
         } else {
             setFormData(prev => ({ ...prev, academicYearId: '', academicYear: '', term: '', startDate: '', endDate: '' }));
@@ -90,6 +98,18 @@ const ExamForm = ({ formData, setFormData, academicYears, onSubmit, onCancel, su
                         </optgroup>
                     </select>
                 </div>
+
+                <div style={styles.formGroup}>
+                    <label style={styles.label}>🚪 Term Opening Date <span style={styles.autoTag}>For report cards</span></label>
+                    <input type="date" style={styles.input} value={formData.termOpeningDate || ''}
+                        onChange={e => setFormData(prev => ({...prev, termOpeningDate: e.target.value}))} />
+                </div>
+
+                <div style={styles.formGroup}>
+                    <label style={styles.label}>🔒 Term Closing Date <span style={styles.autoTag}>For report cards</span></label>
+                    <input type="date" style={styles.input} value={formData.termClosingDate || ''}
+                        onChange={e => setFormData(prev => ({...prev, termClosingDate: e.target.value}))} />
+                </div>
             </div>
 
             {/* Auto-filled preview */}
@@ -98,6 +118,11 @@ const ExamForm = ({ formData, setFormData, academicYears, onSubmit, onCancel, su
                     <span style={styles.autoFillItem}>🏫 Year: <strong>{formData.academicYear}</strong></span>
                     <span style={styles.autoFillItem}>📋 Term: <strong>Term {formData.term}</strong></span>
                     <span style={styles.autoFillItem}>🗓️ {formData.startDate} → {formData.endDate}</span>
+                    {(formData.termOpeningDate || formData.termClosingDate) && (
+                        <span style={{ ...styles.autoFillItem, backgroundColor: '#d4edda', padding: '2px 8px', borderRadius: '4px' }}>
+                            🚪 {formData.termOpeningDate || '-'} → 🔒 {formData.termClosingDate || '-'}
+                        </span>
+                    )}
                     {formData.examType && (
                         <span style={{
                             ...styles.autoFillItem,
@@ -128,7 +153,8 @@ function Exams() {
     const [editingExam, setEditingExam] = useState(null);
     const [formData, setFormData] = useState({
         examName: '', academicYear: '', academicYearId: '',
-        term: '', startDate: '', endDate: '', classLevel: '', examType: ''
+        term: '', startDate: '', endDate: '', classLevel: '', examType: '',
+        termOpeningDate: '', termClosingDate: ''
     });
 
     const examTypeColors = { OPENING: '#28a745', MID_TERM: '#ffc107', END_TERM: '#2E75B6', EXTRA: '#6f42c1' };
@@ -158,7 +184,7 @@ function Exams() {
         } catch (err) {}
     };
 
-    const emptyForm = { examName: '', academicYear: '', academicYearId: '', term: '', startDate: '', endDate: '', classLevel: '', examType: '' };
+    const emptyForm = { examName: '', academicYear: '', academicYearId: '', term: '', startDate: '', endDate: '', classLevel: '', examType: '', termOpeningDate: '', termClosingDate: '' };
 
     const handleEdit = (exam) => {
         setEditingExam(exam);
@@ -171,7 +197,9 @@ function Exams() {
             startDate: exam.startDate,
             endDate: exam.endDate,
             classLevel: exam.classLevel,
-            examType: exam.examType || ''
+            examType: exam.examType || '',
+            termOpeningDate: exam.termOpeningDate || '',
+            termClosingDate: exam.termClosingDate || ''
         });
         setShowAddForm(false);
     };
@@ -186,6 +214,8 @@ function Exams() {
         endDate: formData.endDate,
         classLevel: formData.classLevel,
         examType: formData.examType || null,
+        termOpeningDate: formData.termOpeningDate || null,
+        termClosingDate: formData.termClosingDate || null,
         ...(formData.academicYearId && { academicYearRef: { yearId: formData.academicYearId } })
     });
 
@@ -277,6 +307,7 @@ function Exams() {
                         <ExamForm
                             formData={formData} setFormData={setFormData}
                             academicYears={academicYears}
+                            exams={exams}
                             onSubmit={handleSubmitAdd}
                             onCancel={() => { setShowAddForm(false); setFormData(emptyForm); }}
                             submitLabel="💾 Save Exam"
@@ -360,6 +391,17 @@ function Exams() {
                                                             </span>
                                                         </div>
                                                     </div>
+                                                    {(exam.termOpeningDate || exam.termClosingDate) && (
+                                                        <div style={styles.infoItem}>
+                                                            <span style={styles.infoIcon}>🗓️</span>
+                                                            <div>
+                                                                <div style={styles.infoLabel}>Term Dates</div>
+                                                                <div style={styles.infoValue}>
+                                                                    {exam.termOpeningDate ? 'Open: ' + exam.termOpeningDate : 'Open: -'} | {exam.termClosingDate ? 'Close: ' + exam.termClosingDate : 'Close: -'}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    )}
                                                 </div>
                                             </div>
                                             <div style={styles.examActions}>
@@ -384,6 +426,7 @@ function Exams() {
                                                 <ExamForm
                                                     formData={formData} setFormData={setFormData}
                                                     academicYears={academicYears}
+                                                    exams={exams}
                                                     onSubmit={handleSubmitEdit}
                                                     onCancel={handleCancelEdit}
                                                     submitLabel="✅ Update Exam"

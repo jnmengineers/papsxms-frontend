@@ -17,7 +17,6 @@ const printReportCard = (card, singleResults, progressiveData, allCards) => {
     const term = exam?.term;
     const academicYear = exam?.academicYear;
 
-    // progressiveData is pre-anchored server-side to this exam's position
     const termExams = progressiveData?.exams || [];
     const rawSubjects = progressiveData?.subjects || [];
     const isProgressive = termExams.length > 1 && rawSubjects.length > 0;
@@ -38,19 +37,26 @@ const printReportCard = (card, singleResults, progressiveData, allCards) => {
     let colCounts = {};
 
     if (isProgressive) {
-        examCols = termExams.map(e => e.examType).filter(Boolean);
-        colSums = { OPENING: 0, MID_TERM: 0, END_TERM: 0 };
-        colCounts = { OPENING: 0, MID_TERM: 0, END_TERM: 0 };
+        const allCols = termExams.map(e => e.examType).filter(Boolean);
+        const rawColSums = { OPENING: 0, MID_TERM: 0, END_TERM: 0 };
+        const rawColCounts = { OPENING: 0, MID_TERM: 0, END_TERM: 0 };
+        rawSubjects.forEach(sub => {
+            if (sub.opening != null) { rawColSums.OPENING += sub.opening; rawColCounts.OPENING++; }
+            if (sub.midTerm != null) { rawColSums.MID_TERM += sub.midTerm; rawColCounts.MID_TERM++; }
+            if (sub.endTerm != null) { rawColSums.END_TERM += sub.endTerm; rawColCounts.END_TERM++; }
+        });
+        examCols = allCols.filter(type => rawColCounts[type] > 0);
+        colSums = rawColSums;
+        colCounts = rawColCounts;
+
+        const subjectColPct = 34;
+        const examColPct = examCols.length > 0 ? ((100 - subjectColPct) / examCols.length).toFixed(1) : 0;
 
         examHeaders = examCols.map(type =>
-            '<th style="color:white;padding:6px 8px;text-align:center;background:' + (examTypeColors[type] || '#1F3864') + ';font-size:11px;">' + (examTypeLabels[type] || type) + '</th>'
+            '<th style="width:' + examColPct + '%;color:white;padding:6px 8px;text-align:center;background:' + (examTypeColors[type] || '#1F3864') + ';font-size:11px;">' + (examTypeLabels[type] || type) + '</th>'
         ).join('');
 
         subjectRows = rawSubjects.map((sub, i) => {
-            if (sub.opening != null) { colSums.OPENING += sub.opening; colCounts.OPENING++; }
-            if (sub.midTerm != null) { colSums.MID_TERM += sub.midTerm; colCounts.MID_TERM++; }
-            if (sub.endTerm != null) { colSums.END_TERM += sub.endTerm; colCounts.END_TERM++; }
-
             const cells = examCols.map(type => {
                 const val = type === 'OPENING' ? sub.opening : type === 'MID_TERM' ? sub.midTerm : sub.endTerm;
                 return '<td style="padding:6px 8px;border:1px solid #ddd;text-align:center;">' + badge(val) + '</td>';
@@ -71,16 +77,16 @@ const printReportCard = (card, singleResults, progressiveData, allCards) => {
     }
 
     const avgRowHtml = isProgressive
-        ? '<tr style="background:#1F3864;">'
-            + '<td style="padding:6px 8px;font-weight:bold;color:white;font-size:12px;">Average</td>'
+        ? '<tr style="background:#e8ecf3;border-top:2px solid #1F3864;">'
+            + '<td style="padding:6px 8px;font-weight:bold;color:#1F3864;font-size:12px;">Total</td>'
             + examCols.map(type => {
-                const avg = colCounts[type] > 0 ? colSums[type] / colCounts[type] : null;
-                return '<td style="padding:6px 8px;text-align:center;">' + badge(avg) + '</td>';
+                const total = colSums[type] || 0;
+                const maxTotal = (colCounts[type] || 0) * 100;
+                return '<td style="padding:6px 8px;text-align:center;color:#1F3864;font-weight:bold;">' + total + '/' + maxTotal + '</td>';
             }).join('')
             + '</tr>'
         : '';
 
-    // Overall term average — across every mark visible on this card, regardless of column
     let termAvgSum = 0, termAvgCount = 0;
     if (isProgressive) {
         rawSubjects.forEach(sub => {
@@ -92,21 +98,21 @@ const printReportCard = (card, singleResults, progressiveData, allCards) => {
     const termAvg = termAvgCount > 0 ? termAvgSum / termAvgCount : null;
 
     const subjectCount = isProgressive ? rawSubjects.length : singleResults.length;
-    const overallGrade = isProgressive
-        ? gl(termAvgCount > 0 ? termAvgSum / termAvgCount : null)
-        : gl(singleResults.length > 0 ? singleResults.reduce((s, r) => s + r.marksObtained, 0) / singleResults.length : null);
 
     const theadCols = isProgressive
-        ? '<th style="color:white;padding:7px 8px;text-align:left;font-size:12px;">SUBJECT</th>' + examHeaders
-        : '<th style="color:white;padding:7px 8px;text-align:left;font-size:12px;">SUBJECT</th><th style="color:#FFD700;padding:7px 8px;text-align:center;font-size:12px;">GRADE</th>';
+        ? '<th style="width:34%;color:white;padding:7px 8px;text-align:left;font-size:12px;">SUBJECT</th>' + examHeaders
+        : '<th style="width:60%;color:white;padding:7px 8px;text-align:left;font-size:12px;">SUBJECT</th><th style="width:40%;color:#FFD700;padding:7px 8px;text-align:center;font-size:12px;">GRADE</th>';
+
+    const openingDateStr = exam?.termOpeningDate ? new Date(exam.termOpeningDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '-';
+    const closingDateStr = exam?.termClosingDate ? new Date(exam.termClosingDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '-';
 
     const html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">'
-        + '<title>Report Card - ' + (student ? student.firstName + ' ' + student.lastName : '') + '</title>'
-        + '<style>*{box-sizing:border-box;margin:0;padding:0;}body{font-family:"Times New Roman",Times,serif;font-size:12px;color:#000;padding:12px;max-width:800px;margin:0 auto;}'
-        + '@media print{@page{size:A4;margin:8mm;}.no-print{display:none!important;}body{-webkit-print-color-adjust:exact;print-color-adjust:exact;}}</style>'
+        + '<title>Assessment Report - ' + (student ? student.firstName + ' ' + student.lastName : '') + '</title>'
+        + '<style>*{box-sizing:border-box;margin:0;padding:0;}html,body{height:100%;}body{font-family:"Times New Roman",Times,serif;font-size:12px;color:#000;padding:12px;margin:0 auto;display:flex;flex-direction:column;justify-content:center;min-height:100vh;}'
+        + '@media print{@page{size:A4;margin:8mm;}.no-print{display:none!important;}html,body{height:auto;}body{-webkit-print-color-adjust:exact;print-color-adjust:exact;min-height:100vh;justify-content:center;}}</style>'
         + '</head><body>'
         + '<div class="no-print" style="background:#1F3864;color:white;padding:10px 15px;margin-bottom:12px;border-radius:8px;display:flex;justify-content:space-between;align-items:center;">'
-        + '<span style="font-weight:bold;">Report Card - ' + (student ? student.firstName + ' ' + student.lastName : '') + '</span>'
+        + '<span style="font-weight:bold;">Assessment Report - ' + (student ? student.firstName + ' ' + student.lastName : '') + '</span>'
         + '<button onclick="window.print()" style="background:#28a745;color:white;border:none;padding:8px 20px;border-radius:5px;font-weight:bold;cursor:pointer;font-size:14px;">Print / Save PDF</button>'
         + '</div>'
         + '<div style="border-bottom:3px solid #1F3864;padding-bottom:8px;margin-bottom:10px;">'
@@ -118,9 +124,9 @@ const printReportCard = (card, singleResults, progressiveData, allCards) => {
         + '</div>'
         + '<img src="/logo2.png" onerror="this.style.display=\'none\'" style="width:55px;height:55px;object-fit:contain;">'
         + '</div>'
-        + '<div style="background:#1F3864;padding:5px 10px;text-align:center;border-radius:4px;">'
-        + '<div style="color:white;font-weight:bold;font-size:13px;">' + (isProgressive ? 'PROGRESSIVE TERM REPORT CARD' : 'REPORT CARD') + '</div>'
-        + '<div style="color:#BDD7EE;font-size:10px;">Term ' + term + ' - ' + academicYear + ' - ' + (exam ? exam.examName : '') + '</div>'
+        + '<div style="border:1.5px solid #1F3864;padding:5px 10px;text-align:center;border-radius:4px;">'
+        + '<div style="color:#1F3864;font-weight:bold;font-size:13px;">' + (isProgressive ? 'PROGRESSIVE ASSESSMENT REPORT' : 'ASSESSMENT REPORT') + '</div>'
+        + '<div style="color:#555;font-size:10px;">Term ' + term + ' - ' + academicYear + ' - ' + (exam ? exam.examName : '') + '</div>'
         + '</div></div>'
         + '<div style="background:#f8f9fa;padding:8px 12px;border-radius:6px;margin-bottom:10px;border-left:4px solid #1F3864;">'
         + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;">'
@@ -129,13 +135,12 @@ const printReportCard = (card, singleResults, progressiveData, allCards) => {
         + '<div style="font-size:11px;"><strong style="color:#1F3864;">Class:</strong> ' + (student ? (student.className || '-') : '-') + '</div>'
         + '<div style="font-size:11px;"><strong style="color:#1F3864;">Stream:</strong> ' + (student?.stream ? (student.stream === 'YELLOW' ? 'Yellow' : student.stream === 'BLUE' ? 'Blue' : student.stream === 'RED' ? 'Red' : student.stream) : '-') + '</div>'
         + '</div></div>'
-        + '<table style="width:100%;border-collapse:collapse;margin-bottom:10px;"><thead>'
+        + '<table style="width:100%;border-collapse:collapse;margin-bottom:10px;table-layout:fixed;"><thead>'
         + '<tr style="background:#1F3864;">' + theadCols + '</tr>'
         + '</thead><tbody>' + subjectRows + avgRowHtml + '</tbody></table>'
-        + '<div style="display:flex;gap:12px;background:#1F3864;padding:10px 12px;border-radius:6px;margin-bottom:10px;">'
-        + '<div style="flex:1;text-align:center;"><div style="color:#FFD700;font-size:10px;">Grade</div><div style="color:white;font-size:20px;font-weight:bold;">' + overallGrade + '</div></div>'
-        + '<div style="flex:1;text-align:center;"><div style="color:#FFD700;font-size:10px;">Subjects</div><div style="color:white;font-size:20px;font-weight:bold;">' + subjectCount + '</div></div>'
-        + '<div style="flex:1;text-align:center;"><div style="color:#FFD700;font-size:10px;">Term Average</div><div style="color:white;font-size:20px;font-weight:bold;">' + gl(termAvg) + '</div></div>'
+        + '<div style="display:flex;gap:12px;border:1.5px solid #1F3864;padding:10px 12px;border-radius:6px;margin-bottom:10px;">'
+        + '<div style="flex:1;text-align:center;"><div style="color:#666;font-size:10px;">Subjects</div><div style="color:#1F3864;font-size:20px;font-weight:bold;">' + subjectCount + '</div></div>'
+        + '<div style="flex:1;text-align:center;"><div style="color:#666;font-size:10px;">Average</div><div style="color:#1F3864;font-size:20px;font-weight:bold;">' + gl(termAvg) + '</div></div>'
         + '</div>'
         + '<div style="background:#f8f9fa;padding:6px 10px;border-radius:4px;margin-bottom:10px;font-size:10px;">'
         + '<strong>Grade Key: </strong>'
@@ -155,8 +160,12 @@ const printReportCard = (card, singleResults, progressiveData, allCards) => {
         + '<p style="margin:0 0 16px 0;min-height:28px;font-size:11px;color:#333;">' + (card.principalComment || '.................................................................') + '</p>'
         + '<p style="margin:0;color:#666;font-size:10px;">Signature: _________________ Date: _________</p>'
         + '</div></div>'
+        + '<div style="display:flex;justify-content:space-between;border-top:1px solid #ddd;padding-top:8px;margin-bottom:6px;font-size:10px;">'
+        + '<div><strong style="color:#1F3864;">Term Opens:</strong> ' + openingDateStr + '</div>'
+        + '<div><strong style="color:#1F3864;">Term Closes:</strong> ' + closingDateStr + '</div>'
+        + '</div>'
         + '<p style="text-align:center;font-size:9px;color:#999;border-top:2px solid #1F3864;padding-top:6px;">'
-        + 'Pipeline Adventist School - Official Report Card - Issued: ' + new Date().toLocaleDateString()
+        + 'Pipeline Adventist School - Official Assessment Report - Issued: ' + new Date().toLocaleDateString()
         + '</p></body></html>';
 
     const win = window.open('', '_blank');
@@ -236,8 +245,6 @@ function ReportCards() {
         catch (e) { setError('Failed to load report cards'); setLoading(false); }
     };
 
-    // Returns true if a report card belongs to the logged-in teacher's class.
-    // Uses the classes array (from API) so className/stream are always in the right format.
     const cardBelongsToTeacher = (card) => {
         if (!isTeacher || !linkedClassId) return true;
         if (String(card.student?.schoolClass?.classId) === String(linkedClassId)) return true;
@@ -257,7 +264,6 @@ function ReportCards() {
         try {
             const r = await api.get('/api/results');
             const data = r.data.filter(res => String(res.exam?.examId) === String(examId));
-            // schoolClass.classId is null in API — match classes by className+stream instead
             const classKeys = [...new Set(data.map(res => {
                 const cn = res.student?.className;
                 const st = res.student?.stream || res.student?.schoolClass?.stream;
@@ -364,8 +370,6 @@ function ReportCards() {
         setPrinting(null);
     };
 
-
-
     const handlePrintAll = async () => {
         if (!filtered.length) return;
         setPrintingAll(true); setError('');
@@ -388,15 +392,20 @@ function ReportCards() {
                 const gl=(m)=>m==null?'-':m>=75?'EE':m>=55?'ME':m>=40?'AE':'BE';
                 const badge=(m)=>m==null?'<span style="color:#ccc;">-</span>':'<span style="display:inline-block;padding:2px 10px;border-radius:10px;font-weight:bold;font-size:11px;color:white;background:'+gc(m)+';">'+gl(m)+'</span>';
                 let subjectRows=''; let examCols=[]; let colSums={}; let colCounts={};
+                let subjectColPct = 34;
                 if (isProgressive) {
                     const etl={OPENING:'Opening',MID_TERM:'Mid Term',END_TERM:'End Term'};
                     const etc={OPENING:'#28a745',MID_TERM:'#e07a2f',END_TERM:'#2E75B6'};
-                    examCols=termExams.map(e=>e.examType).filter(Boolean);
-                    colSums={OPENING:0,MID_TERM:0,END_TERM:0}; colCounts={OPENING:0,MID_TERM:0,END_TERM:0};
+                    const allCols=termExams.map(e=>e.examType).filter(Boolean);
+                    const rawColSums={OPENING:0,MID_TERM:0,END_TERM:0}; const rawColCounts={OPENING:0,MID_TERM:0,END_TERM:0};
+                    rawSubjects.forEach(sub=>{
+                        if(sub.opening!=null){rawColSums.OPENING+=sub.opening;rawColCounts.OPENING++;}
+                        if(sub.midTerm!=null){rawColSums.MID_TERM+=sub.midTerm;rawColCounts.MID_TERM++;}
+                        if(sub.endTerm!=null){rawColSums.END_TERM+=sub.endTerm;rawColCounts.END_TERM++;}
+                    });
+                    examCols=allCols.filter(type=>rawColCounts[type]>0);
+                    colSums=rawColSums; colCounts=rawColCounts;
                     subjectRows=rawSubjects.map((sub,i)=>{
-                        if(sub.opening!=null){colSums.OPENING+=sub.opening;colCounts.OPENING++;}
-                        if(sub.midTerm!=null){colSums.MID_TERM+=sub.midTerm;colCounts.MID_TERM++;}
-                        if(sub.endTerm!=null){colSums.END_TERM+=sub.endTerm;colCounts.END_TERM++;}
                         const cells=examCols.map(type=>{
                             const val=type==='OPENING'?sub.opening:type==='MID_TERM'?sub.midTerm:sub.endTerm;
                             return '<td style="padding:6px;border:1px solid #ddd;text-align:center;">'+badge(val)+'</td>';
@@ -409,8 +418,8 @@ function ReportCards() {
                     ).join('');
                 }
                 const avgRowHtml = isProgressive
-                    ? '<tr style="background:#1F3864;"><td style="padding:6px;font-weight:bold;color:white;font-size:12px;">Average</td>'
-                        + examCols.map(type=>{const avg=colCounts[type]>0?colSums[type]/colCounts[type]:null;return '<td style="padding:6px;text-align:center;">'+badge(avg)+'</td>';}).join('')
+                    ? '<tr style="background:#e8ecf3;border-top:2px solid #1F3864;"><td style="padding:6px;font-weight:bold;color:#1F3864;font-size:12px;">Total</td>'
+                        + examCols.map(type=>{const total=colSums[type]||0;const maxTotal=(colCounts[type]||0)*100;return '<td style="padding:6px;text-align:center;color:#1F3864;font-weight:bold;">'+total+'/'+maxTotal+'</td>';}).join('')
                         + '</tr>'
                     : '';
                 let termAvgSum=0, termAvgCount=0;
@@ -421,19 +430,21 @@ function ReportCards() {
                 }
                 const termAvg = termAvgCount>0 ? termAvgSum/termAvgCount : null;
                 const subjectCount = isProgressive ? rawSubjects.length : singleResults.length;
-                const overallGrade = gl(termAvg);
                 const stStream=student?.stream?(student.stream==='YELLOW'?'Yellow':student.stream==='BLUE'?'Blue':student.stream==='RED'?'Red':student.stream):'-';
+                const examColPct = isProgressive && examCols.length > 0 ? ((100 - subjectColPct) / examCols.length).toFixed(1) : 0;
                 const theadCols = isProgressive
-                    ? '<th style="color:white;padding:6px;font-size:11px;text-align:left;">SUBJECT</th>'+examCols.map(type=>{const etl={OPENING:'Opening',MID_TERM:'Mid Term',END_TERM:'End Term'};const etc={OPENING:'#28a745',MID_TERM:'#e07a2f',END_TERM:'#2E75B6'};return '<th style="color:white;padding:6px;font-size:11px;text-align:center;background:'+(etc[type]||'#1F3864')+';">'+(etl[type]||type)+'</th>';}).join('')
-                    : '<th style="color:white;padding:6px;font-size:11px;text-align:left;">SUBJECT</th><th style="color:#FFD700;padding:6px;font-size:11px;text-align:center;">GRADE</th>';
+                    ? '<th style="width:'+subjectColPct+'%;color:white;padding:6px;font-size:11px;text-align:left;">SUBJECT</th>'+examCols.map(type=>{const etl={OPENING:'Opening',MID_TERM:'Mid Term',END_TERM:'End Term'};const etc={OPENING:'#28a745',MID_TERM:'#e07a2f',END_TERM:'#2E75B6'};return '<th style="width:'+examColPct+'%;color:white;padding:6px;font-size:11px;text-align:center;background:'+(etc[type]||'#1F3864')+';">'+(etl[type]||type)+'</th>';}).join('')
+                    : '<th style="width:60%;color:white;padding:6px;font-size:11px;text-align:left;">SUBJECT</th><th style="width:40%;color:#FFD700;padding:6px;font-size:11px;text-align:center;">GRADE</th>';
+                const openingDateStr = exam?.termOpeningDate ? new Date(exam.termOpeningDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '-';
+                const closingDateStr = exam?.termClosingDate ? new Date(exam.termClosingDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '-';
                 allPages.push(
-                    '<div style="page-break-after:always;padding:12px;max-width:780px;margin:0 auto;">'
+                    '<div style="page-break-after:always;padding:12px;margin:0 auto;min-height:calc(100vh - 24px);display:flex;flex-direction:column;justify-content:center;">'
                     +'<div style="border-bottom:3px solid #1F3864;padding-bottom:8px;margin-bottom:10px;text-align:center;">'
                     +'<div style="color:#1F3864;font-size:13px;font-weight:bold;text-transform:uppercase;">PIPELINE ADVENTIST PRIMARY &amp; JUNIOR SECONDARY SCHOOL</div>'
                     +'<div style="color:#2E75B6;font-style:italic;font-size:11px;margin:2px 0;">Abreast with the Best in Holistic Education</div>'
-                    +'<div style="background:#1F3864;padding:5px 12px;text-align:center;border-radius:4px;margin-top:6px;">'
-                    +'<div style="color:white;font-weight:bold;font-size:13px;">'+(isProgressive?'PROGRESSIVE TERM REPORT CARD':'REPORT CARD')+'</div>'
-                    +'<div style="color:#BDD7EE;font-size:11px;">Term '+term+' - '+academicYear+' - '+(exam?exam.examName:'')+'</div>'
+                    +'<div style="border:1.5px solid #1F3864;padding:5px 12px;text-align:center;border-radius:4px;margin-top:6px;">'
+                    +'<div style="color:#1F3864;font-weight:bold;font-size:13px;">'+(isProgressive?'PROGRESSIVE ASSESSMENT REPORT':'ASSESSMENT REPORT')+'</div>'
+                    +'<div style="color:#555;font-size:11px;">Term '+term+' - '+academicYear+' - '+(exam?exam.examName:'')+'</div>'
                     +'</div></div>'
                     +'<div style="background:#f8f9fa;padding:8px;border-radius:6px;margin-bottom:10px;border-left:4px solid #1F3864;">'
                     +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;">'
@@ -442,31 +453,34 @@ function ReportCards() {
                     +'<div style="font-size:11px;"><strong style="color:#1F3864;">Class:</strong> '+(student?(student.className||'-'):'-')+'</div>'
                     +'<div style="font-size:11px;"><strong style="color:#1F3864;">Stream:</strong> '+stStream+'</div>'
                     +'</div></div>'
-                    +'<table style="width:100%;border-collapse:collapse;margin-bottom:10px;">'
+                    +'<table style="width:100%;border-collapse:collapse;margin-bottom:10px;table-layout:fixed;">'
                     +'<thead><tr style="background:#1F3864;">'+theadCols+'</tr></thead><tbody>'+subjectRows+avgRowHtml+'</tbody></table>'
-                    +'<div style="display:flex;gap:10px;background:#1F3864;padding:8px;border-radius:6px;margin-bottom:10px;">'
-                    +'<div style="flex:1;text-align:center;"><div style="color:#FFD700;font-size:10px;">Grade</div><div style="color:white;font-size:18px;font-weight:bold;">'+overallGrade+'</div></div>'
-                    +'<div style="flex:1;text-align:center;"><div style="color:#FFD700;font-size:10px;">Subjects</div><div style="color:white;font-size:18px;font-weight:bold;">'+subjectCount+'</div></div>'
-                    +'<div style="flex:1;text-align:center;"><div style="color:#FFD700;font-size:10px;">Term Average</div><div style="color:white;font-size:18px;font-weight:bold;">'+gl(termAvg)+'</div></div>'
+                    +'<div style="display:flex;gap:10px;border:1.5px solid #1F3864;padding:8px;border-radius:6px;margin-bottom:10px;">'
+                    +'<div style="flex:1;text-align:center;"><div style="color:#666;font-size:10px;">Subjects</div><div style="color:#1F3864;font-size:18px;font-weight:bold;">'+subjectCount+'</div></div>'
+                    +'<div style="flex:1;text-align:center;"><div style="color:#666;font-size:10px;">Average</div><div style="color:#1F3864;font-size:18px;font-weight:bold;">'+gl(termAvg)+'</div></div>'
                     +'</div>'
                     +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:8px;">'
                     +'<div style="border:1px solid #ddd;padding:10px;border-radius:6px;"><p style="font-weight:bold;color:#1F3864;margin:0 0 6px 0;font-size:11px;">Class Teacher Comment:</p><p style="margin:0 0 16px 0;min-height:26px;font-size:11px;color:#333;">'+(card.teacherComment||'.................................................')+'</p><p style="margin:0;color:#666;font-size:10px;">Signature: _____________ Date: _________</p></div>'
                     +'<div style="border:1px solid #ddd;padding:10px;border-radius:6px;"><p style="font-weight:bold;color:#1F3864;margin:0 0 6px 0;font-size:11px;">Principal Comment:</p><p style="margin:0 0 16px 0;min-height:26px;font-size:11px;color:#333;">'+(card.principalComment||'.................................................')+'</p><p style="margin:0;color:#666;font-size:10px;">Signature: _____________ Date: _________</p></div>'
                     +'</div>'
-                    +'<p style="text-align:center;font-size:9px;color:#999;border-top:2px solid #1F3864;padding-top:6px;">Pipeline Adventist School - Official Report Card - Issued: '+new Date().toLocaleDateString()+'</p>'
+                    +'<div style="display:flex;justify-content:space-between;border-top:1px solid #ddd;padding-top:8px;margin-bottom:6px;font-size:10px;">'
+                    +'<div><strong style="color:#1F3864;">Term Opens:</strong> '+openingDateStr+'</div>'
+                    +'<div><strong style="color:#1F3864;">Term Closes:</strong> '+closingDateStr+'</div>'
+                    +'</div>'
+                    +'<p style="text-align:center;font-size:9px;color:#999;border-top:2px solid #1F3864;padding-top:6px;">Pipeline Adventist School - Official Assessment Report - Issued: '+new Date().toLocaleDateString()+'</p>'
                     +'</div>'
                 );
             } catch(e) { console.error('Failed card:', card.reportId, e); }
         }
         if (!allPages.length) { alert('No report cards could be loaded.'); setPrintingAll(false); return; }
-        const html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Bulk Report Cards</title>'
+        const html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Bulk Assessment Reports</title>'
             +'<style>*{box-sizing:border-box;margin:0;padding:0;}body{font-family:"Times New Roman",Times,serif;font-size:12px;color:#000;}'
             +'.no-print{background:#1F3864;color:white;padding:12px 20px;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:999;}'
             +'@media print{@page{size:A4;margin:8mm;}.no-print{display:none!important;}body{-webkit-print-color-adjust:exact;print-color-adjust:exact;}'
             +'div[style*="page-break-after"]:last-child{page-break-after:avoid!important;}}'
             +'</style></head>'
             +'<body>'
-            +'<div class="no-print"><span style="font-weight:bold;">Bulk Print - '+allPages.length+' Report Card(s)</span>'
+            +'<div class="no-print"><span style="font-weight:bold;">Bulk Print - '+allPages.length+' Assessment Report(s)</span>'
             +'<button onclick="window.print()" style="background:#FFD700;color:#1F3864;border:none;padding:8px 20px;border-radius:5px;font-weight:bold;cursor:pointer;font-size:14px;">Print All / Save PDF</button></div>'
             +allPages.join('')+'</body></html>';
         const win = window.open('', '_blank');
@@ -517,13 +531,13 @@ function ReportCards() {
                 <Sidebar />
                 <div style={s.content}>
                 <h2 style={s.title}>Report Cards</h2>
-                <p style={s.subtitle}>Generate, view and print student report cards with progressive term tracking</p>
+                <p style={s.subtitle}>Generate, view and print student assessment reports with progressive term tracking</p>
 
                 {error && <p style={s.error}>{error}</p>}
                 {successMsg && <p style={s.success}>{successMsg}</p>}
 
                 <div style={s.genCard}>
-                    <h3 style={{ color: '#1F3864', margin: '0 0 12px 0', fontSize: '16px' }}>Generate Report Cards</h3>
+                    <h3 style={{ color: '#1F3864', margin: '0 0 12px 0', fontSize: '16px' }}>Generate Assessment Reports</h3>
                     <div style={s.genTabs}>
                         <button onClick={() => setGenMode('class')} style={{ ...s.genTab, backgroundColor: genMode === 'class' ? '#1F3864' : 'white', color: genMode === 'class' ? 'white' : '#1F3864' }}>Per Class (Bulk)</button>
                         <button onClick={() => setGenMode('student')} style={{ ...s.genTab, backgroundColor: genMode === 'student' ? '#1F3864' : 'white', color: genMode === 'student' ? 'white' : '#1F3864' }}>Per Student</button>
@@ -636,7 +650,7 @@ function ReportCards() {
 
                 {!loading && classTiles.length > 0 && (
                     <div style={{ marginBottom: '25px' }}>
-                        <h3 style={{ color: '#1F3864', margin: '0 0 12px 0' }}>Classes with Report Cards</h3>
+                        <h3 style={{ color: '#1F3864', margin: '0 0 12px 0' }}>Classes with Assessment Reports</h3>
                         <div style={s.classTilesGrid}>
                             {classTiles.map((cls, i) => {
                                 const color = sectionColor(cls.section);
@@ -707,8 +721,8 @@ function ReportCards() {
                         ) : filtered.length === 0 ? (
                             <div style={s.emptyState}>
                                 <div style={{ fontSize: '48px', marginBottom: '15px' }}>📋</div>
-                                <h3>No Report Cards Found</h3>
-                                <p style={{ color: '#666' }}>Generate report cards using the form above</p>
+                                <h3>No Assessment Reports Found</h3>
+                                <p style={{ color: '#666' }}>Generate assessment reports using the form above</p>
                             </div>
                         ) : (
                             <div style={s.tableWrapper}>
@@ -764,7 +778,7 @@ function ReportCards() {
                 ) : !loading && classTiles.length > 0 ? (
                     <div style={{ backgroundColor: 'white', padding: '30px', borderRadius: '10px', textAlign: 'center', boxShadow: '0 2px 4px rgba(0,0,0,0.08)', color: '#888' }}>
                         <div style={{ fontSize: '36px', marginBottom: '10px' }}>👆</div>
-                        <p style={{ fontSize: '14px', margin: 0 }}>Click a class tile above to view its report cards</p>
+                        <p style={{ fontSize: '14px', margin: 0 }}>Click a class tile above to view its assessment reports</p>
                     </div>
                 ) : loading ? (
                     <p style={{ textAlign: 'center', padding: '40px', color: '#666' }}>Loading...</p>
@@ -773,9 +787,9 @@ function ReportCards() {
                 {deleteConfirm && (
                     <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999 }}>
                         <div style={{ backgroundColor: 'white', padding: '25px 30px', borderRadius: '10px', maxWidth: '380px', width: '90%', boxShadow: '0 10px 30px rgba(0,0,0,0.3)' }}>
-                            <h3 style={{ color: '#dc3545', margin: '0 0 12px 0' }}>Delete Report Card?</h3>
+                            <h3 style={{ color: '#dc3545', margin: '0 0 12px 0' }}>Delete Assessment Report?</h3>
                             <p style={{ color: '#555', marginBottom: '20px' }}>
-                                {'Delete report card for '}
+                                {'Delete assessment report for '}
                                 <strong>{deleteConfirm.student?.firstName} {deleteConfirm.student?.lastName}</strong>
                                 {deleteConfirm.exam ? deleteConfirm.exam.examName : ''} - This cannot be undone.
                             </p>
@@ -790,9 +804,9 @@ function ReportCards() {
                 {deleteAllConfirm && (
                     <div style={{ position:'fixed', top:0, left:0, right:0, bottom:0, backgroundColor:'rgba(0,0,0,0.5)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:10000 }}>
                         <div style={{ backgroundColor:'white', padding:'25px 30px', borderRadius:'10px', maxWidth:'400px', width:'90%', boxShadow:'0 10px 30px rgba(0,0,0,0.3)' }}>
-                            <h3 style={{ color:'#dc3545', margin:'0 0 12px 0' }}>🗑️ Delete All Report Cards?</h3>
+                            <h3 style={{ color:'#dc3545', margin:'0 0 12px 0' }}>🗑️ Delete All Assessment Reports?</h3>
                             <p style={{ color:'#555', marginBottom:'20px' }}>
-                                This will permanently delete <strong>{filtered.length} report cards</strong> for the selected class and exam. This cannot be undone.
+                                This will permanently delete <strong>{filtered.length} assessment reports</strong> for the selected class and exam. This cannot be undone.
                             </p>
                             <div style={{ display:'flex', gap:'10px', justifyContent:'flex-end' }}>
                                 <button onClick={() => setDeleteAllConfirm(false)} style={{ backgroundColor:'#6c757d', color:'white', border:'none', padding:'9px 20px', borderRadius:'5px', cursor:'pointer', fontWeight:'bold' }}>Cancel</button>
@@ -802,7 +816,6 @@ function ReportCards() {
                     </div>
                 )}
 
-              
             </div>
         </div>
           <Footer />
