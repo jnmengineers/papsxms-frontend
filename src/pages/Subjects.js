@@ -5,7 +5,7 @@ import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
 import Footer from '../components/Footer';
 
-// Outside parent � prevents keyboard dismiss on re-render
+// Outside parent — prevents keyboard dismiss on re-render
 const SubjectFormFields = ({ formData, setFormData, onSubmit, onCancel, submitLabel }) => (
     <form onSubmit={onSubmit} style={styles.inlineForm}>
         <div style={styles.formGrid}>
@@ -22,20 +22,20 @@ const SubjectFormFields = ({ formData, setFormData, onSubmit, onCancel, submitLa
                     placeholder="e.g. MATH" required />
             </div>
             <div style={styles.formGroup}>
-                <label style={styles.label}>Grade Level</label>
+                <label style={styles.label}>Section</label>
                 <select style={styles.input} value={formData.gradeLevel}
                     onChange={e => setFormData({...formData, gradeLevel: e.target.value})} required>
-                    <option value="">Select Grade</option>
-                    <optgroup label="Pre-School"><option value="PG">PG</option><option value="PP1">PP1</option><option value="PP2">PP2</option></optgroup>
-                    <optgroup label="Lower Primary"><option value="G1">G1</option><option value="G2">G2</option><option value="G3">G3</option></optgroup>
-                    <optgroup label="Upper Primary"><option value="G4">G4</option><option value="G5">G5</option><option value="G6">G6</option></optgroup>
-                    <optgroup label="Junior School"><option value="G7">G7</option><option value="G8">G8</option><option value="G9">G9</option></optgroup>
+                    <option value="">Select Section</option>
+                    <option value="PG">Pre-School (PG, PP1, PP2)</option>
+                    <option value="G1">Lower Primary (G1, G2, G3)</option>
+                    <option value="G4">Upper Primary (G4, G5, G6)</option>
+                    <option value="G7">Junior School (G7, G8, G9)</option>
                 </select>
             </div>
         </div>
         <div style={styles.btnGroup}>
             <button type="submit" style={styles.submitBtn}>{submitLabel}</button>
-            <button type="button" onClick={onCancel} style={styles.cancelBtn}>? Cancel</button>
+            <button type="button" onClick={onCancel} style={styles.cancelBtn}>✕ Cancel</button>
         </div>
     </form>
 );
@@ -46,7 +46,7 @@ function Subjects() {
     const [error, setError] = useState('');
     const [successMsg, setSuccessMsg] = useState('');
     const [showAddForm, setShowAddForm] = useState(false);
-    const [editingSubject, setEditingSubject] = useState(null); // inline edit
+    const [editingSubject, setEditingSubject] = useState(null);
     const [teachers, setTeachers] = useState([]);
     const [activeTab, setActiveTab] = useState('pool');
     const [search, setSearch] = useState('');
@@ -54,11 +54,10 @@ function Subjects() {
     const seeded = React.useRef(false);
     const [formData, setFormData] = useState({ subjectName: '', subjectCode: '', gradeLevel: '' });
 
-
     const sections = ['PRE_SCHOOL','LOWER_PRIMARY','UPPER_PRIMARY','JUNIOR_SCHOOL'];
     const sectionGrades = { PRE_SCHOOL: ['PG','PP1','PP2'], LOWER_PRIMARY: ['G1','G2','G3'], UPPER_PRIMARY: ['G4','G5','G6'], JUNIOR_SCHOOL: ['G7','G8','G9'] };
     const sectionColors = { PRE_SCHOOL: '#6f42c1', LOWER_PRIMARY: '#2E75B6', UPPER_PRIMARY: '#fd7e14', JUNIOR_SCHOOL: '#20c997' };
-    const sectionNames = { PRE_SCHOOL: '?? Pre-School (PG, PP1, PP2)', LOWER_PRIMARY: '?? Lower Primary (G1-G3)', UPPER_PRIMARY: '?? Upper Primary (G4-G6)', JUNIOR_SCHOOL: '?? Junior Secondary (G7-G9)' };
+    const sectionNames = { PRE_SCHOOL: '🟣 Pre-School (PG, PP1, PP2)', LOWER_PRIMARY: '🔵 Lower Primary (G1-G3)', UPPER_PRIMARY: '🟠 Upper Primary (G4-G6)', JUNIOR_SCHOOL: '🟢 Junior Secondary (G7-G9)' };
 
     useEffect(() => {
         if (!seeded.current) { seeded.current = true; fetchSubjects(); fetchTeachers(); }
@@ -104,10 +103,10 @@ function Subjects() {
         e.preventDefault();
         try {
             await api.post('/api/subjects', formData);
-            setSuccessMsg('? Subject added!');
+            setSuccessMsg('✅ Subject added!');
             setShowAddForm(false);
             setFormData({ subjectName: '', subjectCode: '', gradeLevel: '' });
-            fetchSubjects(true);
+            fetchSubjects();
             setTimeout(() => setSuccessMsg(''), 3000);
         } catch (err) { setError('Failed to save subject'); }
     };
@@ -116,10 +115,10 @@ function Subjects() {
         e.preventDefault();
         try {
             await api.put(`/api/subjects/${editingSubject.subjectId}`, formData);
-            setSuccessMsg('? Subject updated!');
+            setSuccessMsg('✅ Subject updated!');
             setEditingSubject(null);
             setFormData({ subjectName: '', subjectCode: '', gradeLevel: '' });
-            fetchSubjects(true);
+            fetchSubjects();
             setTimeout(() => setSuccessMsg(''), 3000);
         } catch (err) { setError('Failed to update subject'); }
     };
@@ -127,7 +126,7 @@ function Subjects() {
     const handleAssignTeacher = async (subjectId, teacherId) => {
         try {
             await api.patch(`/api/subjects/${subjectId}/assign-teacher/${teacherId}`);
-            fetchSubjects(true);
+            fetchSubjects();
             setSuccessMsg('Teacher assigned!');
             setTimeout(() => setSuccessMsg(''), 2000);
         } catch (err) { setError('Failed to assign teacher'); }
@@ -138,185 +137,169 @@ function Subjects() {
             try {
                 await api.delete(`/api/subjects/${id}`);
                 if (editingSubject?.subjectId === id) setEditingSubject(null);
-                fetchSubjects(true);
+                fetchSubjects();
                 setSuccessMsg('Subject deleted!');
                 setTimeout(() => setSuccessMsg(''), 2000);
             } catch (err) { setError('Failed to delete subject.'); }
         }
     };
 
-
     return (
         <div style={styles.container}>
-           
-           <Navbar />
+            <Navbar />
             <div style={styles.layoutRow}>
                 <Sidebar />
                 <div style={styles.content}>
-                <div style={styles.header}>
-                    <div>
-                        <h2 style={styles.title}>?? Subjects</h2>
-                        <p style={styles.subtitle}>Subject pool � {subjects.length} subjects across all sections</p>
-                    </div>
-                    <button onClick={() => { setShowAddForm(!showAddForm); setEditingSubject(null); }} style={styles.addBtn}>
-                        {showAddForm ? '? Cancel' : '+ Add Subject'}
-                    </button>
-                </div>
-
-                {error && <p style={styles.error}>{error}</p>}
-                {successMsg && <p style={styles.success}>{successMsg}</p>}
-
-                {/* Add Form */}
-                {showAddForm && (
-                    <div style={styles.addFormCard}>
-                        <h3 style={styles.formTitle}>? Add New Subject</h3>
-                        <SubjectFormFields
-                            formData={formData} setFormData={setFormData}
-                            onSubmit={handleSubmitAdd}
-                            onCancel={() => { setShowAddForm(false); setFormData({ subjectName: '', subjectCode: '', gradeLevel: '' }); }}
-                            submitLabel="?? Save Subject"
-                        />
-                    </div>
-                )}
-
-                {/* TAB 1 � Subject Pool */}
-                {activeTab === 'pool' && (
-                    <>
-                        <div style={styles.searchBar}>
-                            <input style={styles.searchInput} placeholder="?? Search subjects..."
-                                value={search} onChange={e => setSearch(e.target.value)} />
-                            <button onClick={() => setSearch('')} style={styles.clearBtn}>Clear</button>
+                    <div style={styles.header}>
+                        <div>
+                            <h2 style={styles.title}>📚 Subjects</h2>
+                            <p style={styles.subtitle}>Subject pool — {subjects.length} subjects across all sections</p>
                         </div>
-                        {loading ? <p>Loading subjects...</p> : (
-                            <div style={styles.tableWrapper}>
-                                <table style={styles.table}>
-                                    <thead>
-                                        <tr style={styles.tableHeader}>
-                                            <th style={styles.th}>#</th>
-                                            <th style={styles.th}>Subject Name</th>
-                                            <th style={styles.th}>Code</th>
-                                            <th style={styles.th}>Grade</th>
-                                            <th style={styles.th}>Teacher</th>
-                                            <th style={styles.th}>Assign Teacher</th>
-                                            <th style={styles.th}>Actions</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {sections.map(section => {
-                                            const sectionFiltered = filtered.filter(s => sectionGrades[section].includes(s.gradeLevel));
-                                            if (sectionFiltered.length === 0) return null;
-                                            return (
-                                                <React.Fragment key={section}>
-                                                    <tr>
-                                                        <td colSpan="7" style={{ backgroundColor: sectionColors[section], color: 'white', padding: '8px 15px', fontWeight: 'bold', fontSize: '13px' }}>
-                                                            {sectionNames[section]} � {sectionFiltered.length} subjects
-                                                        </td>
-                                                    </tr>
-                                                    {sectionFiltered.map((subject, index) => {
-                                                        const isEditing = editingSubject?.subjectId === subject.subjectId;
-                                                        return (
-                                                            <React.Fragment key={subject.subjectId}>
-                                                                <tr style={{
-                                                                    ...(index % 2 === 0 ? styles.trEven : styles.trOdd),
-                                                                    outline: isEditing ? '2px solid #2E75B6' : 'none',
-                                                                    outlineOffset: '-2px'
-                                                                }}>
-                                                                    <td style={styles.td}>{subject.subjectId}</td>
-                                                                    <td style={styles.td}><strong>{subject.subjectName}</strong></td>
-                                                                    <td style={styles.td}><span style={styles.codeBadge}>{subject.subjectCode}</span></td>
-                                                                    <td style={styles.td}>
-                                                                        <span style={{ backgroundColor: sectionColors[section], color: 'white', padding: '2px 8px', borderRadius: '3px', fontSize: '11px', fontWeight: 'bold' }}>
-                                                                            {subject.gradeLevel}
-                                                                        </span>
-                                                                    </td>
-                                                                    <td style={styles.td}>
-                                                                        {subject.teacher ? `${subject.teacher.firstName} ${subject.teacher.lastName}` : <span style={styles.notAssigned}>Not Assigned</span>}
-                                                                    </td>
-                                                                    <td style={styles.td}>
-                                                                        <select style={styles.smallSelect}
-                                                                            onChange={e => handleAssignTeacher(subject.subjectId, e.target.value)}
-                                                                            defaultValue="">
-                                                                            <option value="">Assign Teacher</option>
-                                                                            {teachers.map(t => <option key={t.teacherId} value={t.teacherId}>{t.firstName} {t.lastName}</option>)}
-                                                                        </select>
-                                                                    </td>
-                                                                    <td style={styles.td}>
-                                                                        <button onClick={() => handleEdit(subject)}
-                                                                            style={isEditing ? styles.cancelEditBtn : styles.editBtn}>
-                                                                            {isEditing ? '? Cancel' : 'Edit'}
-                                                                        </button>
-                                                                        <button onClick={() => handleDelete(subject.subjectId)} style={styles.deleteBtn}>Delete</button>
-                                                                    </td>
-                                                                </tr>
-                                                                {/* -- Inline Edit Row -- */}
-                                                                {isEditing && (
-                                                                    <tr>
-                                                                        <td colSpan="7" style={styles.inlineEditTd}>
-                                                                            <div style={styles.inlineEditCard}>
-                                                                                <div style={styles.inlineEditHeader}>
-                                                                                    <h4 style={styles.inlineEditTitle}>?? Editing: {subject.subjectName}</h4>
-                                                                                    <button onClick={handleCancelEdit} style={styles.closeBtn}>?</button>
-                                                                                </div>
-                                                                                <SubjectFormFields
-                                                                                    formData={formData} setFormData={setFormData}
-                                                                                    onSubmit={handleSubmitEdit}
-                                                                                    onCancel={handleCancelEdit}
-                                                                                    submitLabel="? Update Subject"
-                                                                                />
-                                                                            </div>
+                        <button onClick={() => { setShowAddForm(!showAddForm); setEditingSubject(null); }} style={styles.addBtn}>
+                            {showAddForm ? '✕ Cancel' : '+ Add Subject'}
+                        </button>
+                    </div>
+
+                    {error && <p style={styles.error}>{error}</p>}
+                    {successMsg && <p style={styles.success}>{successMsg}</p>}
+
+                    {showAddForm && (
+                        <div style={styles.addFormCard}>
+                            <h3 style={styles.formTitle}>➕ Add New Subject</h3>
+                            <SubjectFormFields
+                                formData={formData} setFormData={setFormData}
+                                onSubmit={handleSubmitAdd}
+                                onCancel={() => { setShowAddForm(false); setFormData({ subjectName: '', subjectCode: '', gradeLevel: '' }); }}
+                                submitLabel="💾 Save Subject"
+                            />
+                        </div>
+                    )}
+
+                    {activeTab === 'pool' && (
+                        <>
+                            <div style={styles.searchBar}>
+                                <input style={styles.searchInput} placeholder="🔍 Search subjects..."
+                                    value={search} onChange={e => setSearch(e.target.value)} />
+                                <button onClick={() => setSearch('')} style={styles.clearBtn}>Clear</button>
+                            </div>
+                            {loading ? <p>Loading subjects...</p> : (
+                                <div style={styles.tableWrapper}>
+                                    <table style={styles.table}>
+                                        <thead>
+                                            <tr style={styles.tableHeader}>
+                                                <th style={styles.th}>#</th>
+                                                <th style={styles.th}>Subject Name</th>
+                                                <th style={styles.th}>Code</th>
+                                                <th style={styles.th}>Grade</th>
+                                                <th style={styles.th}>Teacher</th>
+                                                <th style={styles.th}>Assign Teacher</th>
+                                                <th style={styles.th}>Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {sections.map(section => {
+                                                const sectionFiltered = filtered.filter(s => sectionGrades[section].includes(s.gradeLevel));
+                                                if (sectionFiltered.length === 0) return null;
+                                                return (
+                                                    <React.Fragment key={section}>
+                                                        <tr>
+                                                            <td colSpan="7" style={{ backgroundColor: sectionColors[section], color: 'white', padding: '8px 15px', fontWeight: 'bold', fontSize: '13px' }}>
+                                                                {sectionNames[section]} — {sectionFiltered.length} subjects
+                                                            </td>
+                                                        </tr>
+                                                        {sectionFiltered.map((subject, index) => {
+                                                            const isEditing = editingSubject?.subjectId === subject.subjectId;
+                                                            return (
+                                                                <React.Fragment key={subject.subjectId}>
+                                                                    <tr style={{
+                                                                        ...(index % 2 === 0 ? styles.trEven : styles.trOdd),
+                                                                        outline: isEditing ? '2px solid #2E75B6' : 'none',
+                                                                        outlineOffset: '-2px'
+                                                                    }}>
+                                                                        <td style={styles.td}>{subject.subjectId}</td>
+                                                                        <td style={styles.td}><strong>{subject.subjectName}</strong></td>
+                                                                        <td style={styles.td}><span style={styles.codeBadge}>{subject.subjectCode}</span></td>
+                                                                        <td style={styles.td}>
+                                                                            <span style={{ backgroundColor: sectionColors[section], color: 'white', padding: '2px 8px', borderRadius: '3px', fontSize: '11px', fontWeight: 'bold' }}>
+                                                                                {subject.gradeLevel}
+                                                                            </span>
+                                                                        </td>
+                                                                        <td style={styles.td}>
+                                                                            {subject.teacher ? `${subject.teacher.firstName} ${subject.teacher.lastName}` : <span style={styles.notAssigned}>Not Assigned</span>}
+                                                                        </td>
+                                                                        <td style={styles.td}>
+                                                                            <select style={styles.smallSelect}
+                                                                                onChange={e => handleAssignTeacher(subject.subjectId, e.target.value)}
+                                                                                defaultValue="">
+                                                                                <option value="">Assign Teacher</option>
+                                                                                {teachers.map(t => <option key={t.teacherId} value={t.teacherId}>{t.firstName} {t.lastName}</option>)}
+                                                                            </select>
+                                                                        </td>
+                                                                        <td style={styles.td}>
+                                                                            <button onClick={() => handleEdit(subject)}
+                                                                                style={isEditing ? styles.cancelEditBtn : styles.editBtn}>
+                                                                                {isEditing ? '✕ Cancel' : 'Edit'}
+                                                                            </button>
+                                                                            <button onClick={() => handleDelete(subject.subjectId)} style={styles.deleteBtn}>Delete</button>
                                                                         </td>
                                                                     </tr>
-                                                                )}
-                                                            </React.Fragment>
-                                                        );
-                                                    })}
-                                                </React.Fragment>
-                                            );
-                                        })}
-                                        {filtered.length === 0 && (
-                                            <tr><td colSpan="7" style={{ textAlign: 'center', padding: '20px', color: '#666' }}>No subjects found</td></tr>
-                                        )}
-                                    </tbody>
-                                </table>
-                            </div>
-                        )}
-                    </>
-                )}
-                
+                                                                    {isEditing && (
+                                                                        <tr>
+                                                                            <td colSpan="7" style={styles.inlineEditTd}>
+                                                                                <div style={styles.inlineEditCard}>
+                                                                                    <div style={styles.inlineEditHeader}>
+                                                                                        <h4 style={styles.inlineEditTitle}>✏️ Editing: {subject.subjectName}</h4>
+                                                                                        <button onClick={handleCancelEdit} style={styles.closeBtn}>✕</button>
+                                                                                    </div>
+                                                                                    <SubjectFormFields
+                                                                                        formData={formData} setFormData={setFormData}
+                                                                                        onSubmit={handleSubmitEdit}
+                                                                                        onCancel={handleCancelEdit}
+                                                                                        submitLabel="✅ Update Subject"
+                                                                                    />
+                                                                                </div>
+                                                                            </td>
+                                                                        </tr>
+                                                                    )}
+                                                                </React.Fragment>
+                                                            );
+                                                        })}
+                                                    </React.Fragment>
+                                                );
+                                            })}
+                                            {filtered.length === 0 && (
+                                                <tr><td colSpan="7" style={{ textAlign: 'center', padding: '20px', color: '#666' }}>No subjects found</td></tr>
+                                            )}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            )}
+                        </>
+                    )}
+                </div>
             </div>
+            <Footer />
         </div>
-        <Footer />
-    </div>
     );
 }
 
 const styles = {
     container: { minHeight: '100vh', backgroundColor: '#f0f2f5' },
     layoutRow: { display: 'flex' },
-    navbar: { backgroundColor: '#1F3864', padding: '15px 30px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
-    navLeft: { display: 'flex', alignItems: 'center', gap: '10px' },
-    navLogo: { width: '45px', height: '45px', objectFit: 'contain' },
-    navTitle: { color: 'white', margin: 0, fontSize: '18px' },
-    navRight: { display: 'flex', gap: '10px' },
-    navBtn: { backgroundColor: 'transparent', color: 'white', border: '1px solid white', padding: '8px 16px', borderRadius: '5px', cursor: 'pointer' },
-    logoutBtn: { backgroundColor: 'transparent', color: 'white', border: '1px solid white', padding: '8px 16px', borderRadius: '5px', cursor: 'pointer' },
-   content: { padding: '30px', flex: 1 },
+    content: { padding: '30px', flex: 1 },
     header: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' },
     title: { color: '#1F3864', margin: '0 0 5px 0' },
     subtitle: { color: '#666', margin: 0, fontSize: '14px' },
     addBtn: { backgroundColor: '#1F3864', color: 'white', border: 'none', padding: '10px 20px', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold' },
     error: { color: 'red', padding: '10px', backgroundColor: '#fff3f3', borderRadius: '5px', marginBottom: '15px' },
     success: { color: '#155724', padding: '10px', backgroundColor: '#d4edda', borderRadius: '5px', marginBottom: '15px' },
-
     addFormCard: { backgroundColor: 'white', padding: '20px', borderRadius: '10px', marginBottom: '20px', boxShadow: '0 2px 8px rgba(0,0,0,0.12)', border: '2px solid #1F3864' },
     formTitle: { color: '#1F3864', margin: '0 0 15px 0' },
-
     inlineEditTd: { padding: 0, border: 'none' },
     inlineEditCard: { backgroundColor: '#f0f7ff', padding: '15px 20px', borderLeft: '4px solid #2E75B6', borderBottom: '1px solid #ddd' },
     inlineEditHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' },
     inlineEditTitle: { color: '#2E75B6', margin: 0, fontSize: '14px' },
     closeBtn: { background: 'none', border: 'none', fontSize: '16px', cursor: 'pointer', color: '#999' },
-
     inlineForm: {},
     formGrid: { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', marginBottom: '12px' },
     formGroup: { display: 'flex', flexDirection: 'column', gap: '4px' },
@@ -325,7 +308,6 @@ const styles = {
     btnGroup: { display: 'flex', gap: '10px' },
     submitBtn: { backgroundColor: '#2E75B6', color: 'white', border: 'none', padding: '9px 20px', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold' },
     cancelBtn: { backgroundColor: '#6c757d', color: 'white', border: 'none', padding: '9px 16px', borderRadius: '5px', cursor: 'pointer' },
-
     tabs: { display: 'flex', gap: '10px', marginBottom: '20px' },
     tab: { padding: '10px 20px', borderRadius: '5px', border: '2px solid #1F3864', cursor: 'pointer', fontWeight: 'bold', fontSize: '14px' },
     searchBar: { display: 'flex', gap: '10px', marginBottom: '20px' },
@@ -343,21 +325,7 @@ const styles = {
     deleteBtn: { backgroundColor: '#dc3545', color: 'white', border: 'none', padding: '5px 10px', borderRadius: '3px', cursor: 'pointer', fontSize: '12px' },
     codeBadge: { backgroundColor: '#e3f2fd', color: '#1F3864', padding: '2px 8px', borderRadius: '3px', fontSize: '12px', fontFamily: 'monospace' },
     notAssigned: { color: '#999', fontStyle: 'italic', fontSize: '13px' },
-    smallSelect: { padding: '5px', borderRadius: '5px', border: '1px solid #ddd', fontSize: '13px' },
-
-    quickHint: { color: '#666', marginBottom: '20px', fontSize: '14px', backgroundColor: '#f8f9fa', padding: '12px', borderRadius: '8px' },
-    sectionBlock: { marginBottom: '25px', borderRadius: '10px', overflow: 'hidden', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' },
-    sectionHeader: { padding: '15px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
-    sectionTitle: { color: 'white', margin: '0 0 4px 0', fontSize: '16px' },
-    sectionGrades: { color: 'rgba(255,255,255,0.8)', margin: 0, fontSize: '12px' },
-    sectionRight: { display: 'flex', alignItems: 'center', gap: '12px' },
-    sectionCount: { color: 'white', fontSize: '13px', backgroundColor: 'rgba(255,255,255,0.2)', padding: '4px 10px', borderRadius: '20px' },
-    addAllBtn: { backgroundColor: 'white', color: '#1F3864', border: 'none', padding: '8px 15px', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold', fontSize: '13px' },
-    sectionTiles: { display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px', padding: '15px', backgroundColor: 'white' },
-    quickTile: { padding: '15px 10px', borderRadius: '8px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '5px' },
-    quickTileIcon: { fontSize: '24px' },
-    quickTileName: { fontSize: '13px', fontWeight: 'bold', lineHeight: '1.3' },
-    quickTileStatus: { fontSize: '11px', fontWeight: 'bold' }
+    smallSelect: { padding: '5px', borderRadius: '5px', border: '1px solid #ddd', fontSize: '13px' }
 };
 
 export default Subjects;
