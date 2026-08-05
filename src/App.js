@@ -25,11 +25,13 @@ import ProgressiveReport from './pages/ProgressiveReport';
 import InactivityTimeout from './components/InactivityTimeout';
 import UpdateChecker from './components/UpdateChecker';
 import { SidebarProvider } from './context/SidebarContext';
+import ScrollToTop from './components/ScrollToTop';
 
 function App() {
     return (
         <SidebarProvider>
         <Router>
+             <ScrollToTop />
             <InactivityTimeout />
             <UpdateChecker />
             <Routes>
