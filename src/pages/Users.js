@@ -4,6 +4,7 @@ import logo1 from '../assets/logo1.png';
 import { classDisplayName } from '../utils/classUtils';
 import Sidebar from '../components/Sidebar';
 import Navbar from '../components/Navbar';
+import Footer from '../components/Footer';
 
 function Users() {
     const [users, setUsers] = useState([]);
