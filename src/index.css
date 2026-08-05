@@ -454,9 +454,6 @@ body {
     .app-sidebar.open {
         left: 0;
     }
-    .app-backdrop {
-        display: block !important;
-    }
 }
 @media (min-width: 769px) {
     .app-backdrop {

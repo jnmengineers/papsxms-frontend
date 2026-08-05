@@ -68,7 +68,9 @@ function Sidebar() {
     return (
         <>
             {/* Mobile backdrop — only visible when sidebar is open on small screens */}
-            <div className="app-backdrop" style={styles.backdrop} onClick={() => setIsOpen(false)} />
+            {isOpen && (
+                <div className="app-backdrop" style={styles.backdrop} onClick={() => setIsOpen(false)} />
+            )}
             <div className={`app-sidebar${isOpen ? ' open' : ''}`} style={styles.sidebar}>
                 {visibleGroups.map((group, gi) => (
                     <div key={gi} style={styles.group}>
