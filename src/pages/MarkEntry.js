@@ -13,7 +13,7 @@ import Footer from '../components/Footer';
 const OrientationToggle = ({ value, onChange }) => (
     <span className="no-print" style={{ display: 'flex', gap: '3px' }}>
         {['portrait', 'landscape'].map(o => (
-            <button key={o} onClick={() => onChange(o)} style={{ fontSize: '11px', padding: '3px 9px', borderRadius: '4px', cursor: 'pointer', border: `1.5px solid ${value === o ? '#1F3864' : '#ccc'}`, background: value === o ? '#1F3864' : 'white', color: value === o ? 'white' : '#666', fontWeight: value === o ? 'bold' : 'normal', textTransform: 'capitalize' }}>{o}</button>
+            <button key={o} onClick={() => onChange(o)} style={{ fontSize: '11px', padding: '3px 9px', borderRadius: '6px', cursor: 'pointer', border: `1.5px solid ${value === o ? '#1F3864' : '#ccc'}`, background: value === o ? '#1F3864' : 'white', color: value === o ? 'white' : '#666', fontWeight: value === o ? 'bold' : 'normal', textTransform: 'capitalize' }}>{o}</button>
         ))}
     </span>
 );
@@ -110,20 +110,17 @@ function MarkEntry() {
     const [selectedExam, setSelectedExam] = useState('');
     const [mode, setMode] = useState('single');
 
-    // Invigilator mode
     const [isInvigilating, setIsInvigilating] = useState(false);
     const [invigilatingClassId, setInvigilatingClassId] = useState('');
 
-    // Single subject mode
     const [selectedSubject, setSelectedSubject] = useState('');
     const [marks, setMarks] = useState({});
 
-    // Multi subject mode
     const [selectedSubjectIds, setSelectedSubjectIds] = useState([]);
     const [multiMarks, setMultiMarks] = useState({});
 
     const [loading, setLoading] = useState(false);
-    const [studentSaveStatus, setStudentSaveStatus] = useState({}); // { studentId: 'saving'|'saved'|'error' }
+    const [studentSaveStatus, setStudentSaveStatus] = useState({});
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState('');
     const [successMsg, setSuccessMsg] = useState('');
@@ -203,12 +200,11 @@ function MarkEntry() {
         }
     };
 
-    // ✅ Fixed — filter purely by schoolClass.classId (all 710 students have it)
     const fetchStudentsByClass = async (classId) => {
         if (!classId) return;
         try {
             setLoading(true);
-            setStudents([]); // Clear first to avoid showing wrong students
+            setStudents([]);
             const r = await api.get('/api/students');
             const filtered = r.data.filter(s =>
                 String(s.schoolClass?.classId) === String(classId)
@@ -266,11 +262,9 @@ function MarkEntry() {
         setSelectedSubjectIds(prev => prev.includes(subjectId) ? prev.filter(id => id !== subjectId) : [...prev, subjectId]);
     };
 
-    // ✅ Bulk save — one API call for all marks
     const handleSaveSingle = async () => {
         setSaving(true); setError(''); setSuccessMsg('');
 
-        // Build bulk payload — only include students with marks entered
         const results = students
             .filter(student => {
                 const markData = marks[student.studentId];
@@ -285,13 +279,12 @@ function MarkEntry() {
                     subjectId: parseInt(selectedSubject),
                     marksObtained: parseFloat(markData.marks),
                     maxMarks: 100,
-                    resultId: markData.resultId || null  // null = new, id = update
+                    resultId: markData.resultId || null
                 };
             });
 
         if (results.length === 0) {
             setSaving(false);
-            // Show more helpful message
             const totalStudents = students.length;
             const totalMarksEntered = Object.values(marks).filter(m => m?.marks !== '' && m?.marks !== undefined).length;
             setError(`No valid marks to save. Students loaded: ${totalStudents}. Marks entered: ${totalMarksEntered}. Make sure marks are between 0-100.`);
@@ -318,12 +311,10 @@ function MarkEntry() {
         }
     };
 
-    // ✅ Bulk save — one API call for ALL marks across all subjects
     const handleSaveMulti = async () => {
         setSaving(true); setError(''); setSuccessMsg('');
         const selectedSubjects = subjects.filter(s => selectedSubjectIds.includes(s.subjectId));
 
-        // Build bulk payload — only include cells with marks entered
         const results = [];
         for (const student of students) {
             for (const subject of selectedSubjects) {
@@ -343,7 +334,6 @@ function MarkEntry() {
 
         if (results.length === 0) {
             setSaving(false);
-            // Show more helpful message
             const totalStudents = students.length;
             const totalMarksEntered = Object.values(marks).filter(m => m?.marks !== '' && m?.marks !== undefined).length;
             setError(`No valid marks to save. Students loaded: ${totalStudents}. Marks entered: ${totalMarksEntered}. Make sure marks are between 0-100.`);
@@ -370,7 +360,6 @@ function MarkEntry() {
         }
     };
 
-    // ── Save marks for a single student ─────────────────────────────────────
     const handleSaveStudent = async (student) => {
         const selectedSubjects = subjects.filter(s => selectedSubjectIds.includes(s.subjectId));
         const studentMarks = mode === 'single'
@@ -400,21 +389,15 @@ function MarkEntry() {
 
         setStudentSaveStatus(prev => ({ ...prev, [student.studentId]: 'saving' }));
         const examId = parseInt(selectedExam);
-        console.log('Per-student save:', student.firstName, 'examId:', examId, 'selectedExam raw:', selectedExam);
-        console.log('results:', JSON.stringify(results));
-        console.log('marks state:', JSON.stringify(marks[student.studentId]));
 
         try {
             const payload = { examId, results };
-            console.log('Full payload being sent:', JSON.stringify(payload));
             const response = await api.post('/api/results/bulk-save', payload);
             const data = response.data;
             if (data.failed > 0) {
                 setStudentSaveStatus(prev => ({ ...prev, [student.studentId]: 'error' }));
             } else {
                 setStudentSaveStatus(prev => ({ ...prev, [student.studentId]: 'saved' }));
-                // ✅ Mark as saved in local state only — don't refresh all marks
-                // (refreshing resets state and causes keyboard issues on mobile)
                 if (mode === 'single') {
                     setMarks(prev => ({
                         ...prev,
@@ -521,7 +504,6 @@ function MarkEntry() {
                 {error && <p style={styles.error}>{error}</p>}
                 {successMsg && <p style={styles.success}>{successMsg}</p>}
 
-                {/* ── INVIGILATOR TOGGLE (Teacher only) ── */}
                 {role === 'TEACHER' && (
                     <div style={styles.invigilatorCard}>
                         <div style={styles.invigilatorRow}>
@@ -573,7 +555,6 @@ function MarkEntry() {
                     </div>
                 )}
 
-                {/* ── MODE TABS ── */}
                 <div style={{ ...styles.modeTabs, flexDirection: 'row' }}>
                     <button onClick={() => { setMode('single'); handleReset(); }} style={{
                         ...styles.modeTab,
@@ -597,7 +578,6 @@ function MarkEntry() {
                     </button>
                 </div>
 
-                {/* ── SETUP CARD ── */}
                 <div style={styles.card}>
                     <div style={{ ...styles.grid3, gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)' }}>
                         <div style={styles.formGroup}>
@@ -660,7 +640,6 @@ function MarkEntry() {
                     </div>
                 </div>
 
-                {/* ── SINGLE MODE MARK SHEET ── */}
                 {mode === 'single' && activeClassId() && selectedExam && selectedSubject && (
                     <div style={styles.tableCard}>
                         <div style={styles.tableTopBar}>
@@ -704,7 +683,7 @@ function MarkEntry() {
                                                         <td style={styles.td}><span style={styles.admNo}>{student.admissionNumber}</span></td>
                                                         <td style={styles.td}><strong>{student.firstName} {student.lastName}</strong></td>
                                                         <td style={styles.td}>
-                                                            <span style={{ backgroundColor: student.gender === 'Male' ? '#2E75B6' : '#e83e8c', color: 'white', padding: '2px 8px', borderRadius: '3px', fontSize: '11px' }}>
+                                                            <span style={{ backgroundColor: student.gender === 'Male' ? '#2E75B6' : '#e83e8c', color: 'white', padding: '2px 8px', borderRadius: '6px', fontSize: '11px' }}>
                                                                 {student.gender}
                                                             </span>
                                                         </td>
@@ -716,7 +695,7 @@ function MarkEntry() {
                                                                 placeholder="—" />
                                                         </td>
                                                         <td style={styles.td}>
-                                                            {grade && <span style={{ backgroundColor: grade.color, color: 'white', padding: '3px 10px', borderRadius: '3px', fontWeight: 'bold', fontSize: '13px' }}>{grade.label}</span>}
+                                                            {grade && <span style={{ backgroundColor: grade.color, color: 'white', padding: '3px 10px', borderRadius: '6px', fontWeight: 'bold', fontSize: '13px' }}>{grade.label}</span>}
                                                         </td>
                                                         <td style={styles.td}>
                                                             {studentSaveStatus[student.studentId] === 'saving'
@@ -756,7 +735,6 @@ function MarkEntry() {
                     </div>
                 )}
 
-                {/* ── MULTI MODE STEP 2: Subject Selection ── */}
                 {mode === 'multi' && step === 2 && (
                     <div style={styles.card}>
                         <div style={styles.subjectToolbar}>
@@ -772,7 +750,7 @@ function MarkEntry() {
                                 const isSelected = selectedSubjectIds.includes(sub.subjectId);
                                 return (
                                     <div key={sub.subjectId} onClick={() => toggleSubject(sub.subjectId)}
-                                        style={{ ...styles.subjectTile, backgroundColor: isSelected ? '#e8f5e9' : 'white', border: isSelected ? '2px solid #28a745' : '2px solid #ddd', color: isSelected ? '#28a745' : '#333' }}>
+                                        style={{ ...styles.subjectTile, backgroundColor: isSelected ? '#e8f5e9' : 'white', border: isSelected ? '2px solid #28a745' : '2px solid #f0f0f0', color: isSelected ? '#28a745' : '#333' }}>
                                         <span style={styles.subjectCheck}>{isSelected ? '✅' : '⬜'}</span>
                                         <span style={styles.subjectName}>{sub.subjectName}</span>
                                     </div>
@@ -786,7 +764,6 @@ function MarkEntry() {
                     </div>
                 )}
 
-                {/* ── MULTI MODE STEP 3: Pivot Table ── */}
                 {mode === 'multi' && step === 3 && (
                     <div style={styles.tableCard}>
                         <div style={styles.tableTopBar}>
@@ -822,7 +799,7 @@ function MarkEntry() {
                                             {students.map((student, index) => (
                                                 <tr key={student.studentId} style={index % 2 === 0 ? styles.trEven : styles.trOdd}>
                                                     <td style={{ ...styles.td, position: 'sticky', left: 0, backgroundColor: index % 2 === 0 ? '#f9f9f9' : 'white', zIndex: 1 }}>{index + 1}</td>
-                                                    <td style={{ ...styles.td, position: 'sticky', left: '50px', backgroundColor: index % 2 === 0 ? '#f9f9f9' : 'white', zIndex: 1, borderRight: '2px solid #ddd' }}>
+                                                    <td style={{ ...styles.td, position: 'sticky', left: '50px', backgroundColor: index % 2 === 0 ? '#f9f9f9' : 'white', zIndex: 1, borderRight: '2px solid #eee' }}>
                                                         <strong style={{ fontSize: '13px' }}>{student.firstName} {student.lastName}</strong>
                                                         <div style={{ fontSize: '11px', color: '#999' }}>{student.admissionNumber}</div>
                                                     </td>
@@ -843,7 +820,6 @@ function MarkEntry() {
                                                             </td>
                                                         );
                                                     })}
-                                                    {/* Per-student save button */}
                                                     <td style={{ ...styles.td, textAlign: 'center', padding: '4px' }}>
                                                         {studentSaveStatus[student.studentId] === 'saving'
                                                             ? <span style={styles.savingBadge}>⏳</span>
@@ -874,7 +850,6 @@ function MarkEntry() {
                 )}
             </div>
 
-            {/* Hidden Printable Mark Sheet */}
             <div style={{ display: 'none' }}>
                 <PrintableMarkSheet
                     ref={printRef}
@@ -896,63 +871,55 @@ function MarkEntry() {
 const styles = {
     container: { minHeight: '100vh', backgroundColor: '#f0f2f5' },
     layoutRow: { display: 'flex' },
-    navbar: { backgroundColor: '#1F3864', padding: '15px 30px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
-    navLeft: { display: 'flex', alignItems: 'center', gap: '10px' },
-    navLogo: { width: '45px', height: '45px', objectFit: 'contain' },
-    navTitle: { color: 'white', margin: 0, fontSize: '18px' },
-    navRight: { display: 'flex', gap: '10px' },
-    navBtn: { backgroundColor: 'transparent', color: 'white', border: '1px solid white', padding: '8px 16px', borderRadius: '5px', cursor: 'pointer' },
-    logoutBtn: { backgroundColor: 'transparent', color: 'white', border: '1px solid white', padding: '8px 16px', borderRadius: '5px', cursor: 'pointer' },
     content: { padding: '30px', flex: 1 },
-    pageHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px', flexWrap: 'wrap', gap: '10px' },
+    pageHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '22px', flexWrap: 'wrap', gap: '10px' },
     headerBtns: { display: 'flex', gap: '10px', flexWrap: 'wrap' },
-    title: { color: '#1F3864', margin: '0 0 5px 0', fontSize: '24px' },
-    subtitle: { color: '#666', margin: 0, fontSize: '14px' },
-    resetBtn: { backgroundColor: '#6c757d', color: 'white', border: 'none', padding: '8px 16px', borderRadius: '5px', cursor: 'pointer' },
-    printBtn: { backgroundColor: '#28a745', color: 'white', border: 'none', padding: '8px 16px', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold' },
-    error: { color: 'red', padding: '10px', backgroundColor: '#fff3f3', borderRadius: '5px', marginBottom: '15px' },
-    success: { color: '#155724', padding: '10px', backgroundColor: '#d4edda', borderRadius: '5px', marginBottom: '15px' },
+    title: { color: '#1F3864', margin: '0 0 5px 0', fontSize: '24px', fontWeight: 800 },
+    subtitle: { color: '#888', margin: 0, fontSize: '14px' },
+    resetBtn: { backgroundColor: '#6c757d', color: 'white', border: 'none', padding: '9px 16px', borderRadius: '8px', cursor: 'pointer' },
+    printBtn: { backgroundColor: '#28a745', color: 'white', border: 'none', padding: '9px 16px', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' },
+    error: { color: '#dc3545', padding: '12px 16px', backgroundColor: '#fff3f3', borderRadius: '10px', marginBottom: '15px', border: '1px solid #ffd6d6' },
+    success: { color: '#155724', padding: '12px 16px', backgroundColor: '#d4edda', borderRadius: '10px', marginBottom: '15px' },
 
-    // Invigilator
-    invigilatorCard: { backgroundColor: '#fff8e1', border: '2px solid #ffc107', borderRadius: '10px', padding: '15px 20px', marginBottom: '20px' },
+    invigilatorCard: { backgroundColor: '#fff8e1', border: '2px solid #ffc107', borderRadius: '14px', padding: '16px 20px', marginBottom: '20px' },
     invigilatorRow: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' },
     invigilatorTitle: { color: '#856404', fontSize: '15px', display: 'block', marginBottom: '4px' },
     invigilatorDesc: { color: '#856404', fontSize: '12px', margin: 0 },
-    invigilatorBtn: { backgroundColor: '#6c757d', color: 'white', border: 'none', padding: '8px 16px', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold', whiteSpace: 'nowrap' },
-    invigilatorBtnActive: { backgroundColor: '#fd7e14', color: 'white', border: 'none', padding: '8px 16px', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold', whiteSpace: 'nowrap' },
+    invigilatorBtn: { backgroundColor: '#6c757d', color: 'white', border: 'none', padding: '9px 16px', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold', whiteSpace: 'nowrap' },
+    invigilatorBtnActive: { backgroundColor: '#fd7e14', color: 'white', border: 'none', padding: '9px 16px', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold', whiteSpace: 'nowrap' },
     invigilatorClassSelect: { marginTop: '12px' },
-    invigilatingBadge: { backgroundColor: '#fff3e0', border: '1px solid #fd7e14', color: '#e65100', padding: '8px 14px', borderRadius: '5px', fontSize: '13px', marginTop: '10px', display: 'inline-block' },
+    invigilatingBadge: { backgroundColor: '#fff3e0', border: '1px solid #fd7e14', color: '#e65100', padding: '9px 14px', borderRadius: '8px', fontSize: '13px', marginTop: '10px', display: 'inline-block' },
     invigilatingNote: { color: '#999', fontSize: '11px' },
-    invigilatorTag: { backgroundColor: '#fd7e14', color: 'white', padding: '2px 8px', borderRadius: '3px', fontSize: '11px', marginLeft: '8px' },
+    invigilatorTag: { backgroundColor: '#fd7e14', color: 'white', padding: '2px 8px', borderRadius: '6px', fontSize: '11px', marginLeft: '8px' },
 
     modeTabs: { display: 'flex', gap: '10px', marginBottom: '20px' },
-    modeTab: { flex: 1, padding: '12px 15px', borderRadius: '8px', border: '2px solid #1F3864', cursor: 'pointer', fontWeight: 'bold', fontSize: '14px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' },
+    modeTab: { flex: 1, padding: '12px 15px', borderRadius: '10px', border: '2px solid #1F3864', cursor: 'pointer', fontWeight: 'bold', fontSize: '14px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' },
     modeTabDesc: { fontSize: '11px', fontWeight: 'normal', opacity: 0.8 },
 
-    card: { backgroundColor: 'white', padding: '20px', borderRadius: '10px', marginBottom: '20px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' },
+    card: { backgroundColor: 'white', padding: '20px', borderRadius: '14px', marginBottom: '20px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' },
     grid3: { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '15px' },
     formGroup: { display: 'flex', flexDirection: 'column', gap: '6px' },
     label: { fontWeight: 'bold', color: '#1F3864', fontSize: '13px' },
-    select: { padding: '10px', borderRadius: '5px', border: '2px solid #ddd', fontSize: '16px', backgroundColor: 'white' },
-    classDisplay: { padding: '10px 15px', borderRadius: '5px', border: '2px solid #1F3864', fontSize: '14px', backgroundColor: '#e3f2fd', color: '#1F3864', fontWeight: 'bold', display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
-    lockedBadge: { backgroundColor: '#1F3864', color: 'white', padding: '2px 8px', borderRadius: '3px', fontSize: '11px' },
-    proceedBtn: { backgroundColor: '#1F3864', color: 'white', border: 'none', padding: '10px', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold', fontSize: '13px' },
-    proceedBtnLarge: { backgroundColor: '#1F3864', color: 'white', border: 'none', padding: '12px 25px', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold', fontSize: '14px', width: '100%', marginTop: '15px' },
+    select: { padding: '10px', borderRadius: '8px', border: '2px solid #ddd', fontSize: '16px', backgroundColor: 'white' },
+    classDisplay: { padding: '10px 15px', borderRadius: '8px', border: '2px solid #1F3864', fontSize: '14px', backgroundColor: '#e3f2fd', color: '#1F3864', fontWeight: 'bold', display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
+    lockedBadge: { backgroundColor: '#1F3864', color: 'white', padding: '2px 8px', borderRadius: '6px', fontSize: '11px' },
+    proceedBtn: { backgroundColor: '#1F3864', color: 'white', border: 'none', padding: '10px', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold', fontSize: '13px' },
+    proceedBtnLarge: { backgroundColor: '#1F3864', color: 'white', border: 'none', padding: '13px 25px', borderRadius: '10px', cursor: 'pointer', fontWeight: 'bold', fontSize: '14px', width: '100%', marginTop: '15px' },
 
     subjectToolbar: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' },
-    sectionTitle: { color: '#1F3864', margin: 0, fontSize: '16px' },
+    sectionTitle: { color: '#1F3864', margin: 0, fontSize: '16px', fontWeight: 700 },
     toolbarBtns: { display: 'flex', gap: '8px' },
-    selectAllBtn: { backgroundColor: '#28a745', color: 'white', border: 'none', padding: '6px 14px', borderRadius: '5px', cursor: 'pointer', fontSize: '12px', fontWeight: 'bold' },
-    clearAllBtn: { backgroundColor: '#6c757d', color: 'white', border: 'none', padding: '6px 14px', borderRadius: '5px', cursor: 'pointer', fontSize: '12px' },
-    subjectHint: { color: '#666', fontSize: '13px', marginBottom: '12px' },
+    selectAllBtn: { backgroundColor: '#28a745', color: 'white', border: 'none', padding: '7px 14px', borderRadius: '8px', cursor: 'pointer', fontSize: '12px', fontWeight: 'bold' },
+    clearAllBtn: { backgroundColor: '#6c757d', color: 'white', border: 'none', padding: '7px 14px', borderRadius: '8px', cursor: 'pointer', fontSize: '12px' },
+    subjectHint: { color: '#888', fontSize: '13px', marginBottom: '12px' },
     subjectGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: '10px', marginBottom: '15px' },
-    subjectTile: { padding: '12px 10px', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' },
+    subjectTile: { padding: '13px 10px', borderRadius: '10px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' },
     subjectCheck: { fontSize: '18px', flexShrink: 0 },
     subjectName: { fontSize: '13px', fontWeight: 'bold' },
 
-    tableCard: { backgroundColor: 'white', borderRadius: '10px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)', overflow: 'hidden', marginBottom: '20px' },
-    tableTopBar: { backgroundColor: '#1F3864', padding: '15px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' },
-    tableTitle: { color: 'white', margin: '0 0 3px 0', fontSize: '16px' },
+    tableCard: { backgroundColor: 'white', borderRadius: '14px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)', overflow: 'hidden', marginBottom: '20px' },
+    tableTopBar: { backgroundColor: '#1F3864', padding: '16px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' },
+    tableTitle: { color: 'white', margin: '0 0 3px 0', fontSize: '16px', fontWeight: 700 },
     tableSubtitle: { color: '#BDD7EE', margin: 0, fontSize: '13px' },
     tableBadges: { display: 'flex', gap: '8px' },
     badge: { backgroundColor: 'rgba(255,255,255,0.2)', color: 'white', padding: '4px 10px', borderRadius: '20px', fontSize: '12px' },
@@ -960,27 +927,27 @@ const styles = {
     tableWrapper: { overflowX: 'auto' },
     table: { width: '100%', borderCollapse: 'collapse', minWidth: '500px' },
     thead: { backgroundColor: '#f8f9fa' },
-    th: { padding: '10px 12px', textAlign: 'left', fontWeight: 'bold', color: '#1F3864', borderBottom: '2px solid #ddd', whiteSpace: 'nowrap', fontSize: '12px' },
-    td: { padding: '8px 12px', borderBottom: '1px solid #eee', fontSize: '13px' },
+    th: { padding: '11px 12px', textAlign: 'left', fontWeight: 'bold', color: '#1F3864', borderBottom: '2px solid #eee', whiteSpace: 'nowrap', fontSize: '12px' },
+    td: { padding: '9px 12px', borderBottom: '1px solid #f0f0f0', fontSize: '13px' },
     trEven: { backgroundColor: '#f9f9f9' },
     trOdd: { backgroundColor: 'white' },
     admNo: { fontFamily: 'monospace', fontSize: '11px', color: '#888' },
-    markInput: { width: '90px', padding: '7px', borderRadius: '5px', border: '2px solid #ddd', fontSize: '16px', textAlign: 'center', outline: 'none' },
+    markInput: { width: '90px', padding: '7px', borderRadius: '8px', border: '2px solid #ddd', fontSize: '16px', textAlign: 'center', outline: 'none' },
     multiMarkCell: { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px', position: 'relative' },
-    multiMarkInput: { width: '65px', padding: '5px 3px', borderRadius: '4px', border: '2px solid #ddd', fontSize: '16px', textAlign: 'center', outline: 'none' },
+    multiMarkInput: { width: '65px', padding: '5px 3px', borderRadius: '6px', border: '2px solid #ddd', fontSize: '16px', textAlign: 'center', outline: 'none' },
     savedDot: { position: 'absolute', top: 0, right: 0, color: '#2E75B6', fontSize: '10px' },
-    updateBadge: { backgroundColor: '#fff3cd', color: '#856404', padding: '2px 6px', borderRadius: '3px', fontSize: '11px' },
-    newBadge: { backgroundColor: '#d4edda', color: '#155724', padding: '2px 6px', borderRadius: '3px', fontSize: '11px' },
+    updateBadge: { backgroundColor: '#fff3cd', color: '#856404', padding: '2px 6px', borderRadius: '6px', fontSize: '11px' },
+    newBadge: { backgroundColor: '#d4edda', color: '#155724', padding: '2px 6px', borderRadius: '6px', fontSize: '11px' },
     emptyBadge: { color: '#aaa', fontSize: '12px' },
-    saveSection: { padding: '15px 20px', borderTop: '2px solid #f0f2f5', display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap', backgroundColor: '#f8f9fa' },
-    saveRowBtn: { backgroundColor: '#2E75B6', color: 'white', border: 'none', padding: '4px 8px', borderRadius: '4px', cursor: 'pointer', fontSize: '13px' },
-    retryBtn: { backgroundColor: '#dc3545', color: 'white', border: 'none', padding: '4px 8px', borderRadius: '4px', cursor: 'pointer', fontSize: '11px' },
+    saveSection: { padding: '16px 20px', borderTop: '2px solid #f0f2f5', display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap', backgroundColor: '#f8f9fa' },
+    saveRowBtn: { backgroundColor: '#2E75B6', color: 'white', border: 'none', padding: '5px 9px', borderRadius: '6px', cursor: 'pointer', fontSize: '13px' },
+    retryBtn: { backgroundColor: '#dc3545', color: 'white', border: 'none', padding: '5px 9px', borderRadius: '6px', cursor: 'pointer', fontSize: '11px' },
     savingBadge: { color: '#fd7e14', fontSize: '11px', fontWeight: 'bold' },
     savedBadge: { color: '#28a745', fontSize: '11px', fontWeight: 'bold' },
     errorBadge: { color: '#dc3545', fontSize: '11px', fontWeight: 'bold' },
-    saveBtn: { backgroundColor: '#28a745', color: 'white', border: 'none', padding: '10px 30px', borderRadius: '5px', cursor: 'pointer', fontSize: '15px', fontWeight: 'bold' },
-    backBtn: { backgroundColor: '#6c757d', color: 'white', border: 'none', padding: '10px 20px', borderRadius: '5px', cursor: 'pointer', fontSize: '14px' },
-    hint: { color: '#666', fontSize: '12px', fontStyle: 'italic', margin: 0 },
+    saveBtn: { backgroundColor: '#28a745', color: 'white', border: 'none', padding: '11px 30px', borderRadius: '10px', cursor: 'pointer', fontSize: '15px', fontWeight: 'bold' },
+    backBtn: { backgroundColor: '#6c757d', color: 'white', border: 'none', padding: '11px 20px', borderRadius: '10px', cursor: 'pointer', fontSize: '14px' },
+    hint: { color: '#888', fontSize: '12px', fontStyle: 'italic', margin: 0 },
 };
 
 const pStyles = {

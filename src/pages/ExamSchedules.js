@@ -196,7 +196,6 @@ function ExamSchedules() {
         if (win) { win.document.write(html); win.document.close(); }
     };
 
-    // Group filtered schedules by date
     const groupedByDate = filtered.reduce((groups, schedule) => {
         const date = schedule.examDate || 'No Date';
         if (!groups[date]) groups[date] = [];
@@ -239,7 +238,6 @@ function ExamSchedules() {
                     </div>
                 )}
 
-                {/* Filters */}
                 <div style={styles.searchBar}>
                     <select style={styles.filterSelect} value={filterYear} onChange={e => { setFilterYear(e.target.value); setFilterExam(''); }}>
                         <option value="">All Years</option>
@@ -263,7 +261,6 @@ function ExamSchedules() {
                 {loading ? <p style={{ textAlign:'center', padding:'40px', color:'#666' }}>⏳ Loading schedules...</p> : filtered.length === 0 ? (
                     <div style={styles.emptyState}><div style={{ fontSize:'48px', marginBottom:'15px' }}>🗓️</div><h3>No Schedules Found</h3><p>Click + Add Schedule to create one</p></div>
                 ) : (
-                    // Group by date
                     Object.entries(groupedByDate).sort(([a],[b]) => a.localeCompare(b)).map(([date, daySchedules]) => (
                         <div key={date} style={styles.dateGroup}>
                             <div style={styles.dateHeader}>
@@ -344,49 +341,42 @@ function ExamSchedules() {
 const styles = {
     container: { minHeight:'100vh', backgroundColor:'#f0f2f5' },
     layoutRow: { display:'flex' },
-    navbar: { backgroundColor:'#1F3864', padding:'15px 30px', display:'flex', justifyContent:'space-between', alignItems:'center' },
-    navLeft: { display:'flex', alignItems:'center', gap:'10px' },
-    navLogo: { width:'45px', height:'45px', objectFit:'contain' },
-    navTitle: { color:'white', margin:0, fontSize:'18px' },
-    navRight: { display:'flex', gap:'10px' },
-    navBtn: { backgroundColor:'transparent', color:'white', border:'1px solid white', padding:'8px 16px', borderRadius:'5px', cursor:'pointer' },
-    logoutBtn: { backgroundColor:'transparent', color:'white', border:'1px solid white', padding:'8px 16px', borderRadius:'5px', cursor:'pointer' },
     content: { padding: '30px', flex: 1 },
-    header: { display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'20px', flexWrap:'wrap', gap:'10px' },
-    title: { color:'#1F3864', margin:'0 0 5px 0', fontSize:'24px' },
-    subtitle: { color:'#666', margin:0, fontSize:'14px' },
-    addBtn: { backgroundColor:'#1F3864', color:'white', border:'none', padding:'10px 20px', borderRadius:'5px', cursor:'pointer', fontWeight:'bold' },
-    printBtn: { backgroundColor:'#28a745', color:'white', border:'none', padding:'10px 20px', borderRadius:'5px', cursor:'pointer', fontWeight:'bold' },
-    error: { color:'red', padding:'10px', backgroundColor:'#fff3f3', borderRadius:'5px', marginBottom:'15px' },
-    success: { color:'#155724', padding:'10px', backgroundColor:'#d4edda', borderRadius:'5px', marginBottom:'15px' },
-    addFormCard: { backgroundColor:'white', padding:'20px', borderRadius:'10px', marginBottom:'20px', boxShadow:'0 2px 8px rgba(0,0,0,0.12)', border:'2px solid #1F3864' },
-    formTitle: { color:'#1F3864', margin:'0 0 5px 0' },
+    header: { display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'22px', flexWrap:'wrap', gap:'10px' },
+    title: { color:'#1F3864', margin:'0 0 5px 0', fontSize:'24px', fontWeight:800 },
+    subtitle: { color:'#888', margin:0, fontSize:'14px' },
+    addBtn: { backgroundColor:'#1F3864', color:'white', border:'none', padding:'11px 22px', borderRadius:'10px', cursor:'pointer', fontWeight:'bold', fontSize:'13px' },
+    printBtn: { backgroundColor:'#28a745', color:'white', border:'none', padding:'11px 22px', borderRadius:'10px', cursor:'pointer', fontWeight:'bold', fontSize:'13px' },
+    error: { color:'#dc3545', padding:'12px 16px', backgroundColor:'#fff3f3', borderRadius:'10px', marginBottom:'15px', border:'1px solid #ffd6d6' },
+    success: { color:'#155724', padding:'12px 16px', backgroundColor:'#d4edda', borderRadius:'10px', marginBottom:'15px' },
+    addFormCard: { backgroundColor:'white', padding:'22px', borderRadius:'14px', marginBottom:'22px', boxShadow:'0 2px 8px rgba(0,0,0,0.06)', border:'2px solid #1F3864' },
+    formTitle: { color:'#1F3864', margin:'0 0 5px 0', fontWeight:700 },
     formGrid: { display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(180px,1fr))', gap:'12px', marginBottom:'12px' },
     formGroup: { display:'flex', flexDirection:'column', gap:'5px' },
     label: { fontSize:'12px', fontWeight:'bold', color:'#1F3864' },
-    input: { padding:'10px', borderRadius:'5px', border:'1.5px solid #ddd', fontSize:'14px' },
+    input: { padding:'10px', borderRadius:'8px', border:'1.5px solid #ddd', fontSize:'14px' },
     btnGroup: { display:'flex', gap:'10px', marginTop:'5px' },
-    submitBtn: { backgroundColor:'#2E75B6', color:'white', border:'none', padding:'10px 22px', borderRadius:'5px', cursor:'pointer', fontWeight:'bold', fontSize:'14px' },
-    cancelBtn: { backgroundColor:'#6c757d', color:'white', border:'none', padding:'10px 18px', borderRadius:'5px', cursor:'pointer', fontSize:'14px' },
-    searchBar: { display:'flex', gap:'10px', marginBottom:'20px', flexWrap:'wrap' },
-    searchInput: { flex:1, padding:'10px', borderRadius:'5px', border:'1.5px solid #ddd', fontSize:'14px', minWidth:'180px' },
-    filterSelect: { padding:'10px', borderRadius:'5px', border:'1.5px solid #ddd', fontSize:'14px' },
-    clearBtn: { backgroundColor:'#6c757d', color:'white', border:'none', padding:'10px 15px', borderRadius:'5px', cursor:'pointer' },
+    submitBtn: { backgroundColor:'#2E75B6', color:'white', border:'none', padding:'11px 22px', borderRadius:'10px', cursor:'pointer', fontWeight:'bold', fontSize:'14px' },
+    cancelBtn: { backgroundColor:'#6c757d', color:'white', border:'none', padding:'11px 18px', borderRadius:'10px', cursor:'pointer', fontSize:'14px' },
+    searchBar: { display:'flex', gap:'10px', marginBottom:'22px', flexWrap:'wrap' },
+    searchInput: { flex:1, padding:'10px', borderRadius:'8px', border:'1.5px solid #ddd', fontSize:'14px', minWidth:'180px' },
+    filterSelect: { padding:'10px', borderRadius:'8px', border:'1.5px solid #ddd', fontSize:'14px' },
+    clearBtn: { backgroundColor:'#6c757d', color:'white', border:'none', padding:'10px 16px', borderRadius:'8px', cursor:'pointer' },
     dateGroup: { marginBottom:'20px' },
-    dateHeader: { backgroundColor:'#2E75B6', color:'white', padding:'10px 15px', borderRadius:'8px 8px 0 0', display:'flex', justifyContent:'space-between', alignItems:'center', fontWeight:'bold', fontSize:'14px' },
-    tableWrapper: { overflowX:'auto', borderRadius:'0 0 8px 8px', boxShadow:'0 2px 4px rgba(0,0,0,0.1)' },
+    dateHeader: { backgroundColor:'#2E75B6', color:'white', padding:'11px 16px', borderRadius:'14px 14px 0 0', display:'flex', justifyContent:'space-between', alignItems:'center', fontWeight:'bold', fontSize:'14px' },
+    tableWrapper: { overflowX:'auto', borderRadius:'0 0 14px 14px', boxShadow:'0 2px 8px rgba(0,0,0,0.06)' },
     table: { width:'100%', borderCollapse:'collapse', backgroundColor:'white', minWidth:'700px' },
     tableHeader: { backgroundColor:'#1F3864' },
-    th: { color:'white', padding:'10px 12px', textAlign:'left', whiteSpace:'nowrap', fontSize:'12px' },
-    td: { padding:'9px 12px', borderBottom:'1px solid #eee', fontSize:'13px' },
+    th: { color:'white', padding:'11px 12px', textAlign:'left', whiteSpace:'nowrap', fontSize:'12px' },
+    td: { padding:'10px 12px', borderBottom:'1px solid #eee', fontSize:'13px' },
     trEven: { backgroundColor:'#f9f9f9' },
     trOdd: { backgroundColor:'white' },
-    editBtn: { backgroundColor:'#2E75B6', color:'white', border:'none', padding:'5px 10px', borderRadius:'3px', cursor:'pointer', fontSize:'12px' },
-    cancelEditBtn: { backgroundColor:'#6c757d', color:'white', border:'none', padding:'5px 10px', borderRadius:'3px', cursor:'pointer', fontSize:'12px' },
-    deleteBtn: { backgroundColor:'#dc3545', color:'white', border:'none', padding:'5px 10px', borderRadius:'3px', cursor:'pointer', fontSize:'12px' },
-    classBadge: { backgroundColor:'#e3f2fd', color:'#1F3864', padding:'2px 8px', borderRadius:'3px', fontSize:'12px', fontWeight:'bold' },
-    examBadge: { backgroundColor:'#fff3cd', color:'#856404', padding:'2px 8px', borderRadius:'3px', fontSize:'12px', fontWeight:'bold' },
-    emptyState: { backgroundColor:'white', padding:'60px', borderRadius:'10px', textAlign:'center', boxShadow:'0 2px 4px rgba(0,0,0,0.1)' },
+    editBtn: { backgroundColor:'#2E75B6', color:'white', border:'none', padding:'6px 12px', borderRadius:'8px', cursor:'pointer', fontSize:'12px' },
+    cancelEditBtn: { backgroundColor:'#6c757d', color:'white', border:'none', padding:'6px 12px', borderRadius:'8px', cursor:'pointer', fontSize:'12px' },
+    deleteBtn: { backgroundColor:'#dc3545', color:'white', border:'none', padding:'6px 10px', borderRadius:'8px', cursor:'pointer', fontSize:'12px' },
+    classBadge: { backgroundColor:'#e3f2fd', color:'#1F3864', padding:'2px 9px', borderRadius:'8px', fontSize:'12px', fontWeight:'bold' },
+    examBadge: { backgroundColor:'#fff3cd', color:'#856404', padding:'2px 9px', borderRadius:'8px', fontSize:'12px', fontWeight:'bold' },
+    emptyState: { backgroundColor:'white', padding:'60px', borderRadius:'14px', textAlign:'center', boxShadow:'0 2px 8px rgba(0,0,0,0.06)' },
 };
 
 export default ExamSchedules;

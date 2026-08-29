@@ -103,7 +103,6 @@ function GradingScales() {
 
     return (
         <div style={styles.container}>
-            {/* Navbar */}
            <Navbar />
             <div style={styles.layoutRow}>
                 <Sidebar />
@@ -117,14 +116,13 @@ function GradingScales() {
 
                 {error && <p style={styles.error}>{error}</p>}
 
-                {/* Add/Edit Form */}
                 {showForm && (
                     <div style={styles.form}>
-                        <h3>{editingScale ? 'Edit Grading Scale' : 'Add New Grading Scale'}</h3>
+                        <h3 style={styles.formTitle}>{editingScale ? 'Edit Grading Scale' : 'Add New Grading Scale'}</h3>
                         <form onSubmit={handleSubmit}>
                             <div style={styles.formGrid}>
                                 <div style={styles.formGroup}>
-                                    <label>Grade Letter</label>
+                                    <label style={styles.label}>Grade Letter</label>
                                     <input
                                         style={styles.input}
                                         value={formData.gradeLetter}
@@ -135,7 +133,7 @@ function GradingScales() {
                                     />
                                 </div>
                                 <div style={styles.formGroup}>
-                                    <label>Min Mark</label>
+                                    <label style={styles.label}>Min Mark</label>
                                     <input
                                         type="number"
                                         style={styles.input}
@@ -146,7 +144,7 @@ function GradingScales() {
                                     />
                                 </div>
                                 <div style={styles.formGroup}>
-                                    <label>Max Mark</label>
+                                    <label style={styles.label}>Max Mark</label>
                                     <input
                                         type="number"
                                         style={styles.input}
@@ -157,7 +155,7 @@ function GradingScales() {
                                     />
                                 </div>
                                 <div style={styles.formGroup}>
-                                    <label>Points</label>
+                                    <label style={styles.label}>Points</label>
                                     <input
                                         type="number"
                                         style={styles.input}
@@ -168,7 +166,7 @@ function GradingScales() {
                                     />
                                 </div>
                                 <div style={styles.formGroup}>
-                                    <label>Remarks</label>
+                                    <label style={styles.label}>Remarks</label>
                                     <input
                                         style={styles.input}
                                         value={formData.remarks}
@@ -189,7 +187,6 @@ function GradingScales() {
                     </div>
                 )}
 
-                {/* Search Bar */}
                 <div style={styles.searchBar}>
                     <input
                         style={styles.searchInput}
@@ -200,9 +197,8 @@ function GradingScales() {
                     <button onClick={() => setSearch('')} style={styles.clearBtn}>Clear</button>
                 </div>
 
-                {/* Table */}
                 {loading ? (
-                    <p>Loading grading scales...</p>
+                    <p style={{ textAlign: 'center', padding: '40px', color: '#666' }}>Loading grading scales...</p>
                 ) : (
                     <div style={styles.tableWrapper}>
                         <table style={styles.table}>
@@ -264,38 +260,33 @@ function GradingScales() {
 const styles = {
     container: { minHeight: '100vh', backgroundColor: '#f0f2f5' },
     layoutRow: { display: 'flex' },
-    navbar: { backgroundColor: '#1F3864', padding: '15px 30px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
-    navLeft: { display: 'flex', alignItems: 'center', gap: '10px' },
-    navLogo: { width: '45px', height: '45px', objectFit: 'contain' },
-    navTitle: { color: 'white', margin: 0, fontSize: '18px' },
-    navRight: { display: 'flex', gap: '10px' },
-    navBtn: { backgroundColor: 'transparent', color: 'white', border: '1px solid white', padding: '8px 16px', borderRadius: '5px', cursor: 'pointer' },
-    logoutBtn: { backgroundColor: 'transparent', color: 'white', border: '1px solid white', padding: '8px 16px', borderRadius: '5px', cursor: 'pointer' },
-   content: { padding: '30px', flex: 1 },
-    header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' },
-    title: { color: '#1F3864', margin: 0 },
-    addBtn: { backgroundColor: '#1F3864', color: 'white', border: 'none', padding: '10px 20px', borderRadius: '5px', cursor: 'pointer' },
-    error: { color: 'red', marginBottom: '15px' },
-    form: { backgroundColor: 'white', padding: '20px', borderRadius: '10px', marginBottom: '20px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' },
+    content: { padding: '30px', flex: 1 },
+    header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '22px' },
+    title: { color: '#1F3864', margin: 0, fontSize: '22px', fontWeight: 800 },
+    addBtn: { backgroundColor: '#1F3864', color: 'white', border: 'none', padding: '11px 22px', borderRadius: '10px', cursor: 'pointer', fontWeight: 'bold', fontSize: '13px' },
+    error: { color: '#dc3545', padding: '12px 16px', backgroundColor: '#fff3f3', borderRadius: '10px', marginBottom: '15px', border: '1px solid #ffd6d6' },
+    form: { backgroundColor: 'white', padding: '22px', borderRadius: '14px', marginBottom: '22px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' },
+    formTitle: { color: '#1F3864', fontWeight: 700, margin: '0 0 15px 0' },
     formGrid: { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '15px', marginBottom: '15px' },
     formGroup: { display: 'flex', flexDirection: 'column', gap: '5px' },
-    input: { padding: '8px', borderRadius: '5px', border: '1px solid #ddd', fontSize: '14px' },
+    label: { fontSize: '12px', fontWeight: 'bold', color: '#1F3864' },
+    input: { padding: '10px', borderRadius: '8px', border: '1.5px solid #ddd', fontSize: '14px' },
     btnGroup: { display: 'flex', gap: '10px' },
-    submitBtn: { backgroundColor: '#2E75B6', color: 'white', border: 'none', padding: '10px 20px', borderRadius: '5px', cursor: 'pointer' },
-    cancelBtn: { backgroundColor: '#6c757d', color: 'white', border: 'none', padding: '10px 20px', borderRadius: '5px', cursor: 'pointer' },
-    searchBar: { display: 'flex', gap: '10px', marginBottom: '20px' },
-    searchInput: { flex: 1, padding: '10px', borderRadius: '5px', border: '1px solid #ddd', fontSize: '14px' },
-    clearBtn: { backgroundColor: '#6c757d', color: 'white', border: 'none', padding: '10px 15px', borderRadius: '5px', cursor: 'pointer' },
-    tableWrapper: { overflowX: 'auto', borderRadius: '10px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' },
+    submitBtn: { backgroundColor: '#2E75B6', color: 'white', border: 'none', padding: '11px 22px', borderRadius: '10px', cursor: 'pointer', fontWeight: 'bold' },
+    cancelBtn: { backgroundColor: '#6c757d', color: 'white', border: 'none', padding: '11px 22px', borderRadius: '10px', cursor: 'pointer' },
+    searchBar: { display: 'flex', gap: '10px', marginBottom: '22px' },
+    searchInput: { flex: 1, padding: '10px', borderRadius: '8px', border: '1.5px solid #ddd', fontSize: '14px' },
+    clearBtn: { backgroundColor: '#6c757d', color: 'white', border: 'none', padding: '10px 16px', borderRadius: '8px', cursor: 'pointer' },
+    tableWrapper: { overflowX: 'auto', borderRadius: '14px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' },
     table: { width: '100%', borderCollapse: 'collapse', backgroundColor: 'white', minWidth: '600px' },
     tableHeader: { backgroundColor: '#1F3864' },
-    th: { color: 'white', padding: '12px 15px', textAlign: 'left' },
-    td: { padding: '12px 15px', borderBottom: '1px solid #eee' },
+    th: { color: 'white', padding: '13px 15px', textAlign: 'left', fontSize: '13px' },
+    td: { padding: '12px 15px', borderBottom: '1px solid #f0f0f0', fontSize: '13px' },
     trEven: { backgroundColor: '#f9f9f9' },
     trOdd: { backgroundColor: 'white' },
-    editBtn: { backgroundColor: '#2E75B6', color: 'white', border: 'none', padding: '5px 10px', borderRadius: '3px', cursor: 'pointer', marginRight: '5px' },
-    deleteBtn: { backgroundColor: '#dc3545', color: 'white', border: 'none', padding: '5px 10px', borderRadius: '3px', cursor: 'pointer' },
-    gradeBadge: { color: 'white', padding: '3px 8px', borderRadius: '3px', fontSize: '14px', fontWeight: 'bold' }
+    editBtn: { backgroundColor: '#2E75B6', color: 'white', border: 'none', padding: '6px 12px', borderRadius: '8px', cursor: 'pointer', marginRight: '5px', fontSize: '12px' },
+    deleteBtn: { backgroundColor: '#dc3545', color: 'white', border: 'none', padding: '6px 12px', borderRadius: '8px', cursor: 'pointer', fontSize: '12px' },
+    gradeBadge: { color: 'white', padding: '4px 10px', borderRadius: '8px', fontSize: '14px', fontWeight: 'bold' }
 };
 
 export default GradingScales;

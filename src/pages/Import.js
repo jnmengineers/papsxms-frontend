@@ -11,7 +11,6 @@ function Import() {
     const [exams, setExams] = useState([]);
     const [classes, setClasses] = useState([]);
 
-    // Marks import state
     const [marksFile, setMarksFile] = useState(null);
     const [marksPreview, setMarksPreview] = useState([]);
     const [marksHeaders, setMarksHeaders] = useState([]);
@@ -19,13 +18,11 @@ function Import() {
     const [marksImporting, setMarksImporting] = useState(false);
     const [marksResult, setMarksResult] = useState(null);
 
-    // Students import state
     const [studentsFile, setStudentsFile] = useState(null);
     const [studentsPreview, setStudentsPreview] = useState([]);
     const [studentsImporting, setStudentsImporting] = useState(false);
     const [studentsResult, setStudentsResult] = useState(null);
 
-    // Teachers import state
     const [teachersFile, setTeachersFile] = useState(null);
     const [teachersPreview, setTeachersPreview] = useState([]);
     const [teachersImporting, setTeachersImporting] = useState(false);
@@ -48,7 +45,6 @@ function Import() {
         setClasses(response.data);
     };
 
-    // ── Parse Excel file ──────────────────────────────────────────────────────
     const parseExcel = (file) => {
         return new Promise((resolve, reject) => {
             const reader = new FileReader();
@@ -67,7 +63,6 @@ function Import() {
         });
     };
 
-    // ── Marks Import ──────────────────────────────────────────────────────────
     const handleMarksFile = async (e) => {
         const file = e.target.files[0];
         if (!file) return;
@@ -76,7 +71,6 @@ function Import() {
         setError('');
         try {
             const rows = await parseExcel(file);
-            // Row 0 = meta headers, Row 1 = meta values, Row 2 = col headers, Row 3+ = data
             if (rows.length < 4) { setError('Invalid template format'); return; }
             const meta = rows[1];
             setMarksMeta({
@@ -87,8 +81,8 @@ function Import() {
             });
             const headers = rows[2].filter(h => h !== '');
             setMarksHeaders(headers);
-            const dataRows = rows.slice(3).filter(r => r[1] && r[1] !== ''); // has admission no
-            setMarksPreview(dataRows.slice(0, 10)); // preview first 10
+            const dataRows = rows.slice(3).filter(r => r[1] && r[1] !== '');
+            setMarksPreview(dataRows.slice(0, 10));
         } catch (err) {
             setError('Failed to parse file. Make sure you are using the correct template.');
         }
@@ -107,7 +101,6 @@ function Import() {
             const className = meta[1];
             const term = parseInt(meta[3]);
 
-            // Find exam
             const exam = exams.find(e =>
                 e.examName.toLowerCase().trim() === examName?.toLowerCase().trim()
             );
@@ -117,7 +110,6 @@ function Import() {
                 return;
             }
 
-            // Find class
             const schoolClass = classes.find(c =>
                 c.className.toLowerCase().trim() === className?.toLowerCase().trim()
             );
@@ -127,18 +119,16 @@ function Import() {
                 return;
             }
 
-            const headers = rows[2]; // col headers
-            const subjectHeaders = headers.slice(3).filter(h => h !== ''); // skip #, ADM, NAME
+            const headers = rows[2];
+            const subjectHeaders = headers.slice(3).filter(h => h !== '');
             const dataRows = rows.slice(3).filter(r => r[1] && r[1] !== '');
 
-            // Get students in this class
             const studentsRes = await api.get('/api/students');
             const classStudents = studentsRes.data.filter(s =>
                 s.className === schoolClass.className ||
                 String(s.schoolClass?.classId) === String(schoolClass.classId)
             );
 
-            // Get subjects from class-subjects
             const subjectsRes = await api.get(`/api/class-subjects/by-class/${schoolClass.classId}`);
             const classSubjects = subjectsRes.data.map(cs => cs.subject).filter(Boolean);
 
@@ -153,7 +143,7 @@ function Import() {
 
                 for (let i = 0; i < subjectHeaders.length; i++) {
                     const subjectName = subjectHeaders[i];
-                    const markValue = row[i + 3]; // offset by 3 (skip #, adm, name)
+                    const markValue = row[i + 3];
 
                     if (markValue === '' || markValue === null || markValue === undefined) continue;
 
@@ -166,7 +156,6 @@ function Import() {
                     if (!subject) continue;
 
                     try {
-                        // Check if result exists
                         const existingRes = await api.get(`/api/results/by-exam/${exam.examId}`);
                         const existing = existingRes.data.find(r =>
                             String(r.student?.studentId) === String(student.studentId) &&
@@ -202,7 +191,6 @@ function Import() {
         setMarksImporting(false);
     };
 
-    // ── Students Import ───────────────────────────────────────────────────────
     const handleStudentsFile = async (e) => {
         const file = e.target.files[0];
         if (!file) return;
@@ -257,7 +245,6 @@ function Import() {
         setStudentsImporting(false);
     };
 
-    // ── Teachers Import ───────────────────────────────────────────────────────
     const handleTeachersFile = async (e) => {
         const file = e.target.files[0];
         if (!file) return;
@@ -283,12 +270,10 @@ function Import() {
             const dataRows = rows.slice(1).filter(r => r[0] && r[0] !== '');
             let saved = 0, updated = 0, skipped = 0, failed = 0;
 
-            // Fetch existing teachers to check for duplicates by phone
             const existingRes = await api.get('/api/teachers');
             const existingTeachers = existingRes.data;
 
             for (const row of dataRows) {
-                // New column order: PHONE (unique), FIRST NAME, LAST NAME, EMAIL (optional)
                 const [phone, firstName, lastName, email] = row;
                 if (!phone || !firstName || !lastName) { skipped++; continue; }
 
@@ -299,7 +284,6 @@ function Import() {
 
                 try {
                     if (existing) {
-                        // Update existing teacher — only overwrite email if provided
                         await api.put(`/api/teachers/${existing.teacherId}`, {
                             firstName: String(firstName).trim(),
                             lastName: String(lastName).trim(),
@@ -372,7 +356,6 @@ function Import() {
 
                 {error && <p style={styles.error}>{error}</p>}
 
-                {/* Tabs */}
                 <div style={styles.tabs}>
                     {tabs.map(tab => (
                         <button key={tab.key} onClick={() => { setActiveTab(tab.key); setError(''); }}
@@ -382,10 +365,8 @@ function Import() {
                     ))}
                 </div>
 
-                {/* ── MARKS IMPORT ── */}
                 {activeTab === 'marks' && (
                     <div>
-                        {/* Download Template */}
                         <div style={styles.templateCard}>
                             <div style={styles.templateLeft}>
                                 <h3 style={styles.templateTitle}>📥 Step 1 — Download Template</h3>
@@ -406,7 +387,6 @@ function Import() {
                             </a>
                         </div>
 
-                        {/* Upload */}
                         <div style={styles.uploadCard}>
                             <h3 style={styles.uploadTitle}>📤 Step 2 — Upload Filled Template</h3>
                             <div style={styles.uploadArea}>
@@ -419,7 +399,6 @@ function Import() {
                                 </label>
                             </div>
 
-                            {/* Meta Preview */}
                             {marksMeta.examName && (
                                 <div style={styles.metaPreview}>
                                     <div style={styles.metaItem}>
@@ -447,7 +426,6 @@ function Import() {
                                 </div>
                             )}
 
-                            {/* Preview Table */}
                             {marksPreview.length > 0 && (
                                 <div>
                                     <h4 style={styles.previewTitle}>👁️ Preview (first 10 rows)</h4>
@@ -482,7 +460,6 @@ function Import() {
                     </div>
                 )}
 
-                {/* ── STUDENTS IMPORT ── */}
                 {activeTab === 'students' && (
                     <div>
                         <div style={styles.templateCard}>
@@ -554,7 +531,6 @@ function Import() {
                     </div>
                 )}
 
-                {/* ── TEACHERS IMPORT ── */}
                 {activeTab === 'teachers' && (
                     <div>
                         <div style={styles.templateCard}>
@@ -633,46 +609,39 @@ function Import() {
 const styles = {
     container: { minHeight: '100vh', backgroundColor: '#f0f2f5' },
     layoutRow: { display: 'flex' },
-    navbar: { backgroundColor: '#1F3864', padding: '15px 30px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
-    navLeft: { display: 'flex', alignItems: 'center', gap: '10px' },
-    navLogo: { width: '45px', height: '45px', objectFit: 'contain' },
-    navTitle: { color: 'white', margin: 0, fontSize: '18px' },
-    navRight: { display: 'flex', gap: '10px' },
-    navBtn: { backgroundColor: 'transparent', color: 'white', border: '1px solid white', padding: '8px 16px', borderRadius: '5px', cursor: 'pointer' },
-    logoutBtn: { backgroundColor: 'transparent', color: 'white', border: '1px solid white', padding: '8px 16px', borderRadius: '5px', cursor: 'pointer' },
     content: { padding: '30px', flex: 1 },
-    title: { color: '#1F3864', margin: '0 0 5px 0', fontSize: '24px' },
-    subtitle: { color: '#666', marginBottom: '25px' },
-    error: { color: 'red', padding: '10px', backgroundColor: '#fff3f3', borderRadius: '5px', marginBottom: '15px' },
-    tabs: { display: 'flex', gap: '10px', marginBottom: '20px', flexWrap: 'wrap' },
-    tab: { padding: '10px 20px', borderRadius: '5px', border: '2px solid #1F3864', cursor: 'pointer', fontWeight: 'bold', fontSize: '14px' },
-    templateCard: { backgroundColor: 'white', padding: '25px', borderRadius: '10px', marginBottom: '20px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '20px', flexWrap: 'wrap' },
+    title: { color: '#1F3864', margin: '0 0 5px 0', fontSize: '24px', fontWeight: 800 },
+    subtitle: { color: '#888', marginBottom: '25px' },
+    error: { color: '#dc3545', padding: '12px 16px', backgroundColor: '#fff3f3', borderRadius: '10px', marginBottom: '15px', border: '1px solid #ffd6d6' },
+    tabs: { display: 'flex', gap: '10px', marginBottom: '22px', flexWrap: 'wrap' },
+    tab: { padding: '11px 22px', borderRadius: '10px', border: '2px solid #1F3864', cursor: 'pointer', fontWeight: 'bold', fontSize: '14px' },
+    templateCard: { backgroundColor: 'white', padding: '25px', borderRadius: '14px', marginBottom: '20px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '20px', flexWrap: 'wrap' },
     templateLeft: { flex: 1 },
-    templateTitle: { color: '#1F3864', margin: '0 0 8px 0', fontSize: '16px' },
+    templateTitle: { color: '#1F3864', margin: '0 0 8px 0', fontSize: '16px', fontWeight: 700 },
     templateDesc: { color: '#666', fontSize: '14px', marginBottom: '15px' },
-    templateSteps: { display: 'flex', flexDirection: 'column', gap: '6px' },
+    templateSteps: { display: 'flex', flexDirection: 'column', gap: '7px' },
     stepItem: { display: 'flex', alignItems: 'center', gap: '10px', fontSize: '13px', color: '#555' },
     stepNum: { backgroundColor: '#1F3864', color: 'white', width: '22px', height: '22px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 'bold', flexShrink: 0 },
-    downloadBtn: { backgroundColor: '#28a745', color: 'white', padding: '12px 20px', borderRadius: '5px', textDecoration: 'none', fontWeight: 'bold', fontSize: '14px', whiteSpace: 'nowrap', alignSelf: 'center' },
-    uploadCard: { backgroundColor: 'white', padding: '25px', borderRadius: '10px', marginBottom: '20px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' },
-    uploadTitle: { color: '#1F3864', margin: '0 0 15px 0', fontSize: '16px' },
+    downloadBtn: { backgroundColor: '#28a745', color: 'white', padding: '13px 22px', borderRadius: '10px', textDecoration: 'none', fontWeight: 'bold', fontSize: '14px', whiteSpace: 'nowrap', alignSelf: 'center' },
+    uploadCard: { backgroundColor: 'white', padding: '25px', borderRadius: '14px', marginBottom: '20px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' },
+    uploadTitle: { color: '#1F3864', margin: '0 0 15px 0', fontSize: '16px', fontWeight: 700 },
     uploadArea: { marginBottom: '15px' },
     fileInput: { display: 'none' },
-    fileLabel: { display: 'block', padding: '15px 20px', border: '2px dashed #2E75B6', borderRadius: '8px', cursor: 'pointer', color: '#2E75B6', fontWeight: 'bold', textAlign: 'center', backgroundColor: '#f0f8ff', fontSize: '14px' },
-    metaPreview: { display: 'flex', gap: '15px', flexWrap: 'wrap', padding: '12px 15px', backgroundColor: '#f8f9fa', borderRadius: '8px', marginBottom: '15px' },
+    fileLabel: { display: 'block', padding: '16px 20px', border: '2px dashed #2E75B6', borderRadius: '12px', cursor: 'pointer', color: '#2E75B6', fontWeight: 'bold', textAlign: 'center', backgroundColor: '#f0f8ff', fontSize: '14px' },
+    metaPreview: { display: 'flex', gap: '16px', flexWrap: 'wrap', padding: '13px 16px', backgroundColor: '#f8f9fa', borderRadius: '10px', marginBottom: '15px' },
     metaItem: { display: 'flex', flexDirection: 'column', gap: '3px' },
     metaLabel: { fontSize: '11px', color: '#999', fontWeight: 'bold', textTransform: 'uppercase' },
     metaValue: { fontSize: '14px', fontWeight: 'bold', color: '#1F3864' },
-    previewTitle: { color: '#1F3864', margin: '0 0 10px 0', fontSize: '14px' },
-    previewWrapper: { overflowX: 'auto', marginBottom: '15px', borderRadius: '5px', border: '1px solid #ddd' },
+    previewTitle: { color: '#1F3864', margin: '0 0 10px 0', fontSize: '14px', fontWeight: 700 },
+    previewWrapper: { overflowX: 'auto', marginBottom: '15px', borderRadius: '10px', border: '1px solid #eee' },
     previewTable: { width: '100%', borderCollapse: 'collapse', fontSize: '12px' },
-    previewTh: { backgroundColor: '#1F3864', color: 'white', padding: '8px 10px', textAlign: 'left', whiteSpace: 'nowrap' },
-    previewTd: { padding: '6px 10px', borderBottom: '1px solid #eee' },
-    importBtn: { backgroundColor: '#1F3864', color: 'white', border: 'none', padding: '12px 30px', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold', fontSize: '15px' },
-    resultBanner: { backgroundColor: 'white', padding: '20px', borderRadius: '10px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)', marginBottom: '20px' },
-    resultTitle: { color: '#155724', margin: '0 0 12px 0', fontSize: '16px' },
+    previewTh: { backgroundColor: '#1F3864', color: 'white', padding: '9px 10px', textAlign: 'left', whiteSpace: 'nowrap' },
+    previewTd: { padding: '7px 10px', borderBottom: '1px solid #f0f0f0' },
+    importBtn: { backgroundColor: '#1F3864', color: 'white', border: 'none', padding: '13px 30px', borderRadius: '10px', cursor: 'pointer', fontWeight: 'bold', fontSize: '15px' },
+    resultBanner: { backgroundColor: 'white', padding: '20px', borderRadius: '14px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)', marginBottom: '20px' },
+    resultTitle: { color: '#155724', margin: '0 0 12px 0', fontSize: '16px', fontWeight: 700 },
     resultStats: { display: 'flex', gap: '12px', flexWrap: 'wrap' },
-    resultStat: { padding: '10px 20px', borderRadius: '8px', fontSize: '14px', fontWeight: 'bold', textAlign: 'center' },
+    resultStat: { padding: '11px 22px', borderRadius: '10px', fontSize: '14px', fontWeight: 'bold', textAlign: 'center' },
 };
 
 export default Import;

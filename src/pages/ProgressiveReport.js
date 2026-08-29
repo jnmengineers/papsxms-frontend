@@ -566,7 +566,7 @@ function ProgressiveReport() {
 
                                 {/* Top 3 highlight */}
                                 <div style={styles.topThree}>
-                                    <h4 style={{ color: '#1F3864', margin: '0 0 12px 0' }}>🏆 Top 3 Most Improved</h4>
+                                    <h4 style={{ color: '#1F3864', margin: '0 0 12px 0', fontWeight: 800 }}>🏆 Top 3 Most Improved</h4>
                                     <div style={styles.podium}>
                                         {improvedStudents.slice(0, 3).map((s, i) => (
                                             <div key={i} style={{
@@ -598,11 +598,9 @@ function ProgressiveReport() {
             {/* Hidden print area */}
             <div style={{ display: 'none' }}>
                 <PrintableProgressiveCard ref={printRef} data={progressiveData} examNames={examNames} />
-               
             </div>
-             <Footer />
         </div>
-          <Footer />
+        <Footer />
     </div>
     );
 }
@@ -610,59 +608,52 @@ function ProgressiveReport() {
 const styles = {
     container: { minHeight: '100vh', backgroundColor: '#f0f2f5' },
     layoutRow: { display: 'flex' },
-    navbar: { backgroundColor: '#1F3864', padding: '15px 30px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
-    navLeft: { display: 'flex', alignItems: 'center', gap: '10px' },
-    navLogo: { width: '45px', height: '45px', objectFit: 'contain' },
-    navTitle: { color: 'white', margin: 0, fontSize: '18px' },
-    navRight: { display: 'flex', gap: '10px' },
-    navBtn: { backgroundColor: 'transparent', color: 'white', border: '1px solid white', padding: '8px 16px', borderRadius: '5px', cursor: 'pointer' },
-    logoutBtn: { backgroundColor: 'transparent', color: 'white', border: '1px solid white', padding: '8px 16px', borderRadius: '5px', cursor: 'pointer' },
     content: { padding: '30px', flex: 1 },
-    title: { color: '#1F3864', margin: '0 0 5px 0', fontSize: '24px' },
+    title: { color: '#1F3864', margin: '0 0 5px 0', fontSize: '24px', fontWeight: 800 },
     subtitle: { color: '#666', margin: '0 0 20px 0' },
-    error: { color: 'red', padding: '10px 15px', backgroundColor: '#fff3f3', borderRadius: '5px', marginBottom: '15px' },
-    controlCard: { backgroundColor: 'white', padding: '20px', borderRadius: '10px', marginBottom: '20px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' },
+    error: { color: '#dc3545', padding: '10px 15px', backgroundColor: '#fff3f3', borderRadius: '10px', marginBottom: '15px', border: '1px solid #ffd6d6' },
+    controlCard: { backgroundColor: 'white', padding: '20px', borderRadius: '14px', marginBottom: '20px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' },
     controlGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '15px', marginBottom: '10px' },
     formGroup: { display: 'flex', flexDirection: 'column', gap: '6px' },
-    label: { fontWeight: 'bold', color: '#1F3864', fontSize: '13px' },
-    select: { padding: '10px', borderRadius: '5px', border: '2px solid #ddd', fontSize: '14px' },
+    label: { fontWeight: 700, color: '#1F3864', fontSize: '13px' },
+    select: { padding: '10px', borderRadius: '8px', border: '2px solid #ddd', fontSize: '14px' },
     examBadges: { display: 'flex', gap: '10px', flexWrap: 'wrap', marginTop: '8px' },
-    examBadge: { backgroundColor: '#e3f2fd', color: '#1F3864', padding: '4px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: 'bold' },
+    examBadge: { backgroundColor: '#e3f2fd', color: '#1F3864', padding: '4px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: 700 },
     tabs: { display: 'flex', gap: '10px', marginBottom: '20px' },
-    tab: { padding: '10px 20px', borderRadius: '5px', border: '2px solid #1F3864', cursor: 'pointer', fontWeight: 'bold', fontSize: '14px' },
+    tab: { padding: '10px 20px', borderRadius: '10px', border: '2px solid #1F3864', cursor: 'pointer', fontWeight: 700, fontSize: '14px', transition: 'all 0.15s ease' },
     studentSelector: { display: 'flex', gap: '15px', alignItems: 'flex-end', marginBottom: '20px', flexWrap: 'wrap' },
-    viewBtn: { backgroundColor: '#1F3864', color: 'white', border: 'none', padding: '11px 24px', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold', whiteSpace: 'nowrap' },
-    reportCard: { backgroundColor: 'white', borderRadius: '10px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)', overflow: 'hidden', marginBottom: '20px' },
+    viewBtn: { backgroundColor: '#1F3864', color: 'white', border: 'none', padding: '11px 24px', borderRadius: '10px', cursor: 'pointer', fontWeight: 700, whiteSpace: 'nowrap', transition: 'transform 0.15s ease, box-shadow 0.15s ease', boxShadow: '0 2px 6px rgba(31,56,100,0.25)' },
+    reportCard: { backgroundColor: 'white', borderRadius: '14px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)', overflow: 'hidden', marginBottom: '20px' },
     printBar: { backgroundColor: '#1F3864', padding: '12px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' },
-    printBarInfo: { color: 'white', fontWeight: 'bold', fontSize: '14px' },
-    printBtn: { backgroundColor: '#28a745', color: 'white', border: 'none', padding: '8px 18px', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold' },
+    printBarInfo: { color: 'white', fontWeight: 700, fontSize: '14px' },
+    printBtn: { backgroundColor: '#28a745', color: 'white', border: 'none', padding: '8px 18px', borderRadius: '8px', cursor: 'pointer', fontWeight: 700, transition: 'transform 0.15s ease' },
     studentHeader: { display: 'flex', alignItems: 'center', gap: '15px', padding: '15px 20px', borderBottom: '1px solid #eee' },
-    studentAvatar: { width: '50px', height: '50px', borderRadius: '50%', backgroundColor: '#1F3864', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '16px', flexShrink: 0 },
-    studentName: { color: '#1F3864', margin: '0 0 4px 0', fontSize: '18px' },
+    studentAvatar: { width: '50px', height: '50px', borderRadius: '50%', backgroundColor: '#1F3864', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '16px', flexShrink: 0 },
+    studentName: { color: '#1F3864', margin: '0 0 4px 0', fontSize: '18px', fontWeight: 800 },
     studentMeta: { color: '#666', margin: 0, fontSize: '13px' },
     table: { width: '100%', borderCollapse: 'collapse' },
     thead: { backgroundColor: '#1F3864' },
-    th: { color: 'white', padding: '10px 12px', textAlign: 'left', fontSize: '12px', fontWeight: 'bold', whiteSpace: 'nowrap' },
+    th: { color: 'white', padding: '10px 12px', textAlign: 'left', fontSize: '12px', fontWeight: 700, whiteSpace: 'nowrap' },
     td: { padding: '10px 12px', borderBottom: '1px solid #eee', fontSize: '13px' },
     trEven: { backgroundColor: '#fafafa' },
     trOdd: { backgroundColor: 'white' },
     markCell: { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' },
-    markNum: { fontSize: '16px', fontWeight: 'bold' },
-    gradeTag: { color: 'white', padding: '1px 6px', borderRadius: '3px', fontSize: '10px', fontWeight: 'bold' },
+    markNum: { fontSize: '16px', fontWeight: 700 },
+    gradeTag: { color: 'white', padding: '1px 6px', borderRadius: '6px', fontSize: '10px', fontWeight: 700 },
     noMark: { color: '#ccc', fontSize: '16px' },
-    admNo: { backgroundColor: '#e3f2fd', color: '#1F3864', padding: '2px 6px', borderRadius: '3px', fontSize: '11px', fontFamily: 'monospace' },
+    admNo: { backgroundColor: '#e3f2fd', color: '#1F3864', padding: '2px 6px', borderRadius: '6px', fontSize: '11px', fontFamily: 'monospace' },
     summaryBar: { display: 'flex', alignItems: 'center', gap: '20px', padding: '15px 20px', backgroundColor: '#f8f9fa', borderTop: '2px solid #eee', flexWrap: 'wrap' },
     summaryItem: { display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: '70px' },
-    summaryNum: { fontSize: '28px', fontWeight: 'bold', lineHeight: 1 },
+    summaryNum: { fontSize: '28px', fontWeight: 800, lineHeight: 1 },
     summaryLabel: { fontSize: '11px', color: '#888', marginTop: '3px' },
     summaryDivider: { width: '1px', height: '40px', backgroundColor: '#eee' },
     topThree: { padding: '20px', borderTop: '1px solid #eee' },
     podium: { display: 'flex', gap: '10px', alignItems: 'flex-end', justifyContent: 'center' },
-    podiumItem: { display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '12px 20px', borderRadius: '8px', minWidth: '100px' },
+    podiumItem: { display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '12px 20px', borderRadius: '10px', minWidth: '100px', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' },
     podiumRank: { fontSize: '24px', marginBottom: '5px' },
-    podiumName: { fontWeight: 'bold', color: '#333', fontSize: '13px', textAlign: 'center' },
+    podiumName: { fontWeight: 700, color: '#333', fontSize: '13px', textAlign: 'center' },
     podiumScore: { fontSize: '12px', color: '#555', marginTop: '3px' },
-    emptyState: { backgroundColor: 'white', padding: '60px', borderRadius: '10px', textAlign: 'center', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' },
+    emptyState: { backgroundColor: 'white', padding: '60px', borderRadius: '14px', textAlign: 'center', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' },
     emptyIcon: { fontSize: '48px', marginBottom: '15px' },
 };
 

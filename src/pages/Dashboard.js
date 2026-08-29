@@ -130,8 +130,12 @@ function Dashboard() {
                             { label: 'Results Entered', value: stats.results, color: '#e83e8c', icon: '📊' },
                             { label: 'Report Cards', value: stats.reportCards, color: '#20c997', icon: '📋' },
                         ].map((stat, i) => (
-                            <div key={i} style={{...styles.statCard, borderTop: `4px solid ${stat.color}`}}>
-                                <div style={styles.statIcon}>{stat.icon}</div>
+                            <div key={i} style={styles.statCard}
+                                onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-3px)'; e.currentTarget.style.boxShadow = '0 8px 20px rgba(0,0,0,0.1)'; }}
+                                onMouseLeave={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.06)'; }}>
+                                <div style={{ ...styles.statIconBadge, backgroundColor: stat.color + '18' }}>
+                                    <span style={{ fontSize: '20px' }}>{stat.icon}</span>
+                                </div>
                                 <div style={{...styles.statNumber, color: stat.color}}>{stat.value}</div>
                                 <div style={styles.statLabel}>{stat.label}</div>
                             </div>
@@ -142,7 +146,10 @@ function Dashboard() {
                 {role === 'ADMIN' && subjectPerformance.length > 0 && (
                     <div style={styles.chartsRow}>
                         <div style={styles.chartCard}>
-                            <h3 style={styles.chartTitle}>📊 Subject Average Performance</h3>
+                            <h3 style={styles.chartTitle}>
+                                <span style={styles.chartTitleIcon}>📊</span>
+                                Subject Average Performance
+                            </h3>
                             <div style={styles.barChart}>
                                 {subjectPerformance.map((sub, i) => (
                                     <div key={i} style={styles.barItem}>
@@ -156,7 +163,10 @@ function Dashboard() {
                             </div>
                         </div>
                         <div style={styles.chartCard}>
-                            <h3 style={styles.chartTitle}>🏫 Students by Section</h3>
+                            <h3 style={styles.chartTitle}>
+                                <span style={styles.chartTitleIcon}>🏫</span>
+                                Students by Section
+                            </h3>
                             <div style={styles.sectionChart}>
                                 {sectionStats.map((s, i) => (
                                     <div key={i} style={styles.sectionItem}>
@@ -184,11 +194,13 @@ function Dashboard() {
                <div style={styles.cardGrid}>
                     {menuItems.map((item, index) => (
                         <div key={index}
-                            style={{...styles.card, borderTop: `4px solid ${item.color}`}}
+                            style={styles.card}
                             onClick={() => navigate(item.path)}
-                            onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-3px)'}
-                            onMouseLeave={e => e.currentTarget.style.transform = 'none'}>
-                            <div style={styles.cardIcon}>{item.icon}</div>
+                            onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-4px)'; e.currentTarget.style.boxShadow = '0 10px 24px rgba(0,0,0,0.12)'; e.currentTarget.style.borderColor = item.color; }}
+                            onMouseLeave={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.06)'; e.currentTarget.style.borderColor = 'transparent'; }}>
+                            <div style={{ ...styles.cardIconBadge, backgroundColor: item.color + '18' }}>
+                                <span style={{ fontSize: '24px' }}>{item.icon}</span>
+                            </div>
                             <h3 style={styles.cardTitle}>{item.label}</h3>
                             {item.count !== null && (
                                 <div style={{...styles.cardCount, backgroundColor: item.color}}>{item.count} records</div>
@@ -205,49 +217,61 @@ function Dashboard() {
 }
 
 const styles = {
-    content: { padding: '30px', flex: 1 },
+    container: { minHeight: '100vh', backgroundColor: '#f0f2f5' },
     layoutRow: { display: 'flex' },
-    navbar: { backgroundColor: '#1F3864', padding: '15px 30px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
-    navLeft: { display: 'flex', alignItems: 'center', gap: '10px' },
-    navLogo: { width: '45px', height: '45px', objectFit: 'contain' },
-    navTitle: { color: 'white', margin: 0, fontSize: '18px' },
-    navRight: { display: 'flex', alignItems: 'center', gap: '10px' },
-    navUser: { color: '#FFD700', fontSize: '14px' },
-    pwdBtn: { backgroundColor: 'transparent', color: 'white', border: '1px solid rgba(255,255,255,0.5)', padding: '6px 12px', borderRadius: '5px', cursor: 'pointer', fontSize: '12px' },
-    logoutBtn: { backgroundColor: 'transparent', color: 'white', border: '1px solid white', padding: '8px 16px', borderRadius: '5px', cursor: 'pointer' },
-    content: { padding: '30px' },
-    welcome: { color: '#1F3864', fontSize: '26px', margin: '0 0 5px 0' },
-    subtitle: { color: '#666', marginBottom: '25px' },
-    statsRow: { display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '12px', marginBottom: '25px' },
-    statCard: { backgroundColor: 'white', padding: '15px', borderRadius: '10px', textAlign: 'center', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' },
-    statIcon: { fontSize: '24px', marginBottom: '5px' },
-    statNumber: { fontSize: '28px', fontWeight: 'bold' },
-    statLabel: { color: '#666', fontSize: '11px', marginTop: '3px' },
-    chartsRow: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '25px' },
-    chartCard: { backgroundColor: 'white', padding: '20px', borderRadius: '10px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' },
-    chartTitle: { color: '#1F3864', marginBottom: '15px', fontSize: '15px' },
-    barChart: { display: 'flex', flexDirection: 'column', gap: '10px' },
-    barItem: { display: 'flex', alignItems: 'center', gap: '10px' },
-    barLabel: { fontSize: '12px', color: '#555', minWidth: '130px', textAlign: 'right' },
+    content: { padding: '30px', flex: 1 },
+    welcome: { color: '#1F3864', fontSize: '26px', margin: '0 0 5px 0', fontWeight: 700 },
+    subtitle: { color: '#888', marginBottom: '28px', fontSize: '14px' },
+
+    statsRow: { display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '14px', marginBottom: '28px' },
+    statCard: {
+        backgroundColor: 'white', padding: '20px 16px', borderRadius: '14px', textAlign: 'center',
+        boxShadow: '0 2px 8px rgba(0,0,0,0.06)', transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+        cursor: 'default'
+    },
+    statIconBadge: {
+        width: '44px', height: '44px', borderRadius: '12px', display: 'flex',
+        alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px'
+    },
+    statNumber: { fontSize: '26px', fontWeight: 800, lineHeight: 1 },
+    statLabel: { color: '#888', fontSize: '11.5px', marginTop: '6px', fontWeight: 500 },
+
+    chartsRow: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '28px' },
+    chartCard: { backgroundColor: 'white', padding: '22px', borderRadius: '14px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' },
+    chartTitle: { color: '#1F3864', marginBottom: '18px', fontSize: '15px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px' },
+    chartTitleIcon: { fontSize: '16px' },
+    barChart: { display: 'flex', flexDirection: 'column', gap: '12px' },
+    barItem: { display: 'flex', alignItems: 'center', gap: '12px' },
+    barLabel: { fontSize: '12px', color: '#666', minWidth: '130px', textAlign: 'right', fontWeight: 500 },
     barWrapper: { flex: 1, display: 'flex', alignItems: 'center', gap: '8px' },
-    bar: { height: '18px', borderRadius: '9px', transition: 'width 0.5s ease', minWidth: '4px' },
-    barValue: { fontSize: '12px', fontWeight: 'bold', color: '#333', minWidth: '35px' },
-    sectionChart: { display: 'flex', flexDirection: 'column', gap: '15px' },
+    bar: { height: '16px', borderRadius: '8px', transition: 'width 0.5s ease', minWidth: '4px' },
+    barValue: { fontSize: '12px', fontWeight: 700, color: '#333', minWidth: '35px' },
+
+    sectionChart: { display: 'flex', flexDirection: 'column', gap: '16px' },
     sectionItem: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px' },
     sectionLeft: { display: 'flex', alignItems: 'center', gap: '10px', minWidth: '150px' },
-    sectionDot: { width: '12px', height: '12px', borderRadius: '50%', flexShrink: 0 },
-    sectionName: { fontSize: '13px', fontWeight: 'bold', color: '#333' },
+    sectionDot: { width: '11px', height: '11px', borderRadius: '50%', flexShrink: 0 },
+    sectionName: { fontSize: '13px', fontWeight: 700, color: '#333' },
     sectionMeta: { fontSize: '11px', color: '#999' },
     sectionRight: { flex: 1, display: 'flex', alignItems: 'center', gap: '10px' },
-    sectionBarWrapper: { flex: 1, height: '12px', backgroundColor: '#f0f0f0', borderRadius: '6px', overflow: 'hidden' },
-    sectionBar: { height: '100%', borderRadius: '6px', transition: 'width 0.5s ease' },
-    sectionCount: { fontSize: '14px', fontWeight: 'bold', minWidth: '30px', textAlign: 'right' },
-    sectionTitle: { color: '#1F3864', marginBottom: '15px' },
-    cardGrid: { display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '12px' },
-    card: { backgroundColor: 'white', padding: '15px', borderRadius: '10px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)', cursor: 'pointer', textAlign: 'center', transition: 'transform 0.2s' },
-    cardIcon: { fontSize: '30px', marginBottom: '8px' },
-    cardTitle: { color: '#1F3864', margin: '0 0 8px 0', fontSize: '13px' },
-    cardCount: { color: 'white', padding: '2px 8px', borderRadius: '3px', fontSize: '11px', display: 'inline-block' }
+    sectionBarWrapper: { flex: 1, height: '10px', backgroundColor: '#f0f0f0', borderRadius: '5px', overflow: 'hidden' },
+    sectionBar: { height: '100%', borderRadius: '5px', transition: 'width 0.5s ease' },
+    sectionCount: { fontSize: '14px', fontWeight: 700, minWidth: '30px', textAlign: 'right' },
+
+    sectionTitle: { color: '#1F3864', marginBottom: '16px', fontSize: '17px', fontWeight: 700 },
+    cardGrid: { display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '14px' },
+    card: {
+        backgroundColor: 'white', padding: '20px 14px', borderRadius: '14px',
+        boxShadow: '0 2px 8px rgba(0,0,0,0.06)', cursor: 'pointer', textAlign: 'center',
+        transition: 'transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease',
+        border: '2px solid transparent'
+    },
+    cardIconBadge: {
+        width: '52px', height: '52px', borderRadius: '14px', display: 'flex',
+        alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px'
+    },
+    cardTitle: { color: '#1F3864', margin: '0 0 10px 0', fontSize: '13px', fontWeight: 700 },
+    cardCount: { color: 'white', padding: '3px 10px', borderRadius: '20px', fontSize: '11px', display: 'inline-block', fontWeight: 600 }
 };
 
 export default Dashboard;

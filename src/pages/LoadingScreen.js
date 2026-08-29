@@ -36,19 +36,16 @@ function LoadingScreen({ message = 'Loading...' }) {
                 <h2 style={styles.schoolName}>PIPELINE ADVENTIST SCHOOL</h2>
                 <p style={styles.subtitle}>Exam Management System</p>
 
-                {/* Spinner */}
                 <div style={styles.spinnerWrapper}>
                     <div style={styles.spinner} />
                 </div>
 
                 <p style={styles.message}>{message}{dots}</p>
 
-                {/* Animated tip */}
                 <div style={styles.tipBox}>
                     <p style={styles.tip}>{tips[tip]}</p>
                 </div>
 
-                {/* Progress bar */}
                 <div style={styles.progressOuter}>
                     <div style={styles.progressInner} />
                 </div>
@@ -82,15 +79,15 @@ const styles = {
         minHeight: '100vh', backgroundColor: '#f0f2f5', padding: '20px'
     },
     card: {
-        backgroundColor: 'white', padding: '50px 40px', borderRadius: '15px',
-        boxShadow: '0 8px 30px rgba(0,0,0,0.12)', width: '100%', maxWidth: '440px',
+        backgroundColor: 'white', padding: '48px 40px', borderRadius: '18px',
+        boxShadow: '0 10px 40px rgba(0,0,0,0.12)', width: '100%', maxWidth: '440px',
         textAlign: 'center'
     },
-    logoRow: { display: 'flex', justifyContent: 'center', gap: '20px', marginBottom: '15px' },
+    logoRow: { display: 'flex', justifyContent: 'center', gap: '20px', marginBottom: '16px' },
     logo: { width: '65px', height: '65px', objectFit: 'contain' },
-    schoolName: { color: '#1F3864', fontSize: '16px', margin: '0 0 5px 0', fontWeight: 'bold' },
-    subtitle: { color: '#2E75B6', fontSize: '13px', margin: '0 0 30px 0' },
-    spinnerWrapper: { display: 'flex', justifyContent: 'center', marginBottom: '20px' },
+    schoolName: { color: '#1F3864', fontSize: '16px', margin: '0 0 5px 0', fontWeight: 700, letterSpacing: '0.3px' },
+    subtitle: { color: '#2E75B6', fontSize: '13px', margin: '0 0 32px 0' },
+    spinnerWrapper: { display: 'flex', justifyContent: 'center', marginBottom: '22px' },
     spinner: {
         width: '50px', height: '50px',
         border: '4px solid #e3f2fd',
@@ -98,16 +95,16 @@ const styles = {
         borderRadius: '50%',
         animation: 'spin 1s linear infinite'
     },
-    message: { color: '#1F3864', fontSize: '15px', fontWeight: 'bold', margin: '0 0 15px 0', minHeight: '22px' },
+    message: { color: '#1F3864', fontSize: '15px', fontWeight: 700, margin: '0 0 16px 0', minHeight: '22px' },
     tipBox: {
-        backgroundColor: '#f8f9fa', borderRadius: '8px', padding: '12px 15px',
-        marginBottom: '20px', minHeight: '50px', display: 'flex', alignItems: 'center', justifyContent: 'center',
+        backgroundColor: '#f8f9fa', borderRadius: '12px', padding: '13px 16px',
+        marginBottom: '22px', minHeight: '50px', display: 'flex', alignItems: 'center', justifyContent: 'center',
         animation: 'fadein 0.5s ease'
     },
     tip: { color: '#666', fontSize: '13px', margin: 0, lineHeight: '1.5' },
-    progressOuter: { height: '4px', backgroundColor: '#e3f2fd', borderRadius: '2px', overflow: 'hidden' },
+    progressOuter: { height: '5px', backgroundColor: '#e3f2fd', borderRadius: '3px', overflow: 'hidden' },
     progressInner: {
-        height: '100%', backgroundColor: '#1F3864', borderRadius: '2px',
+        height: '100%', backgroundColor: '#1F3864', borderRadius: '3px',
         animation: 'progress 60s ease-out forwards'
     }
 };

@@ -537,7 +537,7 @@ function ReportCards() {
                 {successMsg && <p style={s.success}>{successMsg}</p>}
 
                 <div style={s.genCard}>
-                    <h3 style={{ color: '#1F3864', margin: '0 0 12px 0', fontSize: '16px' }}>Generate Assessment Reports</h3>
+                    <h3 style={{ color: '#1F3864', margin: '0 0 12px 0', fontSize: '16px', fontWeight: 800 }}>Generate Assessment Reports</h3>
                     <div style={s.genTabs}>
                         <button onClick={() => setGenMode('class')} style={{ ...s.genTab, backgroundColor: genMode === 'class' ? '#1F3864' : 'white', color: genMode === 'class' ? 'white' : '#1F3864' }}>Per Class (Bulk)</button>
                         <button onClick={() => setGenMode('student')} style={{ ...s.genTab, backgroundColor: genMode === 'student' ? '#1F3864' : 'white', color: genMode === 'student' ? 'white' : '#1F3864' }}>Per Student</button>
@@ -593,11 +593,17 @@ function ReportCards() {
                         )}
                         <div style={{ display: 'flex', alignItems: 'flex-end' }}>
                             {genMode === 'class' ? (
-                                <button onClick={handleGenerateClass} style={s.generateBtn} disabled={generating || !genClassId || !genExam}>
+                                <button onClick={handleGenerateClass} style={s.generateBtn}
+                                    onMouseEnter={e => { if (!generating) e.currentTarget.style.transform = 'translateY(-2px)'; }}
+                                    onMouseLeave={e => { e.currentTarget.style.transform = 'none'; }}
+                                    disabled={generating || !genClassId || !genExam}>
                                     {generating ? 'Generating...' : 'Generate' + (classStudentsCount > 0 ? ' (' + classStudentsCount + ' students)' : '')}
                                 </button>
                             ) : (
-                                <button onClick={handleGenerateStudent} style={s.generateBtn} disabled={generating || !genStudent || !genExam}>
+                                <button onClick={handleGenerateStudent} style={s.generateBtn}
+                                    onMouseEnter={e => { if (!generating) e.currentTarget.style.transform = 'translateY(-2px)'; }}
+                                    onMouseLeave={e => { e.currentTarget.style.transform = 'none'; }}
+                                    disabled={generating || !genStudent || !genExam}>
                                     {generating ? 'Generating...' : 'Generate'}
                                 </button>
                             )}
@@ -616,7 +622,7 @@ function ReportCards() {
                 {editingCard && (
                     <div style={s.editCard}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
-                            <h3 style={{ color: '#2E75B6', margin: 0 }}>Edit: {editingCard.student?.firstName} {editingCard.student?.lastName}</h3>
+                            <h3 style={{ color: '#2E75B6', margin: 0, fontWeight: 800 }}>Edit: {editingCard.student?.firstName} {editingCard.student?.lastName}</h3>
                             <button onClick={() => setEditingCard(null)} style={{ background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer', color: '#999' }}>X</button>
                         </div>
                         <form onSubmit={handleUpdate}>
@@ -650,7 +656,7 @@ function ReportCards() {
 
                 {!loading && classTiles.length > 0 && (
                     <div style={{ marginBottom: '25px' }}>
-                        <h3 style={{ color: '#1F3864', margin: '0 0 12px 0' }}>Classes with Assessment Reports</h3>
+                        <h3 style={{ color: '#1F3864', margin: '0 0 12px 0', fontWeight: 800 }}>Classes with Assessment Reports</h3>
                         <div style={s.classTilesGrid}>
                             {classTiles.map((cls, i) => {
                                 const color = sectionColor(cls.section);
@@ -659,8 +665,8 @@ function ReportCards() {
                                 return (
                                     <div key={i}
                                         onClick={() => setSelectedClassFilter(isSelected ? '' : (cls.stream ? cls.className + '|' + cls.stream : cls.className))}
-                                        onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-3px)'; }}
-                                        onMouseLeave={e => { e.currentTarget.style.transform = 'none'; }}
+                                        onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-3px)'; e.currentTarget.style.boxShadow = '0 6px 16px rgba(0,0,0,0.1)'; }}
+                                        onMouseLeave={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.06)'; }}
                                         style={{ ...s.classTile, borderTop: '4px solid ' + color, outline: isSelected ? '3px solid ' + color : 'none' }}>
                                         <div style={{ ...s.classTileName, color }}>{classDisplayName(cls)}</div>
                                         <div style={s.classTileStats}>
@@ -700,7 +706,7 @@ function ReportCards() {
                                 <span style={{ backgroundColor: sectionColor(classTiles.find(c => (c.stream ? c.className + '|' + c.stream : c.className) === selectedClassFilter)?.section), color: 'white', padding: '5px 12px', borderRadius: '20px', fontWeight: 'bold', fontSize: '13px' }}>
                                     {selectedClassFilter.replace('|', ' (') + (selectedClassFilter.includes('|') ? ')' : '')}
                                 </span>
-                                <button onClick={() => setSelectedClassFilter('')} style={{ backgroundColor: '#6c757d', color: 'white', border: 'none', padding: '5px 10px', borderRadius: '5px', cursor: 'pointer', fontSize: '12px' }}>Close</button>
+                                <button onClick={() => setSelectedClassFilter('')} style={{ backgroundColor: '#6c757d', color: 'white', border: 'none', padding: '5px 10px', borderRadius: '8px', cursor: 'pointer', fontSize: '12px', fontWeight: 700 }}>Close</button>
                             </div>
                             <input style={s.searchInput} placeholder="Search student..." value={search} onChange={e => setSearch(e.target.value)} />
                             <select style={s.filterSelect} value={filterExam} onChange={e => setFilterExam(e.target.value)}>
@@ -709,10 +715,12 @@ function ReportCards() {
                             </select>
                             <button onClick={() => { setSearch(''); setFilterExam(''); }} style={s.clearBtn}>Clear</button>
                             <span style={{ color: '#666', fontSize: '13px', alignSelf: 'center' }}>{filtered.length} card(s)</span>
-                            <button onClick={handlePrintAll} disabled={printingAll || !filtered.length} style={{ backgroundColor: printingAll ? '#6c757d' : '#fd7e14', color: 'white', border: 'none', padding: '10px 16px', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold', fontSize: '13px', whiteSpace: 'nowrap' }}>{printingAll ? 'Loading...' : 'Print All (' + filtered.length + ')'}</button>
+                            <button onClick={handlePrintAll} disabled={printingAll || !filtered.length} style={{ backgroundColor: printingAll ? '#6c757d' : '#fd7e14', color: 'white', border: 'none', padding: '10px 16px', borderRadius: '8px', cursor: 'pointer', fontWeight: 700, fontSize: '13px', whiteSpace: 'nowrap', transition: 'transform 0.15s ease' }}
+                                onMouseEnter={e => { if (!printingAll && filtered.length) e.currentTarget.style.transform = 'translateY(-2px)'; }}
+                                onMouseLeave={e => { e.currentTarget.style.transform = 'none'; }}>{printingAll ? 'Loading...' : 'Print All (' + filtered.length + ')'}</button>
                             <button onClick={() => setDeleteAllConfirm(true)} 
                                 disabled={!filtered.length}
-                                style={{ backgroundColor: '#dc3545', color: 'white', border: 'none', padding: '10px 16px', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold', fontSize: '13px', whiteSpace: 'nowrap' }}>
+                                style={{ backgroundColor: '#dc3545', color: 'white', border: 'none', padding: '10px 16px', borderRadius: '8px', cursor: 'pointer', fontWeight: 700, fontSize: '13px', whiteSpace: 'nowrap' }}>
                                 🗑️ Delete All ({filtered.length})
                             </button>
                         </div>
@@ -756,7 +764,7 @@ function ReportCards() {
                                                     <td style={s.td}><span style={s.examBadge}>{card.exam?.examName}</span></td>
                                                     <td style={s.td}><strong>{card.totalMarks}</strong></td>
                                                     <td style={s.td}><span style={{ color: gc, fontWeight: 'bold' }}>{avg.toFixed(1)}%</span></td>
-                                                    <td style={s.td}><span style={{ backgroundColor: gc, color: 'white', padding: '3px 8px', borderRadius: '3px', fontWeight: 'bold', fontSize: '12px' }}>{gl}</span></td>
+                                                    <td style={s.td}><span style={{ backgroundColor: gc, color: 'white', padding: '3px 8px', borderRadius: '6px', fontWeight: 'bold', fontSize: '12px' }}>{gl}</span></td>
                                                     <td style={s.td}>{card.termRank || '-'}</td>
                                                     <td style={s.td}>
                                                         <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
@@ -776,7 +784,7 @@ function ReportCards() {
                         )}
                     </React.Fragment>
                 ) : !loading && classTiles.length > 0 ? (
-                    <div style={{ backgroundColor: 'white', padding: '30px', borderRadius: '10px', textAlign: 'center', boxShadow: '0 2px 4px rgba(0,0,0,0.08)', color: '#888' }}>
+                    <div style={{ backgroundColor: 'white', padding: '30px', borderRadius: '14px', textAlign: 'center', boxShadow: '0 2px 8px rgba(0,0,0,0.06)', color: '#888' }}>
                         <div style={{ fontSize: '36px', marginBottom: '10px' }}>👆</div>
                         <p style={{ fontSize: '14px', margin: 0 }}>Click a class tile above to view its assessment reports</p>
                     </div>
@@ -786,8 +794,8 @@ function ReportCards() {
 
                 {deleteConfirm && (
                     <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999 }}>
-                        <div style={{ backgroundColor: 'white', padding: '25px 30px', borderRadius: '10px', maxWidth: '380px', width: '90%', boxShadow: '0 10px 30px rgba(0,0,0,0.3)' }}>
-                            <h3 style={{ color: '#dc3545', margin: '0 0 12px 0' }}>Delete Assessment Report?</h3>
+                        <div style={{ backgroundColor: 'white', padding: '25px 30px', borderRadius: '14px', maxWidth: '380px', width: '90%', boxShadow: '0 10px 30px rgba(0,0,0,0.3)' }}>
+                            <h3 style={{ color: '#dc3545', margin: '0 0 12px 0', fontWeight: 800 }}>Delete Assessment Report?</h3>
                             <p style={{ color: '#555', marginBottom: '20px' }}>
                                 {'Delete assessment report for '}
                                 <strong>{deleteConfirm.student?.firstName} {deleteConfirm.student?.lastName}</strong>
@@ -803,14 +811,14 @@ function ReportCards() {
 
                 {deleteAllConfirm && (
                     <div style={{ position:'fixed', top:0, left:0, right:0, bottom:0, backgroundColor:'rgba(0,0,0,0.5)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:10000 }}>
-                        <div style={{ backgroundColor:'white', padding:'25px 30px', borderRadius:'10px', maxWidth:'400px', width:'90%', boxShadow:'0 10px 30px rgba(0,0,0,0.3)' }}>
-                            <h3 style={{ color:'#dc3545', margin:'0 0 12px 0' }}>🗑️ Delete All Assessment Reports?</h3>
+                        <div style={{ backgroundColor:'white', padding:'25px 30px', borderRadius:'14px', maxWidth:'400px', width:'90%', boxShadow:'0 10px 30px rgba(0,0,0,0.3)' }}>
+                            <h3 style={{ color:'#dc3545', margin:'0 0 12px 0', fontWeight: 800 }}>🗑️ Delete All Assessment Reports?</h3>
                             <p style={{ color:'#555', marginBottom:'20px' }}>
                                 This will permanently delete <strong>{filtered.length} assessment reports</strong> for the selected class and exam. This cannot be undone.
                             </p>
                             <div style={{ display:'flex', gap:'10px', justifyContent:'flex-end' }}>
-                                <button onClick={() => setDeleteAllConfirm(false)} style={{ backgroundColor:'#6c757d', color:'white', border:'none', padding:'9px 20px', borderRadius:'5px', cursor:'pointer', fontWeight:'bold' }}>Cancel</button>
-                                <button onClick={handleDeleteAll} style={{ backgroundColor:'#dc3545', color:'white', border:'none', padding:'9px 20px', borderRadius:'5px', cursor:'pointer', fontWeight:'bold' }}>🗑️ Delete All</button>
+                                <button onClick={() => setDeleteAllConfirm(false)} style={{ backgroundColor:'#6c757d', color:'white', border:'none', padding:'9px 20px', borderRadius:'8px', cursor:'pointer', fontWeight: 700 }}>Cancel</button>
+                                <button onClick={handleDeleteAll} style={{ backgroundColor:'#dc3545', color:'white', border:'none', padding:'9px 20px', borderRadius:'8px', cursor:'pointer', fontWeight: 700 }}>🗑️ Delete All</button>
                             </div>
                         </div>
                     </div>
@@ -834,46 +842,46 @@ const s = {
     navBtn: { backgroundColor: 'transparent', color: 'white', border: '1px solid white', padding: '8px 16px', borderRadius: '5px', cursor: 'pointer' },
     logoutBtn: { backgroundColor: 'transparent', color: 'white', border: '1px solid white', padding: '8px 16px', borderRadius: '5px', cursor: 'pointer' },
    content: { padding: '30px', flex: 1 },
-    title: { color: '#1F3864', margin: '0 0 5px 0', fontSize: '24px' },
+    title: { color: '#1F3864', margin: '0 0 5px 0', fontSize: '24px', fontWeight: 800 },
     subtitle: { color: '#666', margin: '0 0 20px 0', fontSize: '14px' },
-    error: { color: 'red', padding: '10px', backgroundColor: '#fff3f3', borderRadius: '5px', marginBottom: '15px', whiteSpace: 'pre-line' },
-    success: { color: '#155724', padding: '10px', backgroundColor: '#d4edda', borderRadius: '5px', marginBottom: '15px' },
-    genCard: { backgroundColor: 'white', padding: '20px', borderRadius: '10px', marginBottom: '20px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' },
+    error: { color: '#dc3545', padding: '10px 15px', backgroundColor: '#fff3f3', borderRadius: '10px', marginBottom: '15px', whiteSpace: 'pre-line', border: '1px solid #ffd6d6' },
+    success: { color: '#155724', padding: '10px 15px', backgroundColor: '#d4edda', borderRadius: '10px', marginBottom: '15px', border: '1px solid #c3e6cb' },
+    genCard: { backgroundColor: 'white', padding: '20px', borderRadius: '14px', marginBottom: '20px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' },
     genTabs: { display: 'flex', gap: '10px', marginBottom: '15px', flexWrap: 'wrap' },
-    genTab: { padding: '9px 18px', borderRadius: '5px', border: '2px solid #1F3864', cursor: 'pointer', fontWeight: 'bold', fontSize: '13px' },
+    genTab: { padding: '9px 18px', borderRadius: '10px', border: '2px solid #1F3864', cursor: 'pointer', fontWeight: 700, fontSize: '13px', transition: 'all 0.15s ease' },
     formRow: { display: 'flex', gap: '12px', flexWrap: 'wrap', marginBottom: '10px' },
-    label: { fontWeight: 'bold', color: '#1F3864', fontSize: '12px', display: 'block', marginBottom: '5px' },
-    input: { padding: '10px', borderRadius: '5px', border: '1.5px solid #ddd', fontSize: '14px', width: '100%' },
-    generateBtn: { backgroundColor: '#1F3864', color: 'white', border: 'none', padding: '10px 20px', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold', fontSize: '14px', whiteSpace: 'nowrap' },
-    editCard: { backgroundColor: 'white', padding: '20px', borderRadius: '10px', marginBottom: '20px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)', border: '2px solid #2E75B6' },
-    submitBtn: { backgroundColor: '#2E75B6', color: 'white', border: 'none', padding: '10px 20px', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold' },
-    cancelBtn: { backgroundColor: '#6c757d', color: 'white', border: 'none', padding: '10px 16px', borderRadius: '5px', cursor: 'pointer' },
+    label: { fontWeight: 700, color: '#1F3864', fontSize: '12px', display: 'block', marginBottom: '5px' },
+    input: { padding: '10px', borderRadius: '8px', border: '1.5px solid #ddd', fontSize: '14px', width: '100%' },
+    generateBtn: { backgroundColor: '#1F3864', color: 'white', border: 'none', padding: '10px 20px', borderRadius: '10px', cursor: 'pointer', fontWeight: 700, fontSize: '14px', whiteSpace: 'nowrap', transition: 'transform 0.15s ease, box-shadow 0.15s ease', boxShadow: '0 2px 6px rgba(31,56,100,0.25)' },
+    editCard: { backgroundColor: 'white', padding: '20px', borderRadius: '14px', marginBottom: '20px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)', border: '2px solid #2E75B6' },
+    submitBtn: { backgroundColor: '#2E75B6', color: 'white', border: 'none', padding: '10px 20px', borderRadius: '10px', cursor: 'pointer', fontWeight: 700, transition: 'transform 0.15s ease' },
+    cancelBtn: { backgroundColor: '#6c757d', color: 'white', border: 'none', padding: '10px 16px', borderRadius: '10px', cursor: 'pointer', fontWeight: 700 },
     classTilesGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(150px,1fr))', gap: '12px' },
-    classTile: { backgroundColor: 'white', borderRadius: '10px', overflow: 'hidden', boxShadow: '0 2px 6px rgba(0,0,0,0.08)', cursor: 'pointer', transition: 'transform 0.15s', userSelect: 'none' },
-    classTileName: { fontSize: '20px', fontWeight: 'bold', textAlign: 'center', padding: '16px 10px 8px' },
+    classTile: { backgroundColor: 'white', borderRadius: '14px', overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.06)', cursor: 'pointer', transition: 'transform 0.15s ease, box-shadow 0.15s ease', userSelect: 'none' },
+    classTileName: { fontSize: '20px', fontWeight: 800, textAlign: 'center', padding: '16px 10px 8px' },
     classTileStats: { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '8px 10px' },
     classTileStat: { display: 'flex', flexDirection: 'column', alignItems: 'center' },
-    classTileNum: { fontSize: '18px', fontWeight: 'bold', color: '#1F3864' },
+    classTileNum: { fontSize: '18px', fontWeight: 800, color: '#1F3864' },
     classTileLbl: { fontSize: '9px', color: '#888' },
     classDivider: { width: '1px', height: '28px', backgroundColor: '#eee' },
-    classTileAction: { color: 'white', textAlign: 'center', padding: '7px', fontSize: '11px' },
+    classTileAction: { color: 'white', textAlign: 'center', padding: '7px', fontSize: '11px', fontWeight: 700 },
     filterRow: { display: 'flex', gap: '10px', marginBottom: '20px', flexWrap: 'wrap', alignItems: 'center' },
-    searchInput: { flex: 2, padding: '10px', borderRadius: '5px', border: '1.5px solid #ddd', fontSize: '14px', minWidth: '180px' },
-    filterSelect: { flex: 1, padding: '10px', borderRadius: '5px', border: '1.5px solid #ddd', fontSize: '14px', minWidth: '150px' },
-    clearBtn: { backgroundColor: '#6c757d', color: 'white', border: 'none', padding: '10px 15px', borderRadius: '5px', cursor: 'pointer' },
-    tableWrapper: { overflowX: 'auto', borderRadius: '10px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' },
+    searchInput: { flex: 2, padding: '10px', borderRadius: '8px', border: '1.5px solid #ddd', fontSize: '14px', minWidth: '180px' },
+    filterSelect: { flex: 1, padding: '10px', borderRadius: '8px', border: '1.5px solid #ddd', fontSize: '14px', minWidth: '150px' },
+    clearBtn: { backgroundColor: '#6c757d', color: 'white', border: 'none', padding: '10px 15px', borderRadius: '8px', cursor: 'pointer', fontWeight: 700 },
+    tableWrapper: { overflowX: 'auto', borderRadius: '14px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' },
     table: { width: '100%', borderCollapse: 'collapse', backgroundColor: 'white', minWidth: '800px' },
     tableHeader: { backgroundColor: '#1F3864' },
-    th: { color: 'white', padding: '12px 15px', textAlign: 'left', whiteSpace: 'nowrap', fontSize: '13px' },
+    th: { color: 'white', padding: '12px 15px', textAlign: 'left', whiteSpace: 'nowrap', fontSize: '13px', fontWeight: 700 },
     td: { padding: '10px 15px', borderBottom: '1px solid #eee', fontSize: '13px' },
     trEven: { backgroundColor: '#f9f9f9' },
     trOdd: { backgroundColor: 'white' },
-    editBtn: { backgroundColor: '#2E75B6', color: 'white', border: 'none', padding: '5px 8px', borderRadius: '3px', cursor: 'pointer', fontSize: '12px' },
-    printBtn: { backgroundColor: '#28a745', color: 'white', border: 'none', padding: '5px 8px', borderRadius: '3px', cursor: 'pointer', fontSize: '12px' },
-    deleteBtn: { backgroundColor: '#dc3545', color: 'white', border: 'none', padding: '5px 8px', borderRadius: '3px', cursor: 'pointer', fontSize: '12px' },
-    admNo: { backgroundColor: '#e3f2fd', color: '#1F3864', padding: '2px 6px', borderRadius: '3px', fontSize: '11px', fontFamily: 'monospace' },
-    examBadge: { backgroundColor: '#fff3cd', color: '#856404', padding: '2px 8px', borderRadius: '3px', fontSize: '12px', fontWeight: 'bold' },
-    emptyState: { backgroundColor: 'white', padding: '60px', borderRadius: '10px', textAlign: 'center', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' },
+    editBtn: { backgroundColor: '#2E75B6', color: 'white', border: 'none', padding: '5px 8px', borderRadius: '6px', cursor: 'pointer', fontSize: '12px', fontWeight: 700 },
+    printBtn: { backgroundColor: '#28a745', color: 'white', border: 'none', padding: '5px 8px', borderRadius: '6px', cursor: 'pointer', fontSize: '12px', fontWeight: 700 },
+    deleteBtn: { backgroundColor: '#dc3545', color: 'white', border: 'none', padding: '5px 8px', borderRadius: '6px', cursor: 'pointer', fontSize: '12px', fontWeight: 700 },
+    admNo: { backgroundColor: '#e3f2fd', color: '#1F3864', padding: '2px 6px', borderRadius: '6px', fontSize: '11px', fontFamily: 'monospace' },
+    examBadge: { backgroundColor: '#fff3cd', color: '#856404', padding: '2px 8px', borderRadius: '6px', fontSize: '12px', fontWeight: 700 },
+    emptyState: { backgroundColor: 'white', padding: '60px', borderRadius: '14px', textAlign: 'center', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' },
 };
 
 export default ReportCards;

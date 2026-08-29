@@ -31,7 +31,6 @@ function ClassSubjects() {
         JUNIOR_SCHOOL: 'Junior Secondary School'
     };
 
-  // ✅ Extract grade from class name e.g. G1R → G1, PP1 Yellow → PP1
     const extractGrade = (className) => {
         if (!className) return '';
         const name = className.trim().toUpperCase();
@@ -43,7 +42,6 @@ function ClassSubjects() {
         return name;
     };
 
-    // ✅ Extract section from grade level
     const extractSection = (gradeOrClassName) => {
         const grade = extractGrade(gradeOrClassName);
         if (['PG', 'PP1', 'PP2'].includes(grade)) return 'PRE_SCHOOL';
@@ -73,7 +71,6 @@ function ClassSubjects() {
         try { const response = await api.get('/api/subjects'); setAllSubjects(response.data); } catch (err) {}
     };
 
-    // ✅ Get all classes for a grade level — uses gradeLevel or extracts from className
     const getClassesForGrade = (gradeLevel) => {
         return classes.filter(c => {
             const grade = c.gradeLevel || extractGrade(c.className);
@@ -81,7 +78,6 @@ function ClassSubjects() {
         });
     };
 
-    // ✅ Get section for a grade level
     const getSectionForGrade = (gradeLevel) => {
         const cls = classes.find(c => {
             const grade = c.gradeLevel || extractGrade(c.className);
@@ -90,7 +86,6 @@ function ClassSubjects() {
         return cls?.section || extractSection(gradeLevel);
     };
 
-    // Fetch subjects already assigned to ANY class of this grade
     const fetchGradeSubjects = async (gradeLevel) => {
         try {
             setLoading(true);
@@ -101,7 +96,6 @@ function ClassSubjects() {
                 return;
             }
 
-            // Use the first class to get assigned subjects
             const firstClass = gradeClasses[0];
             const response = await api.get(`/api/class-subjects/by-class/${firstClass.classId}`);
             setGradeSubjects(response.data);
@@ -133,7 +127,6 @@ function ClassSubjects() {
 
     const clearSelection = () => setSelectedSubjectTiles([]);
 
-    // Assign subjects to ALL streams of the selected grade
     const handleBulkAssign = async () => {
         if (!selectedGrade || selectedSubjectTiles.length === 0) {
             setError('Please select at least one subject to assign');
@@ -156,12 +149,10 @@ function ClassSubjects() {
         let totalFailed = 0;
 
         try {
-            // Get or create subjects
             const subjectsRes = await api.get('/api/subjects');
             const allSubjects = subjectsRes.data;
 
             for (const subjectName of selectedSubjectTiles) {
-                // Find or create subject
                 let subject = allSubjects.find(s =>
                     s.subjectName.toLowerCase() === subjectName.toLowerCase()
                 );
@@ -181,7 +172,6 @@ function ClassSubjects() {
                     }
                 }
 
-                // Assign to ALL streams of this grade simultaneously
                 const assignRequests = gradeClasses.map(cls =>
                     api.post(`/api/class-subjects/assign/class/${cls.classId}/subject/${subject.subjectId}`)
                         .then(() => ({ success: true, className: cls.className }))
@@ -204,7 +194,6 @@ function ClassSubjects() {
         setTimeout(() => setSuccessMsg(''), 5000);
     };
 
-    // Remove subject from ALL streams of this grade
     const handleRemoveFromGrade = async (subjectId, subjectName) => {
         if (!window.confirm(`Remove "${subjectName}" from ALL streams of ${selectedGrade}?`)) return;
 
@@ -224,12 +213,10 @@ function ClassSubjects() {
         }
     };
 
-    // Get unique grade levels grouped by section
-   const getGradesBySection = () => {
+    const getGradesBySection = () => {
     const gradeMap = {};
 
     classes.forEach(cls => {
-        // Use gradeLevel if set, otherwise extract from className
         const grade = cls.gradeLevel || extractGrade(cls.className);
         const section = cls.section || extractSection(cls.className);
 
@@ -258,7 +245,6 @@ function ClassSubjects() {
         }
     });
 
-    // Sort grades within each section
     Object.keys(grouped).forEach(section => {
         grouped[section].sort((a, b) => a.gradeLevel.localeCompare(b.gradeLevel));
     });
@@ -420,7 +406,7 @@ function ClassSubjects() {
                                                             ? '2px solid #28a745'
                                                             : isSelected
                                                                 ? `2px solid ${color?.bg}`
-                                                                : '2px solid #eee',
+                                                                : '2px solid #f0f0f0',
                                                         cursor: isAssigned ? 'default' : 'pointer',
                                                         transform: isSelected ? 'scale(1.03)' : 'scale(1)'
                                                     }}
@@ -527,73 +513,59 @@ function ClassSubjects() {
 const styles = {
     container: { minHeight: '100vh', backgroundColor: '#f0f2f5' },
     layoutRow: { display: 'flex' },
-    navbar: { backgroundColor: '#1F3864', padding: '15px 30px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
-    navLeft: { display: 'flex', alignItems: 'center', gap: '10px' },
-    navLogo: { width: '45px', height: '45px', objectFit: 'contain' },
-    navTitle: { color: 'white', margin: 0, fontSize: '18px' },
-    navRight: { display: 'flex', gap: '10px' },
-    navBtn: { backgroundColor: 'transparent', color: 'white', border: '1px solid white', padding: '8px 16px', borderRadius: '5px', cursor: 'pointer' },
-    logoutBtn: { backgroundColor: 'transparent', color: 'white', border: '1px solid white', padding: '8px 16px', borderRadius: '5px', cursor: 'pointer' },
-   content: { padding: '30px', flex: 1 },
-    title: { color: '#1F3864', margin: '0 0 5px 0', fontSize: '24px' },
-    subtitle: { color: '#666', marginBottom: '25px' },
-    error: { color: 'red', padding: '10px', backgroundColor: '#fff3f3', borderRadius: '5px', marginBottom: '15px', border: '1px solid #ffcdd2' },
-    success: { color: '#155724', padding: '10px', backgroundColor: '#d4edda', borderRadius: '5px', marginBottom: '15px', border: '1px solid #c3e6cb' },
-    hint: { color: '#888', fontSize: '12px', margin: '0 0 10px 0', fontStyle: 'italic' },
+    content: { padding: '30px', flex: 1 },
+    title: { color: '#1F3864', margin: '0 0 5px 0', fontSize: '24px', fontWeight: 800 },
+    subtitle: { color: '#888', marginBottom: '25px' },
+    error: { color: '#dc3545', padding: '12px 16px', backgroundColor: '#fff3f3', borderRadius: '10px', marginBottom: '15px', border: '1px solid #ffd6d6' },
+    success: { color: '#155724', padding: '12px 16px', backgroundColor: '#d4edda', borderRadius: '10px', marginBottom: '15px' },
+    hint: { color: '#999', fontSize: '12px', margin: '0 0 10px 0', fontStyle: 'italic' },
 
-    // Layout
     mainGrid: { display: 'grid', gridTemplateColumns: '300px 1fr', gap: '20px' },
 
-    // Left Panel
     leftPanel: {},
-    panelCard: { backgroundColor: 'white', borderRadius: '10px', padding: '20px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)', marginBottom: '20px' },
-    panelTitle: { color: '#1F3864', margin: '0 0 5px 0', fontSize: '16px', display: 'flex', alignItems: 'center', gap: '8px' },
+    panelCard: { backgroundColor: 'white', borderRadius: '14px', padding: '20px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)', marginBottom: '20px' },
+    panelTitle: { color: '#1F3864', margin: '0 0 5px 0', fontSize: '16px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px' },
     sectionGroup: { marginBottom: '15px' },
-    sectionGroupTitle: { color: 'white', padding: '6px 12px', borderRadius: '5px', fontSize: '12px', fontWeight: 'bold', marginBottom: '8px' },
-    gradeItem: { padding: '10px 12px', borderRadius: '5px', marginBottom: '6px', cursor: 'pointer', transition: 'all 0.2s' },
+    sectionGroupTitle: { color: 'white', padding: '7px 12px', borderRadius: '8px', fontSize: '12px', fontWeight: 'bold', marginBottom: '8px' },
+    gradeItem: { padding: '11px 12px', borderRadius: '10px', marginBottom: '7px', cursor: 'pointer', transition: 'all 0.2s' },
     gradeItemLeft: { display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '5px' },
     gradeLevel: { fontSize: '15px' },
     streamCount: { fontSize: '11px', opacity: 0.8 },
     streamTags: { display: 'flex', flexWrap: 'wrap', gap: '4px' },
-    streamTag: { fontSize: '10px', padding: '2px 6px', borderRadius: '3px' },
+    streamTag: { fontSize: '10px', padding: '2px 7px', borderRadius: '6px' },
     noData: { color: '#999', textAlign: 'center', padding: '20px', fontStyle: 'italic' },
 
-    // Right Panel
     rightPanel: {},
-    emptyState: { backgroundColor: 'white', borderRadius: '10px', padding: '60px', textAlign: 'center', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' },
+    emptyState: { backgroundColor: 'white', borderRadius: '14px', padding: '60px', textAlign: 'center', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' },
     emptyIcon: { fontSize: '48px', marginBottom: '15px' },
 
-    // Streams Banner
-    streamsBanner: { borderRadius: '10px', padding: '15px 20px', marginBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' },
-    bannerTitle: { color: 'white', margin: '0 0 5px 0', fontSize: '18px' },
+    streamsBanner: { borderRadius: '14px', padding: '16px 22px', marginBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' },
+    bannerTitle: { color: 'white', margin: '0 0 5px 0', fontSize: '18px', fontWeight: 700 },
     bannerSubtitle: { color: 'rgba(255,255,255,0.85)', margin: 0, fontSize: '13px' },
     bannerBadge: { backgroundColor: 'rgba(255,255,255,0.2)', color: 'white', padding: '8px 15px', borderRadius: '20px', fontWeight: 'bold', fontSize: '13px' },
 
-    // Subject Tiles
     subjectHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '15px', flexWrap: 'wrap', gap: '10px' },
     actionBtns: { display: 'flex', gap: '8px' },
-    selectAllBtn: { backgroundColor: '#28a745', color: 'white', border: 'none', padding: '6px 12px', borderRadius: '5px', cursor: 'pointer', fontSize: '12px' },
-    clearSelBtn: { backgroundColor: '#6c757d', color: 'white', border: 'none', padding: '6px 12px', borderRadius: '5px', cursor: 'pointer', fontSize: '12px' },
+    selectAllBtn: { backgroundColor: '#28a745', color: 'white', border: 'none', padding: '7px 14px', borderRadius: '8px', cursor: 'pointer', fontSize: '12px' },
+    clearSelBtn: { backgroundColor: '#6c757d', color: 'white', border: 'none', padding: '7px 14px', borderRadius: '8px', cursor: 'pointer', fontSize: '12px' },
     tilesGrid: { display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px', marginBottom: '15px' },
-    subjectTile: { padding: '15px 10px', borderRadius: '8px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px', transition: 'all 0.2s', userSelect: 'none' },
+    subjectTile: { padding: '16px 10px', borderRadius: '12px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px', transition: 'all 0.2s', userSelect: 'none' },
     tileIcon: { fontSize: '22px' },
     tileName: { fontSize: '12px', fontWeight: 'bold', textAlign: 'center', lineHeight: '1.3' },
     assignedTag: { fontSize: '10px', backgroundColor: '#28a745', color: 'white', padding: '2px 8px', borderRadius: '10px' },
 
-    // Assign Section
     assignSection: { borderTop: '2px solid #f0f2f5', paddingTop: '15px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' },
     assignNote: { color: '#666', fontSize: '12px', marginLeft: '8px', fontStyle: 'italic' },
-    assignBtn: { color: 'white', border: 'none', padding: '10px 25px', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold', fontSize: '14px' },
+    assignBtn: { color: 'white', border: 'none', padding: '11px 25px', borderRadius: '10px', cursor: 'pointer', fontWeight: 'bold', fontSize: '14px' },
 
-    // Assigned Subjects
-    countBadge: { color: 'white', padding: '2px 8px', borderRadius: '10px', fontSize: '12px', marginLeft: '8px' },
+    countBadge: { color: 'white', padding: '2px 9px', borderRadius: '10px', fontSize: '12px', marginLeft: '8px' },
     assignedGrid: { display: 'flex', flexDirection: 'column', gap: '8px' },
-    assignedItem: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 15px', backgroundColor: '#f8f9fa', borderRadius: '8px', border: '1px solid #eee' },
+    assignedItem: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '13px 15px', backgroundColor: '#f8f9fa', borderRadius: '10px', border: '1px solid #f0f0f0' },
     assignedLeft: { display: 'flex', alignItems: 'center', gap: '12px' },
     assignedNum: { color: 'white', width: '28px', height: '28px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: 'bold', flexShrink: 0 },
     assignedName: { fontSize: '14px', color: '#1F3864' },
     assignedMeta: { fontSize: '11px', color: '#999', marginTop: '2px' },
-    removeBtn: { backgroundColor: '#dc3545', color: 'white', border: 'none', padding: '6px 12px', borderRadius: '3px', cursor: 'pointer', fontSize: '12px', whiteSpace: 'nowrap' }
+    removeBtn: { backgroundColor: '#dc3545', color: 'white', border: 'none', padding: '7px 12px', borderRadius: '8px', cursor: 'pointer', fontSize: '12px', whiteSpace: 'nowrap' }
 };
 
 export default ClassSubjects;

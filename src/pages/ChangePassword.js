@@ -19,7 +19,6 @@ function ChangePassword() {
     const [showNew, setShowNew] = useState(false);
     const [showConfirm, setShowConfirm] = useState(false);
 
-    // If forced change — block navigation away
     useEffect(() => {
         if (isForced) {
             window.onbeforeunload = () => true;
@@ -69,7 +68,6 @@ function ChangePassword() {
                 newPassword
             });
 
-            // ✅ Clear the force-change flag
             localStorage.removeItem('mustChangePassword');
             setSuccess('✅ Password changed successfully! Redirecting...');
 
@@ -85,14 +83,12 @@ function ChangePassword() {
     return (
         <div style={styles.container}>
             <div style={styles.card}>
-                {/* Header */}
                 <div style={styles.logoRow}>
                     <img src={logo1} alt="Logo 1" style={styles.logo} />
                     <img src={logo2} alt="Logo 2" style={styles.logo} />
                 </div>
                 <h2 style={styles.schoolName}>PIPELINE ADVENTIST SCHOOL</h2>
 
-                {/* Forced change banner */}
                 {isForced && (
                     <div style={styles.forcedBanner}>
                         <div style={styles.forcedIcon}>🔐</div>
@@ -118,7 +114,6 @@ function ChangePassword() {
                 {success && <p style={styles.successMsg}>{success}</p>}
 
                 <form onSubmit={handleSubmit}>
-                    {/* Current Password */}
                     <div style={styles.formGroup}>
                         <label style={styles.label}>
                             {isForced ? '🔑 Default Password (your phone number)' : '🔑 Current Password'}
@@ -142,7 +137,6 @@ function ChangePassword() {
                         )}
                     </div>
 
-                    {/* New Password */}
                     <div style={styles.formGroup}>
                         <label style={styles.label}>🔒 New Password</label>
                         <div style={styles.inputWrapper}>
@@ -159,7 +153,6 @@ function ChangePassword() {
                                 {showNew ? '🙈' : '👁️'}
                             </button>
                         </div>
-                        {/* Strength Meter */}
                         {newPassword && (
                             <div style={styles.strengthMeter}>
                                 <div style={styles.strengthBarOuter}>
@@ -183,7 +176,6 @@ function ChangePassword() {
                         </div>
                     </div>
 
-                    {/* Confirm Password */}
                     <div style={styles.formGroup}>
                         <label style={styles.label}>🔒 Confirm New Password</label>
                         <div style={styles.inputWrapper}>
@@ -195,7 +187,7 @@ function ChangePassword() {
                                     ...styles.input,
                                     borderColor: confirmPassword
                                         ? confirmPassword === newPassword ? '#28a745' : '#dc3545'
-                                        : '#ddd'
+                                        : '#e0e0e0'
                                 }}
                                 placeholder="Confirm new password"
                                 required
@@ -206,12 +198,12 @@ function ChangePassword() {
                             </button>
                         </div>
                         {confirmPassword && confirmPassword !== newPassword && (
-                            <p style={{ color: '#dc3545', fontSize: '12px', margin: '5px 0 0 0' }}>
+                            <p style={{ color: '#dc3545', fontSize: '12px', margin: '6px 0 0 0', fontWeight: 500 }}>
                                 Passwords do not match
                             </p>
                         )}
                         {confirmPassword && confirmPassword === newPassword && (
-                            <p style={{ color: '#28a745', fontSize: '12px', margin: '5px 0 0 0' }}>
+                            <p style={{ color: '#28a745', fontSize: '12px', margin: '6px 0 0 0', fontWeight: 500 }}>
                                 ✅ Passwords match
                             </p>
                         )}
@@ -249,76 +241,77 @@ const styles = {
     },
     card: {
         backgroundColor: 'white',
-        padding: '40px',
-        borderRadius: '10px',
-        boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
+        padding: '44px',
+        borderRadius: '18px',
+        boxShadow: '0 10px 40px rgba(0,0,0,0.12)',
         width: '100%',
         maxWidth: '460px'
     },
-    logoRow: { display: 'flex', justifyContent: 'center', gap: '20px', marginBottom: '10px' },
+    logoRow: { display: 'flex', justifyContent: 'center', gap: '20px', marginBottom: '12px' },
     logo: { width: '60px', height: '60px', objectFit: 'contain' },
-    schoolName: { textAlign: 'center', color: '#1F3864', fontSize: '15px', margin: '0 0 15px 0' },
+    schoolName: { textAlign: 'center', color: '#1F3864', fontSize: '15px', fontWeight: 700, margin: '0 0 18px 0', letterSpacing: '0.3px' },
 
-    // Forced change banner
     forcedBanner: {
         backgroundColor: '#e3f2fd',
-        border: '2px solid #2E75B6',
-        borderRadius: '10px',
-        padding: '15px',
-        marginBottom: '20px',
+        border: '1.5px solid #2E75B6',
+        borderRadius: '14px',
+        padding: '16px',
+        marginBottom: '22px',
         display: 'flex',
         gap: '12px',
         alignItems: 'flex-start'
     },
     forcedIcon: { fontSize: '28px', flexShrink: 0 },
-    forcedTitle: { color: '#1F3864', fontSize: '15px', display: 'block', marginBottom: '4px' },
+    forcedTitle: { color: '#1F3864', fontSize: '15px', display: 'block', marginBottom: '4px', fontWeight: 700 },
     forcedMsg: { color: '#555', fontSize: '13px', margin: 0, lineHeight: '1.5' },
 
-    normalHeader: { marginBottom: '20px', textAlign: 'center' },
-    title: { color: '#1F3864', margin: '0 0 5px 0' },
-    subtitle: { color: '#666', fontSize: '13px', margin: 0 },
+    normalHeader: { marginBottom: '22px', textAlign: 'center' },
+    title: { color: '#1F3864', margin: '0 0 5px 0', fontWeight: 700 },
+    subtitle: { color: '#888', fontSize: '13px', margin: 0 },
 
     error: {
-        color: 'red', padding: '10px', backgroundColor: '#fff3f3',
-        borderRadius: '5px', marginBottom: '15px', fontSize: '13px'
+        color: '#dc3545', padding: '12px 16px', backgroundColor: '#fff3f3',
+        borderRadius: '10px', marginBottom: '16px', fontSize: '13px', border: '1px solid #ffd6d6'
     },
     successMsg: {
-        color: '#155724', padding: '10px', backgroundColor: '#d4edda',
-        borderRadius: '5px', marginBottom: '15px', fontSize: '13px', textAlign: 'center'
+        color: '#155724', padding: '12px 16px', backgroundColor: '#d4edda',
+        borderRadius: '10px', marginBottom: '16px', fontSize: '13px', textAlign: 'center'
     },
 
     formGroup: { marginBottom: '20px' },
-    label: { display: 'block', marginBottom: '6px', fontWeight: 'bold', color: '#1F3864', fontSize: '13px' },
+    label: { display: 'block', marginBottom: '7px', fontWeight: 700, color: '#1F3864', fontSize: '13px' },
     inputWrapper: { position: 'relative' },
     input: {
-        width: '100%', padding: '12px 45px 12px 12px',
-        borderRadius: '5px', border: '2px solid #ddd',
-        fontSize: '14px', boxSizing: 'border-box', outline: 'none'
+        width: '100%', padding: '13px 45px 13px 14px',
+        borderRadius: '10px', border: '1.5px solid #e0e0e0',
+        fontSize: '14px', boxSizing: 'border-box', outline: 'none',
+        backgroundColor: '#fafbfc', fontFamily: 'inherit'
     },
     eyeBtn: {
         position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)',
         background: 'none', border: 'none', cursor: 'pointer', fontSize: '16px', padding: '0'
     },
-    hint: { color: '#888', fontSize: '11px', margin: '5px 0 0 0', fontStyle: 'italic' },
+    hint: { color: '#999', fontSize: '11px', margin: '6px 0 0 0', fontStyle: 'italic' },
 
-    strengthMeter: { display: 'flex', alignItems: 'center', gap: '10px', marginTop: '8px' },
+    strengthMeter: { display: 'flex', alignItems: 'center', gap: '10px', marginTop: '10px' },
     strengthBarOuter: { display: 'flex', gap: '4px', flex: 1 },
     strengthBarSegment: { height: '5px', flex: 1, borderRadius: '3px', transition: 'background-color 0.3s' },
-    strengthLabel: { fontSize: '12px', fontWeight: 'bold', minWidth: '50px' },
+    strengthLabel: { fontSize: '12px', fontWeight: 700, minWidth: '50px' },
 
-    requirements: { display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '8px', fontSize: '11px' },
+    requirements: { display: 'flex', flexWrap: 'wrap', gap: '10px', marginTop: '10px', fontSize: '11px' },
 
     submitBtn: {
-        width: '100%', padding: '13px', backgroundColor: '#1F3864',
-        color: 'white', border: 'none', borderRadius: '5px',
-        fontSize: '15px', cursor: 'pointer', fontWeight: 'bold', marginBottom: '10px'
+        width: '100%', padding: '14px', backgroundColor: '#1F3864',
+        color: 'white', border: 'none', borderRadius: '10px',
+        fontSize: '15px', cursor: 'pointer', fontWeight: 700, marginBottom: '10px',
+        boxShadow: '0 4px 14px rgba(31,56,100,0.25)'
     },
     cancelBtn: {
-        width: '100%', padding: '10px', backgroundColor: 'transparent',
-        color: '#666', border: '1px solid #ddd', borderRadius: '5px',
-        fontSize: '14px', cursor: 'pointer'
+        width: '100%', padding: '11px', backgroundColor: 'transparent',
+        color: '#666', border: '1.5px solid #e0e0e0', borderRadius: '10px',
+        fontSize: '14px', cursor: 'pointer', fontWeight: 500
     },
-    footer: { textAlign: 'center', color: '#999', fontSize: '12px', marginTop: '20px', marginBottom: 0 }
+    footer: { textAlign: 'center', color: '#999', fontSize: '12px', marginTop: '22px', marginBottom: 0 }
 };
 
 export default ChangePassword;

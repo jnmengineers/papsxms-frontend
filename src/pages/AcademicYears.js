@@ -224,7 +224,7 @@ function AcademicYears() {
                 {/* Delete Confirmation Modal */}
                 {deleteConfirm && (
                     <div style={styles.modalOverlay}>
-                        <div style={{ backgroundColor:'white', padding:'25px 30px', borderRadius:'10px', maxWidth:'380px', width:'90%' }}>
+                        <div style={{ backgroundColor:'white', padding:'25px 30px', borderRadius:'14px', maxWidth:'380px', width:'90%' }}>
                             <h3 style={{ color:'#dc3545', margin:'0 0 12px 0' }}>🗑️ Delete Academic Year?</h3>
                             <p style={{ color:'#555', marginBottom:'20px' }}>
                                 Delete <strong>{deleteConfirm.yearLabel} — Term {deleteConfirm.term}</strong>? This cannot be undone.
@@ -272,9 +272,9 @@ function AcademicYears() {
                                 <div style={{ maxHeight:'350px', overflowY:'auto' }}>
                                     {promotionPairs.map((pair, i) => (
                                         <div key={i} style={{ display:'grid', gridTemplateColumns:'1fr 30px 1fr 80px', gap:'10px', padding:'8px 25px', alignItems:'center', borderBottom:'1px solid #eee', backgroundColor: pair.skip ? '#f8f9fa' : i%2===0?'white':'#fafafa', opacity: pair.skip?0.6:1 }}>
-                                            <span style={{ backgroundColor:'#e3f2fd', color:'#1F3864', padding:'5px 10px', borderRadius:'5px', fontWeight:'bold', fontSize:'13px' }}>{pair.fromClassName}</span>
+                                            <span style={{ backgroundColor:'#e3f2fd', color:'#1F3864', padding:'5px 10px', borderRadius:'8px', fontWeight:'bold', fontSize:'13px' }}>{pair.fromClassName}</span>
                                             <span style={{ color:'#28a745', fontWeight:'bold', fontSize:'16px', textAlign:'center' }}>→</span>
-                                            <select style={{ padding:'6px 8px', borderRadius:'5px', border:'1px solid #ddd', fontSize:'12px', width:'100%' }}
+                                            <select style={{ padding:'6px 8px', borderRadius:'8px', border:'1px solid #ddd', fontSize:'12px', width:'100%' }}
                                                 value={pair.toClassId} disabled={pair.skip}
                                                 onChange={e => {
                                                     const newPairs = [...promotionPairs];
@@ -289,9 +289,9 @@ function AcademicYears() {
                                             </select>
                                             <div style={{ display:'flex', justifyContent:'center' }}>
                                                 {pair.skip
-                                                    ? <span style={{ backgroundColor:'#ffc107', color:'#856404', padding:'3px 8px', borderRadius:'3px', fontSize:'11px', fontWeight:'bold' }}>🎓 Graduates</span>
+                                                    ? <span style={{ backgroundColor:'#ffc107', color:'#856404', padding:'3px 8px', borderRadius:'8px', fontSize:'11px', fontWeight:'bold' }}>🎓 Graduates</span>
                                                     : <button onClick={() => { const n=[...promotionPairs]; n[i]={...n[i],skip:true}; setPromotionPairs(n); }}
-                                                        style={{ backgroundColor:'#6c757d', color:'white', border:'none', padding:'3px 8px', borderRadius:'3px', cursor:'pointer', fontSize:'11px' }}>Skip</button>
+                                                        style={{ backgroundColor:'#6c757d', color:'white', border:'none', padding:'3px 8px', borderRadius:'8px', cursor:'pointer', fontSize:'11px' }}>Skip</button>
                                                 }
                                             </div>
                                         </div>
@@ -301,7 +301,7 @@ function AcademicYears() {
 
                             <div style={{ padding:'15px 25px', borderTop:'1px solid #eee', display:'flex', gap:'10px', justifyContent:'flex-end' }}>
                                 <button onClick={handlePromote} disabled={promoting}
-                                    style={{ backgroundColor:'#28a745', color:'white', border:'none', padding:'10px 25px', borderRadius:'5px', cursor:'pointer', fontWeight:'bold', fontSize:'14px' }}>
+                                    style={{ backgroundColor:'#28a745', color:'white', border:'none', padding:'10px 25px', borderRadius:'10px', cursor:'pointer', fontWeight:'bold', fontSize:'14px' }}>
                                     {promoting ? '⏳ Promoting...' : `🎓 Confirm Promotion (${promotionPairs.filter(p => !p.skip && p.toClassId).length} classes)`}
                                 </button>
                                 <button onClick={() => setShowPromote(false)} style={styles.cancelBtn}>Cancel</button>
@@ -322,15 +322,17 @@ function AcademicYears() {
                             <div key={yearLabel} style={styles.yearBlock}>
                                 <div style={styles.yearHeader}>
                                     <span style={styles.yearTitle}>📅 {yearLabel}</span>
-                                    <span style={{ backgroundColor:'rgba(255,255,255,0.2)', color:'white', padding:'3px 12px', borderRadius:'12px', fontSize:'12px' }}>{termsList.length} term(s)</span>
+                                    <span style={{ backgroundColor:'rgba(255,255,255,0.2)', color:'white', padding:'3px 12px', borderRadius:'20px', fontSize:'12px' }}>{termsList.length} term(s)</span>
                                 </div>
                                 <div style={styles.termsGrid}>
                                     {termsList.sort((a,b) => a.term-b.term).map(year => (
                                         <div key={year.yearId}>
-                                            <div style={{ ...styles.termCard, borderTop:`4px solid ${year.isActive?'#28a745':'#ddd'}`, outline: editingYear?.yearId === year.yearId ? '2px solid #2E75B6' : 'none' }}>
+                                            <div style={{ ...styles.termCard, borderTop:`4px solid ${year.isActive?'#28a745':'#ddd'}`, outline: editingYear?.yearId === year.yearId ? '2px solid #2E75B6' : 'none' }}
+                                                onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-3px)'; e.currentTarget.style.boxShadow = '0 8px 20px rgba(0,0,0,0.1)'; }}
+                                                onMouseLeave={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = 'none'; }}>
                                                 <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'10px' }}>
-                                                    <span style={{ fontSize:'20px', fontWeight:'bold', color:'#1F3864' }}>Term {year.term}</span>
-                                                    <span style={{ color:'white', padding:'3px 8px', borderRadius:'3px', fontSize:'11px', fontWeight:'bold', backgroundColor: year.isActive?'#28a745':'#6c757d' }}>
+                                                    <span style={{ fontSize:'20px', fontWeight:800, color:'#1F3864' }}>Term {year.term}</span>
+                                                    <span style={{ color:'white', padding:'3px 10px', borderRadius:'20px', fontSize:'11px', fontWeight:'bold', backgroundColor: year.isActive?'#28a745':'#6c757d' }}>
                                                         {year.isActive ? '✅ Active' : 'Inactive'}
                                                     </span>
                                                 </div>
@@ -340,19 +342,19 @@ function AcademicYears() {
                                                     <span>📅 {year.endDate}</span>
                                                 </div>
                                                 <div style={{ display:'flex', gap:'6px', flexWrap:'wrap' }}>
-                                                    <button onClick={() => handleSetActive(year)} style={{ flex:1, backgroundColor: year.isActive?'#6c757d':'#28a745', color:'white', border:'none', padding:'6px 10px', borderRadius:'3px', cursor:'pointer', fontSize:'11px', fontWeight:'bold' }}>
+                                                    <button onClick={() => handleSetActive(year)} style={{ flex:1, backgroundColor: year.isActive?'#6c757d':'#28a745', color:'white', border:'none', padding:'7px 10px', borderRadius:'8px', cursor:'pointer', fontSize:'11px', fontWeight:'bold' }}>
                                                         {year.isActive ? 'Deactivate' : '✅ Set Active'}
                                                     </button>
-                                                    <button onClick={() => handleEdit(year)} style={{ flex:1, backgroundColor: editingYear?.yearId===year.yearId?'#6c757d':'#2E75B6', color:'white', border:'none', padding:'6px 10px', borderRadius:'3px', cursor:'pointer', fontSize:'11px' }}>
+                                                    <button onClick={() => handleEdit(year)} style={{ flex:1, backgroundColor: editingYear?.yearId===year.yearId?'#6c757d':'#2E75B6', color:'white', border:'none', padding:'7px 10px', borderRadius:'8px', cursor:'pointer', fontSize:'11px' }}>
                                                         {editingYear?.yearId===year.yearId ? '✕' : 'Edit'}
                                                     </button>
-                                                    <button onClick={() => setDeleteConfirm(year)} style={{ backgroundColor:'#dc3545', color:'white', border:'none', padding:'6px 10px', borderRadius:'3px', cursor:'pointer', fontSize:'11px' }}>
+                                                    <button onClick={() => setDeleteConfirm(year)} style={{ backgroundColor:'#dc3545', color:'white', border:'none', padding:'7px 10px', borderRadius:'8px', cursor:'pointer', fontSize:'11px' }}>
                                                         🗑️
                                                     </button>
                                                 </div>
                                             </div>
                                             {editingYear?.yearId === year.yearId && (
-                                                <div style={{ backgroundColor:'white', borderRadius:'0 0 8px 8px', padding:'15px', border:'2px solid #2E75B6', borderTop:'none', marginTop:'-2px' }}>
+                                                <div style={{ backgroundColor:'white', borderRadius:'0 0 10px 10px', padding:'15px', border:'2px solid #2E75B6', borderTop:'none', marginTop:'-2px' }}>
                                                     <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'12px' }}>
                                                         <h4 style={{ color:'#2E75B6', margin:0, fontSize:'13px' }}>✏️ Editing: {year.yearLabel} Term {year.term}</h4>
                                                         <button onClick={handleCancelEdit} style={{ background:'none', border:'none', fontSize:'16px', cursor:'pointer', color:'#999' }}>✕</button>
@@ -380,46 +382,39 @@ function AcademicYears() {
 const styles = {
     container: { minHeight:'100vh', backgroundColor:'#f0f2f5' },
     layoutRow: { display:'flex' },
-    navbar: { backgroundColor:'#1F3864', padding:'15px 30px', display:'flex', justifyContent:'space-between', alignItems:'center' },
-    navLeft: { display:'flex', alignItems:'center', gap:'10px' },
-    navLogo: { width:'45px', height:'45px', objectFit:'contain' },
-    navTitle: { color:'white', margin:0, fontSize:'18px' },
-    navRight: { display:'flex', gap:'10px' },
-    navBtn: { backgroundColor:'transparent', color:'white', border:'1px solid white', padding:'8px 16px', borderRadius:'5px', cursor:'pointer' },
-    logoutBtn: { backgroundColor:'transparent', color:'white', border:'1px solid white', padding:'8px 16px', borderRadius:'5px', cursor:'pointer' },
-   content: { padding: '30px', flex: 1 },
-    header: { display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:'20px', flexWrap:'wrap', gap:'10px' },
+    content: { padding: '30px', flex: 1 },
+    header: { display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:'24px', flexWrap:'wrap', gap:'10px' },
     headerBtns: { display:'flex', gap:'10px', flexWrap:'wrap' },
-    title: { color:'#1F3864', margin:'0 0 5px 0', fontSize:'24px' },
-    subtitle: { color:'#666', margin:0, fontSize:'14px' },
-    addBtn: { backgroundColor:'#1F3864', color:'white', border:'none', padding:'10px 20px', borderRadius:'5px', cursor:'pointer', fontWeight:'bold' },
-    promoteBtn: { backgroundColor:'#28a745', color:'white', border:'none', padding:'10px 20px', borderRadius:'5px', cursor:'pointer', fontWeight:'bold' },
-    error: { color:'red', padding:'10px', backgroundColor:'#fff3f3', borderRadius:'5px', marginBottom:'15px' },
-    success: { color:'#155724', padding:'10px', backgroundColor:'#d4edda', borderRadius:'5px', marginBottom:'15px' },
-    addFormCard: { backgroundColor:'white', padding:'20px', borderRadius:'10px', marginBottom:'20px', boxShadow:'0 2px 8px rgba(0,0,0,0.12)', border:'2px solid #1F3864' },
-    formTitle: { color:'#1F3864', margin:'0 0 15px 0' },
+    title: { color:'#1F3864', margin:'0 0 5px 0', fontSize:'24px', fontWeight:800 },
+    subtitle: { color:'#888', margin:0, fontSize:'14px' },
+    addBtn: { backgroundColor:'#1F3864', color:'white', border:'none', padding:'11px 22px', borderRadius:'10px', cursor:'pointer', fontWeight:'bold', fontSize:'13px' },
+    promoteBtn: { backgroundColor:'#28a745', color:'white', border:'none', padding:'11px 22px', borderRadius:'10px', cursor:'pointer', fontWeight:'bold', fontSize:'13px' },
+    error: { color:'#dc3545', padding:'12px 16px', backgroundColor:'#fff3f3', borderRadius:'10px', marginBottom:'15px', border:'1px solid #ffd6d6' },
+    success: { color:'#155724', padding:'12px 16px', backgroundColor:'#d4edda', borderRadius:'10px', marginBottom:'15px' },
+    addFormCard: { backgroundColor:'white', padding:'22px', borderRadius:'14px', marginBottom:'22px', boxShadow:'0 2px 8px rgba(0,0,0,0.06)', border:'2px solid #1F3864' },
+    formTitle: { color:'#1F3864', margin:'0 0 15px 0', fontWeight:700 },
     inlineForm: {},
     formGrid: { display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(180px,1fr))', gap:'12px', marginBottom:'12px' },
     formGroup: { display:'flex', flexDirection:'column', gap:'5px' },
     label: { fontSize:'12px', fontWeight:'bold', color:'#1F3864' },
-    input: { padding:'10px', borderRadius:'5px', border:'1.5px solid #ddd', fontSize:'14px' },
+    input: { padding:'10px', borderRadius:'8px', border:'1.5px solid #ddd', fontSize:'14px' },
     btnGroup: { display:'flex', gap:'10px' },
-    submitBtn: { backgroundColor:'#2E75B6', color:'white', border:'none', padding:'10px 20px', borderRadius:'5px', cursor:'pointer', fontWeight:'bold', fontSize:'14px' },
-    cancelBtn: { backgroundColor:'#6c757d', color:'white', border:'none', padding:'10px 16px', borderRadius:'5px', cursor:'pointer', fontSize:'14px' },
+    submitBtn: { backgroundColor:'#2E75B6', color:'white', border:'none', padding:'11px 22px', borderRadius:'10px', cursor:'pointer', fontWeight:'bold', fontSize:'14px' },
+    cancelBtn: { backgroundColor:'#6c757d', color:'white', border:'none', padding:'11px 18px', borderRadius:'10px', cursor:'pointer', fontSize:'14px' },
     yearBlock: { marginBottom:'25px' },
-    yearHeader: { backgroundColor:'#1F3864', padding:'12px 20px', borderRadius:'8px 8px 0 0', display:'flex', justifyContent:'space-between', alignItems:'center' },
-    yearTitle: { color:'white', fontWeight:'bold', fontSize:'18px' },
-    termsGrid: { display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(220px,1fr))', gap:'15px', padding:'15px', backgroundColor:'white', borderRadius:'0 0 8px 8px', boxShadow:'0 2px 4px rgba(0,0,0,0.1)' },
-    termCard: { backgroundColor:'#f8f9fa', borderRadius:'8px', padding:'15px', border:'1px solid #eee' },
+    yearHeader: { backgroundColor:'#1F3864', padding:'14px 22px', borderRadius:'14px 14px 0 0', display:'flex', justifyContent:'space-between', alignItems:'center' },
+    yearTitle: { color:'white', fontWeight:800, fontSize:'18px' },
+    termsGrid: { display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(220px,1fr))', gap:'15px', padding:'18px', backgroundColor:'white', borderRadius:'0 0 14px 14px', boxShadow:'0 2px 8px rgba(0,0,0,0.06)' },
+    termCard: { backgroundColor:'#f8f9fa', borderRadius:'12px', padding:'16px', border:'1px solid #eee', transition:'transform 0.2s ease, box-shadow 0.2s ease' },
     modalOverlay: { position:'fixed', top:0, left:0, right:0, bottom:0, backgroundColor:'rgba(0,0,0,0.5)', zIndex:1000, display:'flex', alignItems:'center', justifyContent:'center', padding:'20px' },
-    modal: { backgroundColor:'white', borderRadius:'12px', width:'100%', maxWidth:'700px', maxHeight:'90vh', display:'flex', flexDirection:'column', boxShadow:'0 20px 60px rgba(0,0,0,0.3)' },
-    modalHeader: { backgroundColor:'#1F3864', padding:'20px 25px', borderRadius:'12px 12px 0 0', display:'flex', justifyContent:'space-between', alignItems:'center' },
-    modalTitle: { color:'white', margin:0, fontSize:'18px' },
+    modal: { backgroundColor:'white', borderRadius:'16px', width:'100%', maxWidth:'700px', maxHeight:'90vh', display:'flex', flexDirection:'column', boxShadow:'0 20px 60px rgba(0,0,0,0.3)' },
+    modalHeader: { backgroundColor:'#1F3864', padding:'20px 25px', borderRadius:'16px 16px 0 0', display:'flex', justifyContent:'space-between', alignItems:'center' },
+    modalTitle: { color:'white', margin:0, fontSize:'18px', fontWeight:700 },
     modalClose: { background:'none', border:'none', color:'white', fontSize:'20px', cursor:'pointer' },
     modalSubtitle: { color:'#666', fontSize:'13px', padding:'15px 25px 0', margin:0, lineHeight:'1.5' },
     promotionTable: { flex:1, overflow:'auto', margin:'15px 0' },
     promotionHeader: { display:'grid', gridTemplateColumns:'1fr 30px 1fr 80px', gap:'10px', padding:'8px 25px', backgroundColor:'#f8f9fa', borderBottom:'2px solid #ddd', fontWeight:'bold', fontSize:'12px', color:'#1F3864' },
-    emptyState: { backgroundColor:'white', padding:'60px', borderRadius:'10px', textAlign:'center', boxShadow:'0 2px 4px rgba(0,0,0,0.1)' },
+    emptyState: { backgroundColor:'white', padding:'60px', borderRadius:'14px', textAlign:'center', boxShadow:'0 2px 8px rgba(0,0,0,0.06)' },
 };
 
 export default AcademicYears;

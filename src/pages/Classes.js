@@ -139,7 +139,6 @@ function Classes() {
         return labels[s] || s || '';
     };
 
-    // Auto-fill className when grade or stream changes
     useEffect(() => {
         if (formData.gradeLevel) {
             const streamSuffix = formData.stream ? formData.stream.charAt(0).toUpperCase() : '';
@@ -318,18 +317,17 @@ function Classes() {
                                                     <div key={grade.gradeLevel}
                                                         style={{ ...styles.gradeTile, borderTop:`4px solid ${section.color}` }}
                                                         onClick={() => handleGradeClick(grade)}
-                                                        onMouseEnter={e => e.currentTarget.style.transform='translateY(-2px)'}
-                                                        onMouseLeave={e => e.currentTarget.style.transform='none'}>
+                                                        onMouseEnter={e => { e.currentTarget.style.transform='translateY(-3px)'; e.currentTarget.style.boxShadow='0 8px 20px rgba(0,0,0,0.1)'; }}
+                                                        onMouseLeave={e => { e.currentTarget.style.transform='none'; e.currentTarget.style.boxShadow='0 2px 8px rgba(0,0,0,0.06)'; }}>
                                                         <div style={{ ...styles.gradeLabelStyle, color: section.color }}>{grade.gradeLevel}</div>
                                                         <div style={styles.gradeFullName}>{gradeLabel(grade.gradeLevel)}</div>
                                                         <div style={styles.gradeCount}>{grade.count} class{grade.count !== 1 ? 'es' : ''}</div>
-                                                        {/* Stream dots */}
-                                                        <div style={{ display:'flex', gap:'4px', justifyContent:'center', marginTop:'6px', flexWrap:'wrap' }}>
+                                                        <div style={{ display:'flex', gap:'4px', justifyContent:'center', marginTop:'8px', flexWrap:'wrap' }}>
                                                             {grade.classes.map((cls, i) => (
                                                                 <span key={i} style={{ width:'10px', height:'10px', borderRadius:'50%', backgroundColor: getStreamColor(cls.stream), display:'inline-block', title: cls.stream || 'Single' }} />
                                                             ))}
                                                         </div>
-                                                        <div style={{ fontSize:'11px', color:'#999', marginTop:'6px' }}>View →</div>
+                                                        <div style={{ fontSize:'11px', color:'#999', marginTop:'8px', fontWeight:600 }}>View →</div>
                                                     </div>
                                                 ))}
                                             </div>
@@ -417,7 +415,9 @@ function Classes() {
                                     <div style={styles.studentGrid}>
                                         {students.sort((a,b) => `${a.firstName}${a.lastName}`.localeCompare(`${b.firstName}${b.lastName}`)).map((student, index) => (
                                             <div key={student.studentId} style={styles.studentCard}
-                                                onClick={() => window.location.href = `/student/${student.studentId}`}>
+                                                onClick={() => window.location.href = `/student/${student.studentId}`}
+                                                onMouseEnter={e => { e.currentTarget.style.transform='translateY(-2px)'; e.currentTarget.style.boxShadow='0 6px 16px rgba(0,0,0,0.1)'; }}
+                                                onMouseLeave={e => { e.currentTarget.style.transform='none'; e.currentTarget.style.boxShadow='none'; }}>
                                                 <div style={{ ...styles.studentAvatar, backgroundColor: student.gender === 'Male' ? '#2E75B6' : '#e83e8c' }}>
                                                     {student.firstName?.charAt(0)}{student.lastName?.charAt(0)}
                                                 </div>
@@ -425,7 +425,7 @@ function Classes() {
                                                     <strong style={styles.studentName}>{student.firstName} {student.lastName}</strong>
                                                     <span style={{ fontSize:'11px', color:'#999', fontFamily:'monospace' }}>{student.admissionNumber}</span>
                                                     <div style={{ display:'flex', gap:'4px', marginTop:'2px', flexWrap:'wrap' }}>
-                                                        <span style={{ color:'white', padding:'1px 6px', borderRadius:'3px', fontSize:'10px', backgroundColor: student.gender === 'Male' ? '#2E75B6' : '#e83e8c' }}>{student.gender}</span>
+                                                        <span style={{ color:'white', padding:'1px 6px', borderRadius:'8px', fontSize:'10px', backgroundColor: student.gender === 'Male' ? '#2E75B6' : '#e83e8c' }}>{student.gender}</span>
                                                     </div>
                                                 </div>
                                                 <div style={{ fontSize:'12px', color:'#1F3864', fontWeight:'bold' }}>#{index + 1}</div>
@@ -448,65 +448,58 @@ function Classes() {
 const styles = {
     container: { minHeight:'100vh', backgroundColor:'#f0f2f5' },
     layoutRow: { display:'flex' },
-    navbar: { backgroundColor:'#1F3864', padding:'15px 30px', display:'flex', justifyContent:'space-between', alignItems:'center' },
-    navLeft: { display:'flex', alignItems:'center', gap:'10px' },
-    navLogo: { width:'45px', height:'45px', objectFit:'contain' },
-    navTitle: { color:'white', margin:0, fontSize:'18px' },
-    navRight: { display:'flex', gap:'10px' },
-    navBtn: { backgroundColor:'transparent', color:'white', border:'1px solid white', padding:'8px 16px', borderRadius:'5px', cursor:'pointer' },
-    logoutBtn: { backgroundColor:'transparent', color:'white', border:'1px solid white', padding:'8px 16px', borderRadius:'5px', cursor:'pointer' },
     content: { padding: '30px', flex: 1 },
-    header: { display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'20px', flexWrap:'wrap', gap:'10px' },
+    header: { display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'22px', flexWrap:'wrap', gap:'10px' },
     headerLeft: { display:'flex', alignItems:'center', gap:'15px' },
-    backBtn: { backgroundColor:'#6c757d', color:'white', border:'none', padding:'8px 16px', borderRadius:'5px', cursor:'pointer', fontSize:'14px' },
-    title: { color:'#1F3864', margin:0, fontSize:'22px' },
-    breadcrumb: { color:'#666', margin:'3px 0 0 0', fontSize:'13px' },
-    addBtn: { backgroundColor:'#1F3864', color:'white', border:'none', padding:'10px 20px', borderRadius:'5px', cursor:'pointer', fontWeight:'bold' },
-    error: { color:'red', padding:'10px', backgroundColor:'#fff3f3', borderRadius:'5px', marginBottom:'15px' },
-    success: { color:'#155724', padding:'10px', backgroundColor:'#d4edda', borderRadius:'5px', marginBottom:'15px' },
+    backBtn: { backgroundColor:'#6c757d', color:'white', border:'none', padding:'9px 16px', borderRadius:'10px', cursor:'pointer', fontSize:'14px' },
+    title: { color:'#1F3864', margin:0, fontSize:'22px', fontWeight:800 },
+    breadcrumb: { color:'#888', margin:'3px 0 0 0', fontSize:'13px' },
+    addBtn: { backgroundColor:'#1F3864', color:'white', border:'none', padding:'11px 22px', borderRadius:'10px', cursor:'pointer', fontWeight:'bold', fontSize:'13px' },
+    error: { color:'#dc3545', padding:'12px 16px', backgroundColor:'#fff3f3', borderRadius:'10px', marginBottom:'15px', border:'1px solid #ffd6d6' },
+    success: { color:'#155724', padding:'12px 16px', backgroundColor:'#d4edda', borderRadius:'10px', marginBottom:'15px' },
     centerMsg: { textAlign:'center', padding:'40px', color:'#666' },
-    addFormCard: { backgroundColor:'white', padding:'25px', borderRadius:'10px', marginBottom:'20px', boxShadow:'0 2px 8px rgba(0,0,0,0.12)', border:'2px solid #1F3864' },
-    formTitle: { color:'#1F3864', margin:'0 0 15px 0' },
-    inlineEditCard: { backgroundColor:'white', borderRadius:'0 0 8px 8px', padding:'20px', border:'2px solid #2E75B6', borderTop:'none', marginTop:'-2px', marginBottom:'8px' },
+    addFormCard: { backgroundColor:'white', padding:'25px', borderRadius:'14px', marginBottom:'22px', boxShadow:'0 2px 8px rgba(0,0,0,0.06)', border:'2px solid #1F3864' },
+    formTitle: { color:'#1F3864', margin:'0 0 15px 0', fontWeight:700 },
+    inlineEditCard: { backgroundColor:'white', borderRadius:'0 0 12px 12px', padding:'20px', border:'2px solid #2E75B6', borderTop:'none', marginTop:'-2px', marginBottom:'8px' },
     inlineEditHeader: { display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'15px' },
-    stepGuide: { display:'flex', alignItems:'center', gap:'8px', backgroundColor:'#f8f9fa', padding:'8px 12px', borderRadius:'6px', marginBottom:'15px', flexWrap:'wrap' },
+    stepGuide: { display:'flex', alignItems:'center', gap:'8px', backgroundColor:'#f8f9fa', padding:'10px 14px', borderRadius:'10px', marginBottom:'16px', flexWrap:'wrap' },
     step: { fontSize:'11px', fontWeight:'bold', color:'#1F3864' },
     stepArrow: { color:'#999', fontSize:'14px' },
     formGrid: { display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(180px,1fr))', gap:'12px', marginBottom:'12px' },
     formGroup: { display:'flex', flexDirection:'column', gap:'5px' },
     label: { fontSize:'12px', fontWeight:'bold', color:'#1F3864', display:'flex', alignItems:'center', gap:'5px' },
-    autoTag: { backgroundColor:'#2E75B6', color:'white', padding:'1px 5px', borderRadius:'3px', fontSize:'9px' },
-    input: { padding:'10px', borderRadius:'5px', border:'1.5px solid #ddd', fontSize:'14px' },
-    preview: { backgroundColor:'#f0f4ff', padding:'10px 15px', borderRadius:'6px', marginBottom:'12px', display:'flex', alignItems:'center', gap:'10px', flexWrap:'wrap' },
-    previewBadge: { color:'white', padding:'3px 10px', borderRadius:'4px', fontWeight:'bold', fontSize:'15px' },
+    autoTag: { backgroundColor:'#2E75B6', color:'white', padding:'1px 6px', borderRadius:'6px', fontSize:'9px' },
+    input: { padding:'10px', borderRadius:'8px', border:'1.5px solid #ddd', fontSize:'14px' },
+    preview: { backgroundColor:'#f0f4ff', padding:'12px 16px', borderRadius:'10px', marginBottom:'12px', display:'flex', alignItems:'center', gap:'10px', flexWrap:'wrap' },
+    previewBadge: { color:'white', padding:'4px 12px', borderRadius:'8px', fontWeight:'bold', fontSize:'15px' },
     previewDetail: { color:'#666', fontSize:'12px' },
     btnGroup: { display:'flex', gap:'10px' },
-    submitBtn: { backgroundColor:'#2E75B6', color:'white', border:'none', padding:'10px 22px', borderRadius:'5px', cursor:'pointer', fontWeight:'bold', fontSize:'14px' },
-    cancelBtn: { backgroundColor:'#6c757d', color:'white', border:'none', padding:'10px 18px', borderRadius:'5px', cursor:'pointer', fontSize:'14px' },
+    submitBtn: { backgroundColor:'#2E75B6', color:'white', border:'none', padding:'11px 22px', borderRadius:'10px', cursor:'pointer', fontWeight:'bold', fontSize:'14px' },
+    cancelBtn: { backgroundColor:'#6c757d', color:'white', border:'none', padding:'11px 18px', borderRadius:'10px', cursor:'pointer', fontSize:'14px' },
     sectionBlock: { marginBottom:'30px' },
-    sectionTitle: { color:'white', padding:'12px 20px', borderRadius:'8px 8px 0 0', display:'flex', justifyContent:'space-between', alignItems:'center', fontWeight:'bold', fontSize:'15px' },
-    gradeTiles: { display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(130px,1fr))', gap:'10px', padding:'15px', backgroundColor:'white', borderRadius:'0 0 8px 8px', boxShadow:'0 2px 4px rgba(0,0,0,0.1)' },
-    gradeTile: { backgroundColor:'white', padding:'20px 15px', borderRadius:'8px', textAlign:'center', cursor:'pointer', boxShadow:'0 2px 4px rgba(0,0,0,0.08)', border:'1px solid #eee', transition:'transform 0.15s', userSelect:'none' },
-    gradeLabelStyle: { fontSize:'24px', fontWeight:'bold', marginBottom:'3px' },
-    gradeFullName: { fontSize:'10px', color:'#888', marginBottom:'5px' },
+    sectionTitle: { color:'white', padding:'14px 22px', borderRadius:'14px 14px 0 0', display:'flex', justifyContent:'space-between', alignItems:'center', fontWeight:'bold', fontSize:'15px' },
+    gradeTiles: { display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(130px,1fr))', gap:'12px', padding:'18px', backgroundColor:'white', borderRadius:'0 0 14px 14px', boxShadow:'0 2px 8px rgba(0,0,0,0.06)' },
+    gradeTile: { backgroundColor:'white', padding:'22px 16px', borderRadius:'12px', textAlign:'center', cursor:'pointer', boxShadow:'0 2px 8px rgba(0,0,0,0.06)', border:'1px solid #f0f0f0', transition:'transform 0.2s ease, box-shadow 0.2s ease', userSelect:'none' },
+    gradeLabelStyle: { fontSize:'24px', fontWeight:800, marginBottom:'3px' },
+    gradeFullName: { fontSize:'10px', color:'#888', marginBottom:'6px' },
     gradeCount: { fontSize:'12px', color:'#666' },
-    streamTiles: { display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(220px,1fr))', gap:'15px', padding:'15px', backgroundColor:'white', borderRadius:'0 0 8px 8px', boxShadow:'0 2px 4px rgba(0,0,0,0.1)' },
-    streamTile: { backgroundColor:'white', borderRadius:'8px', overflow:'visible', boxShadow:'0 2px 8px rgba(0,0,0,0.1)', border:'1px solid #eee' },
-    streamTop: { padding:'20px', cursor:'pointer', textAlign:'center' },
+    streamTiles: { display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(220px,1fr))', gap:'16px', padding:'18px', backgroundColor:'white', borderRadius:'0 0 14px 14px', boxShadow:'0 2px 8px rgba(0,0,0,0.06)' },
+    streamTile: { backgroundColor:'white', borderRadius:'12px', overflow:'visible', boxShadow:'0 2px 8px rgba(0,0,0,0.08)', border:'1px solid #f0f0f0' },
+    streamTop: { padding:'22px', cursor:'pointer', textAlign:'center' },
     streamBadge: { color:'white', padding:'5px 15px', borderRadius:'20px', fontSize:'12px', fontWeight:'bold', display:'inline-block', marginBottom:'10px' },
-    streamName: { fontSize:'16px', fontWeight:'bold', color:'#1F3864', marginBottom:'8px' },
+    streamName: { fontSize:'16px', fontWeight:800, color:'#1F3864', marginBottom:'8px' },
     streamTeacher: { fontSize:'12px', color:'#666', marginBottom:'5px' },
-    streamActions: { borderTop:'1px solid #eee', padding:'10px 15px', display:'flex', justifyContent:'space-between', alignItems:'center', backgroundColor:'#f8f9fa', gap:'8px' },
-    teacherSelect: { padding:'6px', borderRadius:'5px', border:'1px solid #ddd', fontSize:'12px', flex:1 },
-    editBtn: { backgroundColor:'#2E75B6', color:'white', border:'none', padding:'6px 12px', borderRadius:'3px', cursor:'pointer', fontSize:'12px' },
-    cancelEditBtn: { backgroundColor:'#6c757d', color:'white', border:'none', padding:'6px 12px', borderRadius:'3px', cursor:'pointer', fontSize:'12px' },
-    deleteBtn: { backgroundColor:'#dc3545', color:'white', border:'none', padding:'6px 10px', borderRadius:'3px', cursor:'pointer', fontSize:'12px' },
-    studentGrid: { display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(220px,1fr))', gap:'10px', padding:'15px', backgroundColor:'white', borderRadius:'0 0 8px 8px', boxShadow:'0 2px 4px rgba(0,0,0,0.1)' },
-    studentCard: { backgroundColor:'#f8f9fa', borderRadius:'8px', padding:'12px', display:'flex', alignItems:'center', gap:'12px', border:'1px solid #eee', cursor:'pointer', transition:'transform 0.15s' },
+    streamActions: { borderTop:'1px solid #eee', padding:'12px 15px', display:'flex', justifyContent:'space-between', alignItems:'center', backgroundColor:'#f8f9fa', gap:'8px', borderRadius:'0 0 12px 12px' },
+    teacherSelect: { padding:'6px', borderRadius:'8px', border:'1px solid #ddd', fontSize:'12px', flex:1 },
+    editBtn: { backgroundColor:'#2E75B6', color:'white', border:'none', padding:'7px 12px', borderRadius:'8px', cursor:'pointer', fontSize:'12px' },
+    cancelEditBtn: { backgroundColor:'#6c757d', color:'white', border:'none', padding:'7px 12px', borderRadius:'8px', cursor:'pointer', fontSize:'12px' },
+    deleteBtn: { backgroundColor:'#dc3545', color:'white', border:'none', padding:'7px 10px', borderRadius:'8px', cursor:'pointer', fontSize:'12px' },
+    studentGrid: { display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(220px,1fr))', gap:'12px', padding:'18px', backgroundColor:'white', borderRadius:'0 0 14px 14px', boxShadow:'0 2px 8px rgba(0,0,0,0.06)' },
+    studentCard: { backgroundColor:'#f8f9fa', borderRadius:'12px', padding:'14px', display:'flex', alignItems:'center', gap:'12px', border:'1px solid #f0f0f0', cursor:'pointer', transition:'transform 0.2s ease, box-shadow 0.2s ease' },
     studentAvatar: { width:'40px', height:'40px', borderRadius:'50%', display:'flex', alignItems:'center', justifyContent:'center', color:'white', fontWeight:'bold', fontSize:'13px', flexShrink:0 },
     studentInfo: { flex:1, display:'flex', flexDirection:'column', gap:'2px', minWidth:0 },
     studentName: { fontSize:'13px', color:'#1F3864', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' },
-    emptyState: { backgroundColor:'white', padding:'60px', borderRadius:'10px', textAlign:'center', boxShadow:'0 2px 4px rgba(0,0,0,0.1)', marginTop:'10px' },
+    emptyState: { backgroundColor:'white', padding:'60px', borderRadius:'14px', textAlign:'center', boxShadow:'0 2px 8px rgba(0,0,0,0.06)', marginTop:'10px' },
 };
 
 export default Classes;

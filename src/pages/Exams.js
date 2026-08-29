@@ -11,7 +11,6 @@ const ExamForm = ({ formData, setFormData, academicYears, exams, onSubmit, onCan
     const handleAcademicYearChange = (yearId) => {
         const selected = academicYears.find(ay => Number(ay.yearId) === Number(yearId));
         if (selected) {
-            // Find another exam in the same academic year + term that already has term dates set
             const sibling = (exams || []).find(e =>
                 e.academicYear === selected.yearLabel &&
                 String(e.term) === String(selected.term) &&
@@ -112,14 +111,13 @@ const ExamForm = ({ formData, setFormData, academicYears, exams, onSubmit, onCan
                 </div>
             </div>
 
-            {/* Auto-filled preview */}
             {formData.academicYearId && formData.term && (
                 <div style={styles.autoFillPreview}>
                     <span style={styles.autoFillItem}>🏫 Year: <strong>{formData.academicYear}</strong></span>
                     <span style={styles.autoFillItem}>📋 Term: <strong>Term {formData.term}</strong></span>
                     <span style={styles.autoFillItem}>🗓️ {formData.startDate} → {formData.endDate}</span>
                     {(formData.termOpeningDate || formData.termClosingDate) && (
-                        <span style={{ ...styles.autoFillItem, backgroundColor: '#d4edda', padding: '2px 8px', borderRadius: '4px' }}>
+                        <span style={{ ...styles.autoFillItem, backgroundColor: '#d4edda', padding: '3px 10px', borderRadius: '8px' }}>
                             🚪 {formData.termOpeningDate || '-'} → 🔒 {formData.termClosingDate || '-'}
                         </span>
                     )}
@@ -127,7 +125,7 @@ const ExamForm = ({ formData, setFormData, academicYears, exams, onSubmit, onCan
                         <span style={{
                             ...styles.autoFillItem,
                             backgroundColor: formData.examType === 'OPENING' ? '#d4edda' : formData.examType === 'MID_TERM' ? '#fff3cd' : '#cce5ff',
-                            padding: '2px 8px', borderRadius: '4px', fontWeight: 'bold'
+                            padding: '3px 10px', borderRadius: '8px', fontWeight: 'bold'
                         }}>
                             {formData.examType === 'OPENING' ? '🟢 Opening' : formData.examType === 'MID_TERM' ? '🟡 Mid Term' : '🔵 End Term'}
                         </span>
@@ -261,7 +259,6 @@ function Exams() {
         return '#1F3864';
     };
 
-    // Group by academic year + term, then order exams OPENING → MID_TERM → END_TERM
     const typeOrder = { OPENING: 1, MID_TERM: 2, END_TERM: 3 };
     const groupedExams = exams.reduce((groups, exam) => {
         const key = `${exam.academicYear} — Term ${exam.term}`;
@@ -301,7 +298,7 @@ function Exams() {
                 {showAddForm && (
                     <div style={styles.addFormCard}>
                         <h3 style={styles.formTitle}>➕ Add New Exam</h3>
-                        <p style={{ color:'#666', fontSize:'13px', margin:'0 0 15px 0' }}>
+                        <p style={{ color:'#888', fontSize:'13px', margin:'0 0 15px 0' }}>
                             💡 Each term should have 3 exams: Opening → Mid Term → End Term
                         </p>
                         <ExamForm
@@ -332,12 +329,11 @@ function Exams() {
                             <div style={styles.groupHeader}>
                                 <span style={styles.groupTitle}>📅 {groupKey}</span>
                                 <div style={{ display:'flex', alignItems:'center', gap:'10px' }}>
-                                    {/* Show which exam types exist */}
                                     {['OPENING','MID_TERM','END_TERM'].map(type => {
                                         const exists = groupExams.some(e => e.examType === type);
                                         return (
                                             <span key={type} style={{
-                                                fontSize:'11px', padding:'2px 8px', borderRadius:'10px',
+                                                fontSize:'11px', padding:'3px 10px', borderRadius:'10px',
                                                 backgroundColor: exists ? examTypeColors[type] : 'rgba(255,255,255,0.1)',
                                                 color: exists ? 'white' : 'rgba(255,255,255,0.4)',
                                                 fontWeight: exists ? 'bold' : 'normal'
@@ -355,14 +351,15 @@ function Exams() {
                                         <div style={{
                                             ...styles.examCard,
                                             outline: editingExam?.examId === exam.examId ? '2px solid #2E75B6' : 'none'
-                                        }}>
-                                            {/* Exam type stripe */}
+                                        }}
+                                            onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-3px)'; e.currentTarget.style.boxShadow = '0 8px 20px rgba(0,0,0,0.1)'; }}
+                                            onMouseLeave={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.06)'; }}>
                                             <div style={{ height:'5px', backgroundColor: examTypeColors[exam.examType] || '#1F3864' }} />
                                             <div style={{ ...styles.examHeader, backgroundColor: '#1F3864' }}>
                                                 <div style={{ flex:1 }}>
                                                     <div style={{ display:'flex', alignItems:'center', gap:'8px', marginBottom:'4px' }}>
                                                         {exam.examType && (
-                                                            <span style={{ backgroundColor: examTypeColors[exam.examType], color:'white', padding:'2px 8px', borderRadius:'3px', fontSize:'10px', fontWeight:'bold' }}>
+                                                            <span style={{ backgroundColor: examTypeColors[exam.examType], color:'white', padding:'2px 9px', borderRadius:'8px', fontSize:'10px', fontWeight:'bold' }}>
                                                                 {examTypeLabels[exam.examType]}
                                                             </span>
                                                         )}
@@ -436,7 +433,6 @@ function Exams() {
                                     </div>
                                 ))}
 
-                                {/* Hint cards for missing exam types */}
                                 {['OPENING','MID_TERM','END_TERM'].filter(type => !groupExams.some(e => e.examType === type)).map(type => (
                                     <div key={type} style={styles.missingExamCard} onClick={() => {
                                         setShowAddForm(true);
@@ -466,63 +462,56 @@ function Exams() {
 const styles = {
     container: { minHeight:'100vh', backgroundColor:'#f0f2f5' },
     layoutRow: { display:'flex' },
-    navbar: { backgroundColor:'#1F3864', padding:'15px 30px', display:'flex', justifyContent:'space-between', alignItems:'center' },
-    navLeft: { display:'flex', alignItems:'center', gap:'10px' },
-    navLogo: { width:'45px', height:'45px', objectFit:'contain' },
-    navTitle: { color:'white', margin:0, fontSize:'18px' },
-    navRight: { display:'flex', gap:'10px' },
-    navBtn: { backgroundColor:'transparent', color:'white', border:'1px solid white', padding:'8px 16px', borderRadius:'5px', cursor:'pointer' },
-    logoutBtn: { backgroundColor:'transparent', color:'white', border:'1px solid white', padding:'8px 16px', borderRadius:'5px', cursor:'pointer' },
     content: { padding: '30px', flex: 1 }, 
-    header: { display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:'20px', flexWrap:'wrap', gap:'10px' },
-    title: { color:'#1F3864', margin:'0 0 5px 0', fontSize:'24px' },
-    subtitle: { color:'#666', margin:0, fontSize:'14px' },
-    addBtn: { backgroundColor:'#1F3864', color:'white', border:'none', padding:'10px 20px', borderRadius:'5px', cursor:'pointer', fontWeight:'bold' },
-    warningBanner: { backgroundColor:'#fff3cd', border:'1px solid #ffc107', padding:'12px 15px', borderRadius:'8px', marginBottom:'15px', color:'#856404', fontSize:'14px' },
-    error: { color:'red', padding:'10px', backgroundColor:'#fff3f3', borderRadius:'5px', marginBottom:'15px' },
-    success: { color:'#155724', padding:'10px', backgroundColor:'#d4edda', borderRadius:'5px', marginBottom:'15px' },
+    header: { display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:'22px', flexWrap:'wrap', gap:'10px' },
+    title: { color:'#1F3864', margin:'0 0 5px 0', fontSize:'24px', fontWeight:800 },
+    subtitle: { color:'#888', margin:0, fontSize:'14px' },
+    addBtn: { backgroundColor:'#1F3864', color:'white', border:'none', padding:'11px 22px', borderRadius:'10px', cursor:'pointer', fontWeight:'bold', fontSize:'13px' },
+    warningBanner: { backgroundColor:'#fff3cd', border:'1px solid #ffc107', padding:'13px 16px', borderRadius:'10px', marginBottom:'15px', color:'#856404', fontSize:'14px' },
+    error: { color:'#dc3545', padding:'12px 16px', backgroundColor:'#fff3f3', borderRadius:'10px', marginBottom:'15px', border:'1px solid #ffd6d6' },
+    success: { color:'#155724', padding:'12px 16px', backgroundColor:'#d4edda', borderRadius:'10px', marginBottom:'15px' },
     centerMsg: { textAlign:'center', padding:'40px', color:'#666' },
-    addFormCard: { backgroundColor:'white', padding:'25px', borderRadius:'10px', marginBottom:'25px', boxShadow:'0 2px 8px rgba(0,0,0,0.12)', border:'2px solid #1F3864' },
-    formTitle: { color:'#1F3864', margin:'0 0 8px 0' },
-    inlineEditCard: { backgroundColor:'white', borderRadius:'0 0 10px 10px', padding:'20px', boxShadow:'0 6px 16px rgba(0,0,0,0.15)', border:'2px solid #2E75B6', borderTop:'none', marginTop:'-2px', marginBottom:'8px' },
+    addFormCard: { backgroundColor:'white', padding:'25px', borderRadius:'14px', marginBottom:'25px', boxShadow:'0 2px 8px rgba(0,0,0,0.06)', border:'2px solid #1F3864' },
+    formTitle: { color:'#1F3864', margin:'0 0 8px 0', fontWeight:700 },
+    inlineEditCard: { backgroundColor:'white', borderRadius:'0 0 12px 12px', padding:'20px', boxShadow:'0 6px 16px rgba(0,0,0,0.1)', border:'2px solid #2E75B6', borderTop:'none', marginTop:'-2px', marginBottom:'8px' },
     inlineEditHeader: { display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'15px' },
-    inlineEditTitle: { color:'#2E75B6', margin:0, fontSize:'15px' },
+    inlineEditTitle: { color:'#2E75B6', margin:0, fontSize:'15px', fontWeight:700 },
     closeBtn: { background:'none', border:'none', fontSize:'18px', cursor:'pointer', color:'#999' },
     inlineForm: {},
     formGrid: { display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(200px,1fr))', gap:'12px', marginBottom:'12px' },
     formGroup: { display:'flex', flexDirection:'column', gap:'5px' },
     label: { fontSize:'12px', fontWeight:'bold', color:'#1F3864', display:'flex', alignItems:'center', gap:'6px', flexWrap:'wrap' },
-    autoTag: { backgroundColor:'#2E75B6', color:'white', padding:'1px 6px', borderRadius:'3px', fontSize:'9px', fontWeight:'normal' },
-    input: { padding:'10px', borderRadius:'5px', border:'1.5px solid #ddd', fontSize:'14px', outline:'none', transition:'border-color 0.2s' },
-    autoFillPreview: { display:'flex', gap:'12px', flexWrap:'wrap', backgroundColor:'#e3f2fd', padding:'10px 15px', borderRadius:'6px', marginBottom:'12px', border:'1px solid #2E75B6', alignItems:'center' },
+    autoTag: { backgroundColor:'#2E75B6', color:'white', padding:'1px 7px', borderRadius:'6px', fontSize:'9px', fontWeight:'normal' },
+    input: { padding:'10px', borderRadius:'8px', border:'1.5px solid #ddd', fontSize:'14px', outline:'none', transition:'border-color 0.2s' },
+    autoFillPreview: { display:'flex', gap:'12px', flexWrap:'wrap', backgroundColor:'#e3f2fd', padding:'11px 16px', borderRadius:'10px', marginBottom:'12px', border:'1px solid #2E75B6', alignItems:'center' },
     autoFillItem: { fontSize:'13px', color:'#1F3864' },
     btnGroup: { display:'flex', gap:'10px', marginTop:'5px' },
-    submitBtn: { backgroundColor:'#2E75B6', color:'white', border:'none', padding:'10px 24px', borderRadius:'5px', cursor:'pointer', fontWeight:'bold', fontSize:'14px' },
-    cancelBtn: { backgroundColor:'#6c757d', color:'white', border:'none', padding:'10px 18px', borderRadius:'5px', cursor:'pointer', fontSize:'14px' },
+    submitBtn: { backgroundColor:'#2E75B6', color:'white', border:'none', padding:'11px 24px', borderRadius:'10px', cursor:'pointer', fontWeight:'bold', fontSize:'14px' },
+    cancelBtn: { backgroundColor:'#6c757d', color:'white', border:'none', padding:'11px 18px', borderRadius:'10px', cursor:'pointer', fontSize:'14px' },
     groupBlock: { marginBottom:'30px' },
-    groupHeader: { backgroundColor:'#1F3864', padding:'12px 20px', borderRadius:'8px 8px 0 0', display:'flex', justifyContent:'space-between', alignItems:'center', flexWrap:'wrap', gap:'8px' },
+    groupHeader: { backgroundColor:'#1F3864', padding:'14px 22px', borderRadius:'14px 14px 0 0', display:'flex', justifyContent:'space-between', alignItems:'center', flexWrap:'wrap', gap:'8px' },
     groupTitle: { color:'white', fontWeight:'bold', fontSize:'16px' },
-    groupCount: { backgroundColor:'rgba(255,255,255,0.2)', color:'white', padding:'3px 10px', borderRadius:'12px', fontSize:'12px' },
-    examGrid: { display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(260px,1fr))', gap:'15px', padding:'15px', backgroundColor:'white', borderRadius:'0 0 8px 8px', boxShadow:'0 2px 4px rgba(0,0,0,0.1)' },
-    examCard: { backgroundColor:'white', borderRadius:'10px', overflow:'hidden', boxShadow:'0 2px 8px rgba(0,0,0,0.1)', border:'1px solid #eee' },
-    missingExamCard: { backgroundColor:'#fafafa', borderRadius:'10px', overflow:'hidden', border:'2px dashed #ddd', cursor:'pointer', transition:'border-color 0.2s' },
-    examHeader: { padding:'15px 20px', display:'flex', justifyContent:'space-between', alignItems:'flex-start', gap:'10px' },
-    examName: { color:'white', margin:'0 0 4px 0', fontSize:'16px' },
+    groupCount: { backgroundColor:'rgba(255,255,255,0.2)', color:'white', padding:'4px 12px', borderRadius:'20px', fontSize:'12px' },
+    examGrid: { display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(260px,1fr))', gap:'16px', padding:'18px', backgroundColor:'white', borderRadius:'0 0 14px 14px', boxShadow:'0 2px 8px rgba(0,0,0,0.06)' },
+    examCard: { backgroundColor:'white', borderRadius:'14px', overflow:'hidden', boxShadow:'0 2px 8px rgba(0,0,0,0.06)', border:'1px solid #f0f0f0', transition:'transform 0.2s ease, box-shadow 0.2s ease' },
+    missingExamCard: { backgroundColor:'#fafafa', borderRadius:'14px', overflow:'hidden', border:'2px dashed #ddd', cursor:'pointer', transition:'border-color 0.2s' },
+    examHeader: { padding:'16px 20px', display:'flex', justifyContent:'space-between', alignItems:'flex-start', gap:'10px' },
+    examName: { color:'white', margin:'0 0 4px 0', fontSize:'16px', fontWeight:700 },
     examMeta: { color:'rgba(255,255,255,0.8)', margin:0, fontSize:'12px' },
     termBadge: { backgroundColor:'rgba(255,255,255,0.2)', color:'white', padding:'4px 10px', borderRadius:'20px', fontSize:'11px', fontWeight:'bold', whiteSpace:'nowrap' },
-    examBody: { padding:'15px 20px' },
-    examInfo: { display:'flex', flexDirection:'column', gap:'8px' },
+    examBody: { padding:'16px 20px' },
+    examInfo: { display:'flex', flexDirection:'column', gap:'9px' },
     infoItem: { display:'flex', alignItems:'center', gap:'10px' },
     infoIcon: { fontSize:'16px' },
     infoLabel: { fontSize:'11px', color:'#999' },
     infoValue: { fontSize:'13px', color:'#333', fontWeight:'bold' },
-    levelBadge: { color:'white', padding:'2px 8px', borderRadius:'3px', fontSize:'12px', fontWeight:'bold', display:'inline-block' },
-    examActions: { borderTop:'1px solid #eee', padding:'10px 15px', display:'flex', gap:'8px', backgroundColor:'#f8f9fa' },
-    resultsBtn: { flex:2, backgroundColor:'#28a745', color:'white', border:'none', padding:'8px', borderRadius:'5px', cursor:'pointer', fontSize:'12px', fontWeight:'bold' },
-    editBtn: { flex:2, backgroundColor:'#2E75B6', color:'white', border:'none', padding:'8px', borderRadius:'5px', cursor:'pointer', fontSize:'12px' },
-    cancelEditBtn: { flex:2, backgroundColor:'#6c757d', color:'white', border:'none', padding:'8px', borderRadius:'5px', cursor:'pointer', fontSize:'12px' },
-    deleteBtn: { flex:1, backgroundColor:'#dc3545', color:'white', border:'none', padding:'8px', borderRadius:'5px', cursor:'pointer', fontSize:'12px' },
-    emptyState: { backgroundColor:'white', padding:'60px', borderRadius:'10px', textAlign:'center', boxShadow:'0 2px 4px rgba(0,0,0,0.1)' },
+    levelBadge: { color:'white', padding:'2px 9px', borderRadius:'8px', fontSize:'12px', fontWeight:'bold', display:'inline-block' },
+    examActions: { borderTop:'1px solid #eee', padding:'11px 15px', display:'flex', gap:'8px', backgroundColor:'#f8f9fa' },
+    resultsBtn: { flex:2, backgroundColor:'#28a745', color:'white', border:'none', padding:'9px', borderRadius:'8px', cursor:'pointer', fontSize:'12px', fontWeight:'bold' },
+    editBtn: { flex:2, backgroundColor:'#2E75B6', color:'white', border:'none', padding:'9px', borderRadius:'8px', cursor:'pointer', fontSize:'12px' },
+    cancelEditBtn: { flex:2, backgroundColor:'#6c757d', color:'white', border:'none', padding:'9px', borderRadius:'8px', cursor:'pointer', fontSize:'12px' },
+    deleteBtn: { flex:1, backgroundColor:'#dc3545', color:'white', border:'none', padding:'9px', borderRadius:'8px', cursor:'pointer', fontSize:'12px' },
+    emptyState: { backgroundColor:'white', padding:'60px', borderRadius:'14px', textAlign:'center', boxShadow:'0 2px 8px rgba(0,0,0,0.06)' },
     emptyIcon: { fontSize:'48px', marginBottom:'15px' }
 };
 
