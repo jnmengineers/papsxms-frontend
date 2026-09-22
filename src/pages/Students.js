@@ -11,8 +11,10 @@ import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
 import Footer from '../components/Footer';
 
+const Icon = ({ name, style }) => <i className={`bi bi-${name}`} style={{ marginRight: '6px', ...style }} />;
+
 // Outside parent — prevents keyboard dismiss on re-render
-const StudentFormFields = ({ formData, setFormData, classId, setClassId, sections, classes, onSubmit, onCancel, submitLabel, showClassField = false }) => (
+const StudentFormFields = ({ formData, setFormData, classId, setClassId, sections, classes, onSubmit, onCancel, submitLabel, submitIcon, showClassField = false }) => (
     <form onSubmit={onSubmit} style={styles.inlineForm}>
         <div style={styles.formGrid}>
             <div style={styles.formGroup}>
@@ -62,8 +64,8 @@ const StudentFormFields = ({ formData, setFormData, classId, setClassId, section
             )}
         </div>
         <div style={styles.btnGroup}>
-            <button type="submit" style={styles.submitBtn}>{submitLabel}</button>
-            <button type="button" onClick={onCancel} style={styles.cancelBtn}>✕ Cancel</button>
+            <button type="submit" style={styles.submitBtn}><Icon name={submitIcon || 'save-fill'} />{submitLabel}</button>
+            <button type="button" onClick={onCancel} style={styles.cancelBtn}><Icon name="x-lg" />Cancel</button>
         </div>
     </form>
 );
@@ -169,7 +171,6 @@ function Students() {
     const getClassesForGrade = (gradeLevel) =>
         classes.filter(c => (c.gradeLevel || extractGrade(c.className)) === gradeLevel);
 
-    // ✅ Fixed — filter by classId (reliable) with className fallback
     const getStudentsForClass = (className, classId) => {
         if (classId) {
             return students.filter(s => String(s.schoolClass?.classId) === String(classId));
@@ -179,7 +180,6 @@ function Students() {
         );
     };
 
-    // ✅ Fixed — find class by classId first, then className
     const findClassForStudent = (student) =>
         classes.find(c =>
             String(c.classId) === String(student.schoolClass?.classId) ||
@@ -202,7 +202,7 @@ function Students() {
     const handleGradeClick = (grade) => { setSelectedGrade(grade); setSelectedClass(null); setView('streams'); };
     const handleClassClick = (cls) => {
         setSelectedClass(cls);
-        setSelectedClassFilter(cls.classId); // ✅ use classId not className
+        setSelectedClassFilter(cls.classId);
         setView('students');
     };
     const handleBack = () => {
@@ -235,7 +235,7 @@ function Students() {
             await api.put(`/api/students/${editingStudent.studentId}`, {
                 ...formData, className: editingStudent.className, stream: editingStudent.stream
             });
-            showToast('✅ Student updated successfully!', 'success');
+            showToast('Student updated successfully!', 'success');
             setEditingStudent(null);
             setFormData({ firstName: '', lastName: '', dateOfBirth: '', gender: '', admissionNumber: '' });
             fetchStudents();
@@ -248,7 +248,7 @@ function Students() {
         e.preventDefault();
         try {
             await api.post(`/api/students?classId=${classId}`, formData);
-            showToast('✅ Student added successfully!', 'success');
+            showToast('Student added successfully!', 'success');
             setShowAddForm(false);
             setFormData({ firstName: '', lastName: '', dateOfBirth: '', gender: '', admissionNumber: '' });
             setClassId('');
@@ -281,333 +281,347 @@ function Students() {
             <div style={styles.layoutRow}>
                 <Sidebar />
                 <div style={styles.content}>
-                            <div style={styles.header}>
-                    <div style={styles.headerLeft}>
-                        {view !== 'grades' && (
-                            <button onClick={handleBack} style={styles.backBtn}>← Back</button>
-                        )}
-                        <div>
-                            <h2 style={styles.title}>
-                                🎓 Students
-                                {selectedGrade && ` › ${selectedGrade.gradeLevel}`}
-                                {selectedClass && ` › ${selectedClass.className}`}
-                            </h2>
-                            <p style={styles.breadcrumb}>
-                                {view === 'grades' && `${students.length} total students across all classes`}
-                                {view === 'streams' && `${getClassesForGrade(selectedGrade?.gradeLevel).length} class(es) in ${selectedGrade?.gradeLevel}`}
-                                {view === 'students' && `${getStudentsForClass(selectedClass?.className, selectedClass?.classId).length} student(s) in ${selectedClass?.className}`}
-                            </p>
-                        </div>
-                    </div>
-                    <button onClick={() => { setShowAddForm(!showAddForm); setEditingStudent(null); }} style={styles.addBtn}>
-                        {showAddForm ? '✕ Cancel' : '+ Add Student'}
-                    </button>
-                </div>
-
-                {error && <p style={styles.error}>{error}</p>}
-
-                {showAddForm && (
-                    <div style={styles.addFormCard}>
-                        <h3 style={styles.formTitle}>➕ Add New Student</h3>
-                        <StudentFormFields
-                            formData={formData} setFormData={setFormData}
-                            classId={classId} setClassId={setClassId}
-                            sections={sections} classes={classes}
-                            onSubmit={handleSubmitAdd}
-                            onCancel={() => { setShowAddForm(false); setFormData({ firstName: '', lastName: '', dateOfBirth: '', gender: '', admissionNumber: '' }); }}
-                            submitLabel="💾 Save Student"
-                            showClassField={true}
-                        />
-                    </div>
-                )}
-
-                {loading ? <Spinner message="Loading students..." /> : (
-                    <>
-                        {/* ── VIEW 1: Grade Tiles ── */}
-                        {view === 'grades' && (
+                    <div style={styles.header}>
+                        <div style={styles.headerLeft}>
+                            {view !== 'grades' && (
+                                <button onClick={handleBack} style={styles.backBtn}><Icon name="arrow-left" style={{ marginRight: '4px' }} />Back</button>
+                            )}
                             <div>
-                                <div style={styles.statsRow}>
-                                    {sections.map(section => {
-                                        const sectionStudents = students.filter(s => {
-                                            const cls = findClassForStudent(s);
-                                            return cls?.section === section.value;
-                                        });
-                                        const sectionClasses = classes.filter(c => c.section === section.value);
-                                        return (
-                                            <div key={section.value} style={{ ...styles.statCard, borderTop: `4px solid ${section.color}` }}>
-                                                <div style={{ ...styles.statIcon, backgroundColor: section.light, color: section.color }}>
-                                                    {section.label.charAt(0)}
-                                                </div>
-                                                <div style={styles.statInfo}>
-                                                    <div style={{ ...styles.statNum, color: section.color }}>{sectionStudents.length}</div>
-                                                    <div style={styles.statLabel}>{section.label}</div>
-                                                    <div style={styles.statMeta}>{sectionClasses.length} classes</div>
-                                                </div>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-
-                                <div style={styles.searchCard}>
-                                    <input style={styles.searchInput}
-                                        placeholder="🔍 Search by name or admission number..."
-                                        value={search} onChange={e => setSearch(e.target.value)} />
-                                    <select style={styles.filterSelect} value={filterGender}
-                                        onChange={e => setFilterGender(e.target.value)}>
-                                        <option value="">All Genders</option>
-                                        <option value="Male">👦 Male</option>
-                                        <option value="Female">👧 Female</option>
-                                    </select>
-                                    <button onClick={() => { setSearch(''); setFilterGender(''); setSelectedClassFilter(''); }}
-                                        style={styles.clearBtn}>Clear</button>
-                                </div>
-
-                                {sections.map(section => {
-                                    const sectionGrades = grouped[section.value] || [];
-                                    if (sectionGrades.length === 0) return null;
-                                    return (
-                                        <div key={section.value} style={styles.sectionBlock}>
-                                            <div style={{ ...styles.sectionTitle, backgroundColor: section.color }}>
-                                                <div>
-                                                    <span style={styles.sectionLabel}>{section.label}</span>
-                                                    <span style={styles.sectionMeta}>Target: {section.target}% | {sectionGrades.length} grade(s)</span>
-                                                </div>
-                                                <span style={styles.sectionCount}>
-                                                    {students.filter(s => {
-                                                        const cls = findClassForStudent(s);
-                                                        return cls?.section === section.value;
-                                                    }).length} students
-                                                </span>
-                                            </div>
-                                            <div style={styles.gradeTiles}>
-                                                {sectionGrades.map(grade => {
-                                                    const gradeStudents = students.filter(s => {
-                                                        const cls = findClassForStudent(s);
-                                                        return (cls?.gradeLevel || extractGrade(cls?.className)) === grade.gradeLevel;
-                                                    });
-                                                    return (
-                                                        <div key={grade.gradeLevel}
-                                                            style={{ ...styles.gradeTile, borderTop: `4px solid ${section.color}` }}
-                                                            onClick={() => handleGradeClick(grade)}>
-                                                            <div style={{ ...styles.gradeLabel, color: section.color }}>{grade.gradeLevel}</div>
-                                                            <div style={styles.gradeStudentCount}>{gradeStudents.length} students</div>
-                                                            <div style={styles.genderRow}>
-                                                                <span style={styles.maleCount}>👦 {gradeStudents.filter(s => s.gender === 'Male').length}</span>
-                                                                <span style={styles.femaleCount}>👧 {gradeStudents.filter(s => s.gender === 'Female').length}</span>
-                                                            </div>
-                                                            <div style={styles.gradeClasses}>{grade.count} class{grade.count !== 1 ? 'es' : ''}</div>
-                                                            <div style={{ ...styles.viewArrow, color: section.color }}>View →</div>
-                                                        </div>
-                                                    );
-                                                })}
-                                            </div>
-                                        </div>
-                                    );
-                                })}
-
-                                {(search || filterGender || selectedClassFilter) && (
-                                    <div style={styles.tableCard}>
-                                        <div style={styles.tableTopBar}>
-                                            <h3 style={styles.tableTitle}>🔍 Search Results ({filtered.length})</h3>
-                                        </div>
-                                        <div style={{ overflowX: 'auto' }}>
-                                            <table style={styles.table}>
-                                                <thead>
-                                                    <tr style={styles.thead}>
-                                                        <th style={styles.th}>#</th>
-                                                        <th style={styles.th}>Adm No</th>
-                                                        <th style={styles.th}>Name</th>
-                                                        <th style={styles.th}>Gender</th>
-                                                        <th style={styles.th}>Class</th>
-                                                        <th style={styles.th}>Actions</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    {filtered.map((s, i) => (
-                                                        <tr key={s.studentId} style={i % 2 === 0 ? styles.trEven : styles.trOdd}>
-                                                            <td style={styles.td}>{i + 1}</td>
-                                                            <td style={styles.td}><span style={styles.admNo}>{s.admissionNumber}</span></td>
-                                                            <td style={styles.td}><strong>{s.firstName} {s.lastName}</strong></td>
-                                                            <td style={styles.td}>
-                                                                <span style={{ ...styles.genderBadge, backgroundColor: s.gender === 'Male' ? '#2E75B6' : '#e83e8c' }}>{s.gender}</span>
-                                                            </td>
-                                                            <td style={styles.td}>{classDisplayName({ className: s.schoolClass?.className || s.className, stream: s.schoolClass?.stream || s.stream })}</td>
-                                                            <td style={styles.td}>
-                                                                <button onClick={() => navigate(`/student/${s.studentId}`)} style={styles.viewBtn}>👤</button>
-                                                                <button onClick={() => handleEdit(s)} style={styles.editBtn}>Edit</button>
-                                                                <button onClick={() => handleDelete(s.studentId)} style={styles.deleteBtn}>Delete</button>
-                                                            </td>
-                                                        </tr>
-                                                    ))}
-                                                </tbody>
-                                            </table>
-                                        </div>
-                                    </div>
-                                )}
+                                <h2 style={styles.title}>
+                                    <Icon name="mortarboard-fill" style={{ color: '#1F3864' }} />Students
+                                    {selectedGrade && ` › ${selectedGrade.gradeLevel}`}
+                                    {selectedClass && ` › ${selectedClass.className}`}
+                                </h2>
+                                <p style={styles.breadcrumb}>
+                                    {view === 'grades' && `${students.length} total students across all classes`}
+                                    {view === 'streams' && `${getClassesForGrade(selectedGrade?.gradeLevel).length} class(es) in ${selectedGrade?.gradeLevel}`}
+                                    {view === 'students' && `${getStudentsForClass(selectedClass?.className, selectedClass?.classId).length} student(s) in ${selectedClass?.className}`}
+                                </p>
                             </div>
-                        )}
+                        </div>
+                        <button onClick={() => { setShowAddForm(!showAddForm); setEditingStudent(null); }} style={styles.addBtn}>
+                            {showAddForm ? <><Icon name="x-lg" />Cancel</> : <><Icon name="plus-circle" />Add Student</>}
+                        </button>
+                    </div>
 
-                        {/* ── VIEW 2: Stream Tiles ── */}
-                        {view === 'streams' && selectedGrade && (() => {
-                            const sectionInfo = getSectionInfo(selectedGrade.section);
-                            const gradeClasses = getClassesForGrade(selectedGrade.gradeLevel);
-                            return (
+                    {error && <p style={styles.error}>{error}</p>}
+
+                    {showAddForm && (
+                        <div style={styles.addFormCard}>
+                            <h3 style={styles.formTitle}><Icon name="plus-circle" style={{ color: '#1F3864' }} />Add New Student</h3>
+                            <StudentFormFields
+                                formData={formData} setFormData={setFormData}
+                                classId={classId} setClassId={setClassId}
+                                sections={sections} classes={classes}
+                                onSubmit={handleSubmitAdd}
+                                onCancel={() => { setShowAddForm(false); setFormData({ firstName: '', lastName: '', dateOfBirth: '', gender: '', admissionNumber: '' }); }}
+                                submitLabel="Save Student"
+                                submitIcon="save-fill"
+                                showClassField={true}
+                            />
+                        </div>
+                    )}
+
+                    {loading ? <Spinner message="Loading students..." /> : (
+                        <>
+                            {/* ── VIEW 1: Grade Tiles ── */}
+                            {view === 'grades' && (
                                 <div>
-                                    <div style={{ ...styles.sectionTitle, backgroundColor: sectionInfo?.color || '#1F3864', borderRadius: '10px 10px 0 0' }}>
-                                        <div>
-                                            <span style={styles.sectionLabel}>{selectedGrade.gradeLevel} — {sectionInfo?.label}</span>
-                                            <span style={styles.sectionMeta}>{gradeClasses.length} class(es)</span>
-                                        </div>
-                                        <span style={styles.sectionCount}>
-                                            {gradeClasses.reduce((sum, c) => sum + getStudentsForClass(c.className, c.classId).length, 0)} students
-                                        </span>
-                                    </div>
-                                    <div style={styles.streamTiles}>
-                                        {gradeClasses.map(cls => {
-                                            const clsStudents = getStudentsForClass(cls.className, cls.classId);
-                                            const streamColor = getStreamColor(cls.stream);
+                                    <div style={styles.statsRow}>
+                                        {sections.map(section => {
+                                            const sectionStudents = students.filter(s => {
+                                                const cls = findClassForStudent(s);
+                                                return cls?.section === section.value;
+                                            });
+                                            const sectionClasses = classes.filter(c => c.section === section.value);
                                             return (
-                                                <div key={cls.classId}
-                                                    style={{ ...styles.streamTile, borderTop: `5px solid ${streamColor}` }}
-                                                    onClick={() => handleClassClick(cls)}>
-                                                    <div style={{ ...styles.streamBadge, backgroundColor: streamColor }}>{cls.stream || 'SINGLE'}</div>
-                                                    <div style={styles.streamName}>{classDisplayName(cls)}</div>
-                                                    <div style={styles.streamStats}>
-                                                        <div style={styles.streamStatItem}>
-                                                            <span style={styles.streamStatNum}>{clsStudents.length}</span>
-                                                            <span style={styles.streamStatLabel}>Total</span>
-                                                        </div>
-                                                        <div style={styles.streamStatItem}>
-                                                            <span style={{ ...styles.streamStatNum, color: '#2E75B6' }}>{clsStudents.filter(s => s.gender === 'Male').length}</span>
-                                                            <span style={styles.streamStatLabel}>Boys</span>
-                                                        </div>
-                                                        <div style={styles.streamStatItem}>
-                                                            <span style={{ ...styles.streamStatNum, color: '#e83e8c' }}>{clsStudents.filter(s => s.gender === 'Female').length}</span>
-                                                            <span style={styles.streamStatLabel}>Girls</span>
-                                                        </div>
+                                                <div key={section.value} style={{ ...styles.statCard, borderTop: `4px solid ${section.color}` }}
+                                                    onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-3px)'; e.currentTarget.style.boxShadow = '0 8px 20px rgba(0,0,0,0.1)'; }}
+                                                    onMouseLeave={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.06)'; }}>
+                                                    <div style={{ ...styles.statIcon, backgroundColor: section.light, color: section.color }}>
+                                                        {section.label.charAt(0)}
                                                     </div>
-                                                    <div style={styles.streamTeacher}>
-                                                        👨‍🏫 {cls.classTeacher ? `${cls.classTeacher.firstName} ${cls.classTeacher.lastName}` : 'No Teacher'}
+                                                    <div style={styles.statInfo}>
+                                                        <div style={{ ...styles.statNum, color: section.color }}>{sectionStudents.length}</div>
+                                                        <div style={styles.statLabel}>{section.label}</div>
+                                                        <div style={styles.statMeta}>{sectionClasses.length} classes</div>
                                                     </div>
-                                                    <div style={{ ...styles.viewStudentsBtn, color: streamColor }}>👥 View Students →</div>
                                                 </div>
                                             );
                                         })}
                                     </div>
-                                </div>
-                            );
-                        })()}
 
-                        {/* ── VIEW 3: Students in Class ── */}
-                        {view === 'students' && selectedClass && (() => {
-                            const sectionInfo = getSectionInfo(selectedClass.section || extractSection(selectedClass.gradeLevel || extractGrade(selectedClass.className)));
-                            const clsStudents = getStudentsForClass(selectedClass.className, selectedClass.classId).filter(s => {
-                                if (search && !`${s.firstName} ${s.lastName}`.toLowerCase().includes(search.toLowerCase()) && !s.admissionNumber?.toLowerCase().includes(search.toLowerCase())) return false;
-                                if (filterGender && s.gender !== filterGender) return false;
-                                return true;
-                            });
-                            return (
-                                <div>
-                                    <div style={{ ...styles.classHeader, backgroundColor: sectionInfo?.color || '#1F3864' }}>
-                                        <div>
-                                            <h3 style={styles.classHeaderTitle}>{selectedClass.className} Students</h3>
-                                            <p style={styles.classHeaderMeta}>
-                                                {sectionInfo?.label} | Target: {selectedClass.meanTarget}% | Teacher: {selectedClass.classTeacher ? `${selectedClass.classTeacher.firstName} ${selectedClass.classTeacher.lastName}` : 'Not Assigned'}
-                                            </p>
+                                    <div style={styles.searchCard}>
+                                        <div style={styles.searchInputWrap}>
+                                            <Icon name="search" style={{ color: '#999', marginRight: '8px' }} />
+                                            <input style={styles.searchInput}
+                                                placeholder="Search by name or admission number..."
+                                                value={search} onChange={e => setSearch(e.target.value)} />
                                         </div>
-                                        <div style={styles.classHeaderStats}>
-                                            {[['Total', clsStudents.length, 'white'], ['Boys', clsStudents.filter(s => s.gender === 'Male').length, '#BDD7EE'], ['Girls', clsStudents.filter(s => s.gender === 'Female').length, '#FFCCE5']].map(([label, num, color]) => (
-                                                <div key={label} style={styles.classStatBox}>
-                                                    <span style={{ ...styles.classStatNum, color }}>{num}</span>
-                                                    <span style={styles.classStatLabel}>{label}</span>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </div>
-
-                                    <div style={styles.classSearchBar}>
-                                        <input style={styles.searchInput} placeholder="🔍 Search students..."
-                                            value={search} onChange={e => setSearch(e.target.value)} />
-                                        <select style={styles.filterSelect} value={filterGender} onChange={e => setFilterGender(e.target.value)}>
-                                            <option value="">All</option>
-                                            <option value="Male">👦 Boys</option>
-                                            <option value="Female">👧 Girls</option>
+                                        <select style={styles.filterSelect} value={filterGender}
+                                            onChange={e => setFilterGender(e.target.value)}>
+                                            <option value="">All Genders</option>
+                                            <option value="Male">Male</option>
+                                            <option value="Female">Female</option>
                                         </select>
-                                        <button onClick={() => { setSearch(''); setFilterGender(''); }} style={styles.clearBtn}>Clear</button>
+                                        <button onClick={() => { setSearch(''); setFilterGender(''); setSelectedClassFilter(''); }}
+                                            style={styles.clearBtn}>Clear</button>
                                     </div>
 
-                                    {clsStudents.length === 0 ? (
-                                        <div style={styles.emptyState}>
-                                            <div style={styles.emptyIcon}>👥</div>
-                                            <h3>No Students Yet</h3>
-                                            <p>Click + Add Student to add students to {selectedClass.className}</p>
-                                        </div>
-                                    ) : (
-                                        <div style={styles.studentGrid}>
-                                            {clsStudents.map((student, index) => (
-                                                <div key={student.studentId}>
-                                                    <div style={{
-                                                        ...styles.studentCard,
-                                                        outline: editingStudent?.studentId === student.studentId ? '2px solid #2E75B6' : 'none'
-                                                    }}>
-                                                        <div style={styles.studentCardTop}>
-                                                            <div style={styles.studentRankBadge}>#{index + 1}</div>
-                                                            <div style={{ ...styles.studentAvatar, backgroundColor: student.gender === 'Male' ? '#2E75B6' : '#e83e8c' }}>
-                                                                {student.firstName?.charAt(0)}{student.lastName?.charAt(0)}
-                                                            </div>
-                                                        </div>
-                                                        <div style={styles.studentCardBody}>
-                                                            <strong style={styles.studentName}>{student.firstName} {student.lastName}</strong>
-                                                            <span style={styles.studentAdm}>{student.admissionNumber}</span>
-                                                            <span style={{ ...styles.genderBadge, backgroundColor: student.gender === 'Male' ? '#2E75B6' : '#e83e8c' }}>
-                                                                {student.gender === 'Male' ? '👦' : '👧'} {student.gender}
-                                                            </span>
-                                                        </div>
-                                                        <div style={styles.studentCardActions}>
-                                                            <button onClick={() => navigate(`/student/${student.studentId}`)} style={styles.profileBtn}>👤 Profile</button>
-                                                            <button
-                                                                onClick={() => handleEdit(student)}
-                                                                style={editingStudent?.studentId === student.studentId ? styles.cancelEditBtnSm : styles.editBtnSm}>
-                                                                {editingStudent?.studentId === student.studentId ? '✕' : '✏️'}
-                                                            </button>
-                                                            <button onClick={() => handleDelete(student.studentId)} style={styles.deleteBtnSm}>🗑️</button>
-                                                        </div>
+                                    {sections.map(section => {
+                                        const sectionGrades = grouped[section.value] || [];
+                                        if (sectionGrades.length === 0) return null;
+                                        return (
+                                            <div key={section.value} style={styles.sectionBlock}>
+                                                <div style={{ ...styles.sectionTitle, backgroundColor: section.color }}>
+                                                    <div>
+                                                        <span style={styles.sectionLabel}>{section.label}</span>
+                                                        <span style={styles.sectionMeta}>Target: {section.target}% | {sectionGrades.length} grade(s)</span>
                                                     </div>
-
-                                                    {editingStudent?.studentId === student.studentId && (
-                                                        <div style={styles.inlineEditCard}>
-                                                            <div style={styles.inlineEditHeader}>
-                                                                <h4 style={styles.inlineEditTitle}>
-                                                                    ✏️ Editing: {student.firstName} {student.lastName}
-                                                                </h4>
-                                                                <button onClick={handleCancelEdit} style={styles.closeBtn}>✕</button>
-                                                            </div>
-                                                            <StudentFormFields
-                                                                formData={formData} setFormData={setFormData}
-                                                                classId={classId} setClassId={setClassId}
-                                                                sections={sections} classes={classes}
-                                                                onSubmit={handleSubmitEdit}
-                                                                onCancel={handleCancelEdit}
-                                                                submitLabel="✅ Update Student"
-                                                                showClassField={false}
-                                                            />
-                                                        </div>
-                                                    )}
+                                                    <span style={styles.sectionCount}>
+                                                        {students.filter(s => {
+                                                            const cls = findClassForStudent(s);
+                                                            return cls?.section === section.value;
+                                                        }).length} students
+                                                    </span>
                                                 </div>
-                                            ))}
+                                                <div style={styles.gradeTiles}>
+                                                    {sectionGrades.map(grade => {
+                                                        const gradeStudents = students.filter(s => {
+                                                            const cls = findClassForStudent(s);
+                                                            return (cls?.gradeLevel || extractGrade(cls?.className)) === grade.gradeLevel;
+                                                        });
+                                                        return (
+                                                            <div key={grade.gradeLevel}
+                                                                style={{ ...styles.gradeTile, borderTop: `4px solid ${section.color}` }}
+                                                                onClick={() => handleGradeClick(grade)}
+                                                                onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-3px)'; e.currentTarget.style.boxShadow = '0 8px 20px rgba(0,0,0,0.1)'; }}
+                                                                onMouseLeave={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.06)'; }}>
+                                                                <div style={{ ...styles.gradeLabel, color: section.color }}>{grade.gradeLevel}</div>
+                                                                <div style={styles.gradeStudentCount}>{gradeStudents.length} students</div>
+                                                                <div style={styles.genderRow}>
+                                                                    <span style={styles.maleCount}><Icon name="gender-male" style={{ marginRight: '3px' }} />{gradeStudents.filter(s => s.gender === 'Male').length}</span>
+                                                                    <span style={styles.femaleCount}><Icon name="gender-female" style={{ marginRight: '3px' }} />{gradeStudents.filter(s => s.gender === 'Female').length}</span>
+                                                                </div>
+                                                                <div style={styles.gradeClasses}>{grade.count} class{grade.count !== 1 ? 'es' : ''}</div>
+                                                                <div style={{ ...styles.viewArrow, color: section.color }}>View <i className="bi bi-arrow-right" /></div>
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+
+                                    {(search || filterGender || selectedClassFilter) && (
+                                        <div style={styles.tableCard}>
+                                            <div style={styles.tableTopBar}>
+                                                <h3 style={styles.tableTitle}><Icon name="search" />Search Results ({filtered.length})</h3>
+                                            </div>
+                                            <div style={{ overflowX: 'auto' }}>
+                                                <table style={styles.table}>
+                                                    <thead>
+                                                        <tr style={styles.thead}>
+                                                            <th style={styles.th}>#</th>
+                                                            <th style={styles.th}>Adm No</th>
+                                                            <th style={styles.th}>Name</th>
+                                                            <th style={styles.th}>Gender</th>
+                                                            <th style={styles.th}>Class</th>
+                                                            <th style={styles.th}>Actions</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        {filtered.map((s, i) => (
+                                                            <tr key={s.studentId} style={i % 2 === 0 ? styles.trEven : styles.trOdd}>
+                                                                <td style={styles.td}>{i + 1}</td>
+                                                                <td style={styles.td}><span style={styles.admNo}>{s.admissionNumber}</span></td>
+                                                                <td style={styles.td}><strong>{s.firstName} {s.lastName}</strong></td>
+                                                                <td style={styles.td}>
+                                                                    <span style={{ ...styles.genderBadge, backgroundColor: s.gender === 'Male' ? '#2E75B6' : '#e83e8c' }}>{s.gender}</span>
+                                                                </td>
+                                                                <td style={styles.td}>{classDisplayName({ className: s.schoolClass?.className || s.className, stream: s.schoolClass?.stream || s.stream })}</td>
+                                                                <td style={styles.td}>
+                                                                    <button onClick={() => navigate(`/student/${s.studentId}`)} style={styles.viewBtn}><i className="bi bi-person-circle" /></button>
+                                                                    <button onClick={() => handleEdit(s)} style={styles.editBtn}><i className="bi bi-pencil-fill" /></button>
+                                                                    <button onClick={() => handleDelete(s.studentId)} style={styles.deleteBtn}><i className="bi bi-trash-fill" /></button>
+                                                                </td>
+                                                            </tr>
+                                                        ))}
+                                                    </tbody>
+                                                </table>
+                                            </div>
                                         </div>
                                     )}
                                 </div>
-                            );
-                        })()}
-                    </>
-                )}
+                            )}
 
-                
+                            {/* ── VIEW 2: Stream Tiles ── */}
+                            {view === 'streams' && selectedGrade && (() => {
+                                const sectionInfo = getSectionInfo(selectedGrade.section);
+                                const gradeClasses = getClassesForGrade(selectedGrade.gradeLevel);
+                                return (
+                                    <div>
+                                        <div style={{ ...styles.sectionTitle, backgroundColor: sectionInfo?.color || '#1F3864', borderRadius: '14px 14px 0 0' }}>
+                                            <div>
+                                                <span style={styles.sectionLabel}>{selectedGrade.gradeLevel} — {sectionInfo?.label}</span>
+                                                <span style={styles.sectionMeta}>{gradeClasses.length} class(es)</span>
+                                            </div>
+                                            <span style={styles.sectionCount}>
+                                                {gradeClasses.reduce((sum, c) => sum + getStudentsForClass(c.className, c.classId).length, 0)} students
+                                            </span>
+                                        </div>
+                                        <div style={styles.streamTiles}>
+                                            {gradeClasses.map(cls => {
+                                                const clsStudents = getStudentsForClass(cls.className, cls.classId);
+                                                const streamColor = getStreamColor(cls.stream);
+                                                return (
+                                                    <div key={cls.classId}
+                                                        style={{ ...styles.streamTile, borderTop: `5px solid ${streamColor}` }}
+                                                        onClick={() => handleClassClick(cls)}
+                                                        onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-3px)'; e.currentTarget.style.boxShadow = '0 8px 20px rgba(0,0,0,0.1)'; }}
+                                                        onMouseLeave={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.08)'; }}>
+                                                        <div style={{ ...styles.streamBadge, backgroundColor: streamColor }}>{cls.stream || 'SINGLE'}</div>
+                                                        <div style={styles.streamName}>{classDisplayName(cls)}</div>
+                                                        <div style={styles.streamStats}>
+                                                            <div style={styles.streamStatItem}>
+                                                                <span style={styles.streamStatNum}>{clsStudents.length}</span>
+                                                                <span style={styles.streamStatLabel}>Total</span>
+                                                            </div>
+                                                            <div style={styles.streamStatItem}>
+                                                                <span style={{ ...styles.streamStatNum, color: '#2E75B6' }}>{clsStudents.filter(s => s.gender === 'Male').length}</span>
+                                                                <span style={styles.streamStatLabel}>Boys</span>
+                                                            </div>
+                                                            <div style={styles.streamStatItem}>
+                                                                <span style={{ ...styles.streamStatNum, color: '#e83e8c' }}>{clsStudents.filter(s => s.gender === 'Female').length}</span>
+                                                                <span style={styles.streamStatLabel}>Girls</span>
+                                                            </div>
+                                                        </div>
+                                                        <div style={styles.streamTeacher}>
+                                                            <Icon name="person-workspace" style={{ color: '#888' }} />
+                                                            {cls.classTeacher ? `${cls.classTeacher.firstName} ${cls.classTeacher.lastName}` : 'No Teacher'}
+                                                        </div>
+                                                        <div style={{ ...styles.viewStudentsBtn, color: streamColor }}><Icon name="people-fill" />View Students <i className="bi bi-arrow-right" /></div>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                );
+                            })()}
+
+                            {/* ── VIEW 3: Students in Class ── */}
+                            {view === 'students' && selectedClass && (() => {
+                                const sectionInfo = getSectionInfo(selectedClass.section || extractSection(selectedClass.gradeLevel || extractGrade(selectedClass.className)));
+                                const clsStudents = getStudentsForClass(selectedClass.className, selectedClass.classId).filter(s => {
+                                    if (search && !`${s.firstName} ${s.lastName}`.toLowerCase().includes(search.toLowerCase()) && !s.admissionNumber?.toLowerCase().includes(search.toLowerCase())) return false;
+                                    if (filterGender && s.gender !== filterGender) return false;
+                                    return true;
+                                });
+                                return (
+                                    <div>
+                                        <div style={{ ...styles.classHeader, backgroundColor: sectionInfo?.color || '#1F3864' }}>
+                                            <div>
+                                                <h3 style={styles.classHeaderTitle}>{selectedClass.className} Students</h3>
+                                                <p style={styles.classHeaderMeta}>
+                                                    {sectionInfo?.label} | Target: {selectedClass.meanTarget}% | Teacher: {selectedClass.classTeacher ? `${selectedClass.classTeacher.firstName} ${selectedClass.classTeacher.lastName}` : 'Not Assigned'}
+                                                </p>
+                                            </div>
+                                            <div style={styles.classHeaderStats}>
+                                                {[['Total', clsStudents.length, 'white'], ['Boys', clsStudents.filter(s => s.gender === 'Male').length, '#BDD7EE'], ['Girls', clsStudents.filter(s => s.gender === 'Female').length, '#FFCCE5']].map(([label, num, color]) => (
+                                                    <div key={label} style={styles.classStatBox}>
+                                                        <span style={{ ...styles.classStatNum, color }}>{num}</span>
+                                                        <span style={styles.classStatLabel}>{label}</span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+
+                                        <div style={styles.classSearchBar}>
+                                            <input style={styles.searchInput} placeholder="Search students..."
+                                                value={search} onChange={e => setSearch(e.target.value)} />
+                                            <select style={styles.filterSelect} value={filterGender} onChange={e => setFilterGender(e.target.value)}>
+                                                <option value="">All</option>
+                                                <option value="Male">Boys</option>
+                                                <option value="Female">Girls</option>
+                                            </select>
+                                            <button onClick={() => { setSearch(''); setFilterGender(''); }} style={styles.clearBtn}>Clear</button>
+                                        </div>
+
+                                        {clsStudents.length === 0 ? (
+                                            <div style={styles.emptyState}>
+                                                <div style={styles.emptyIcon}><i className="bi bi-people" /></div>
+                                                <h3>No Students Yet</h3>
+                                                <p>Click Add Student to add students to {selectedClass.className}</p>
+                                            </div>
+                                        ) : (
+                                            <div style={styles.studentGrid}>
+                                                {clsStudents.map((student, index) => (
+                                                    <div key={student.studentId}>
+                                                        <div style={{
+                                                            ...styles.studentCard,
+                                                            outline: editingStudent?.studentId === student.studentId ? '2px solid #2E75B6' : 'none'
+                                                        }}
+                                                            onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 6px 16px rgba(0,0,0,0.1)'; }}
+                                                            onMouseLeave={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = '0 1px 4px rgba(0,0,0,0.06)'; }}>
+                                                            <div style={styles.studentCardTop}>
+                                                                <div style={styles.studentRankBadge}>#{index + 1}</div>
+                                                                <div style={{ ...styles.studentAvatar, backgroundColor: student.gender === 'Male' ? '#2E75B6' : '#e83e8c' }}>
+                                                                    {student.firstName?.charAt(0)}{student.lastName?.charAt(0)}
+                                                                </div>
+                                                            </div>
+                                                            <div style={styles.studentCardBody}>
+                                                                <strong style={styles.studentName}>{student.firstName} {student.lastName}</strong>
+                                                                <span style={styles.studentAdm}>{student.admissionNumber}</span>
+                                                                <span style={{ ...styles.genderBadge, backgroundColor: student.gender === 'Male' ? '#2E75B6' : '#e83e8c' }}>
+                                                                    <i className={`bi bi-gender-${student.gender === 'Male' ? 'male' : 'female'}`} style={{ marginRight: '4px' }} />{student.gender}
+                                                                </span>
+                                                            </div>
+                                                            <div style={styles.studentCardActions}>
+                                                                <button onClick={() => navigate(`/student/${student.studentId}`)} style={styles.profileBtn}><i className="bi bi-person-circle" style={{ marginRight: '4px' }} />Profile</button>
+                                                                <button
+                                                                    onClick={() => handleEdit(student)}
+                                                                    style={editingStudent?.studentId === student.studentId ? styles.cancelEditBtnSm : styles.editBtnSm}>
+                                                                    <i className={`bi bi-${editingStudent?.studentId === student.studentId ? 'x-lg' : 'pencil-fill'}`} />
+                                                                </button>
+                                                                <button onClick={() => handleDelete(student.studentId)} style={styles.deleteBtnSm}><i className="bi bi-trash-fill" /></button>
+                                                            </div>
+                                                        </div>
+
+                                                        {editingStudent?.studentId === student.studentId && (
+                                                            <div style={styles.inlineEditCard}>
+                                                                <div style={styles.inlineEditHeader}>
+                                                                    <h4 style={styles.inlineEditTitle}>
+                                                                        <i className="bi bi-pencil-fill" style={{ marginRight: '6px' }} />
+                                                                        Editing: {student.firstName} {student.lastName}
+                                                                    </h4>
+                                                                    <button onClick={handleCancelEdit} style={styles.closeBtn}><i className="bi bi-x-lg" /></button>
+                                                                </div>
+                                                                <StudentFormFields
+                                                                    formData={formData} setFormData={setFormData}
+                                                                    classId={classId} setClassId={setClassId}
+                                                                    sections={sections} classes={classes}
+                                                                    onSubmit={handleSubmitEdit}
+                                                                    onCancel={handleCancelEdit}
+                                                                    submitLabel="Update Student"
+                                                                    submitIcon="check-circle-fill"
+                                                                    showClassField={false}
+                                                                />
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            })()}
+                        </>
+                    )}
+
+                </div>
             </div>
+            <Footer />
         </div>
-        <Footer />
-    </div>
     );
 }
 
@@ -622,99 +636,102 @@ const styles = {
     navBtn: { backgroundColor: 'transparent', color: 'white', border: '1px solid white', padding: '8px 16px', borderRadius: '5px', cursor: 'pointer' },
     logoutBtn: { backgroundColor: 'transparent', color: 'white', border: '1px solid white', padding: '8px 16px', borderRadius: '5px', cursor: 'pointer' },
     content: { padding: '30px', flex: 1 },
-    header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '10px' },
+    header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '22px', flexWrap: 'wrap', gap: '10px' },
     headerLeft: { display: 'flex', alignItems: 'center', gap: '15px' },
-    backBtn: { backgroundColor: '#6c757d', color: 'white', border: 'none', padding: '8px 16px', borderRadius: '5px', cursor: 'pointer', fontSize: '14px', fontWeight: 'bold' },
-    title: { color: '#1F3864', margin: 0, fontSize: '22px' },
-    breadcrumb: { color: '#666', margin: '3px 0 0 0', fontSize: '13px' },
-    addBtn: { backgroundColor: '#1F3864', color: 'white', border: 'none', padding: '10px 20px', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold' },
-    error: { color: 'red', marginBottom: '15px' },
-    addFormCard: { backgroundColor: 'white', padding: '20px', borderRadius: '10px', marginBottom: '20px', boxShadow: '0 2px 8px rgba(0,0,0,0.12)', border: '2px solid #1F3864' },
-    formTitle: { color: '#1F3864', margin: '0 0 15px 0' },
-    inlineEditCard: { backgroundColor: 'white', borderRadius: '0 0 8px 8px', padding: '15px', border: '2px solid #2E75B6', borderTop: 'none', marginTop: '-2px' },
+    backBtn: { backgroundColor: '#6c757d', color: 'white', border: 'none', padding: '9px 16px', borderRadius: '10px', cursor: 'pointer', fontSize: '14px', fontWeight: 'bold', display: 'flex', alignItems: 'center' },
+    title: { color: '#1F3864', margin: 0, fontSize: '22px', fontWeight: 800, display: 'flex', alignItems: 'center' },
+    breadcrumb: { color: '#888', margin: '3px 0 0 0', fontSize: '13px' },
+    addBtn: { backgroundColor: '#1F3864', color: 'white', border: 'none', padding: '11px 22px', borderRadius: '10px', cursor: 'pointer', fontWeight: 'bold', fontSize: '13px', display: 'flex', alignItems: 'center' },
+    error: { color: '#dc3545', padding: '12px 16px', backgroundColor: '#fff3f3', borderRadius: '10px', marginBottom: '15px', border: '1px solid #ffd6d6' },
+    addFormCard: { backgroundColor: 'white', padding: '22px', borderRadius: '14px', marginBottom: '22px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)', border: '2px solid #1F3864' },
+    formTitle: { color: '#1F3864', margin: '0 0 15px 0', fontWeight: 700, display: 'flex', alignItems: 'center' },
+    inlineEditCard: { backgroundColor: 'white', borderRadius: '0 0 12px 12px', padding: '16px', border: '2px solid #2E75B6', borderTop: 'none', marginTop: '-2px' },
     inlineEditHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' },
-    inlineEditTitle: { color: '#2E75B6', margin: 0, fontSize: '13px' },
+    inlineEditTitle: { color: '#2E75B6', margin: 0, fontSize: '13px', fontWeight: 700, display: 'flex', alignItems: 'center' },
     closeBtn: { background: 'none', border: 'none', fontSize: '16px', cursor: 'pointer', color: '#999' },
     inlineForm: {},
+
     formGrid: { display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px', marginBottom: '12px' },
     formGroup: { display: 'flex', flexDirection: 'column', gap: '4px' },
     label: { fontSize: '11px', fontWeight: 'bold', color: '#1F3864' },
-    input: { padding: '8px', borderRadius: '5px', border: '1px solid #ddd', fontSize: '12px' },
+    input: { padding: '9px', borderRadius: '8px', border: '1px solid #ddd', fontSize: '13px' },
     btnGroup: { display: 'flex', gap: '8px' },
-    submitBtn: { backgroundColor: '#2E75B6', color: 'white', border: 'none', padding: '8px 16px', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold', fontSize: '12px' },
-    cancelBtn: { backgroundColor: '#6c757d', color: 'white', border: 'none', padding: '8px 14px', borderRadius: '5px', cursor: 'pointer', fontSize: '12px' },
-    statsRow: { display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px', marginBottom: '20px' },
-    statCard: { backgroundColor: 'white', borderRadius: '10px', padding: '15px', display: 'flex', alignItems: 'center', gap: '12px', boxShadow: '0 2px 4px rgba(0,0,0,0.08)' },
-    statIcon: { width: '44px', height: '44px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '18px', flexShrink: 0 },
+    submitBtn: { backgroundColor: '#2E75B6', color: 'white', border: 'none', padding: '9px 18px', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold', fontSize: '12px', display: 'flex', alignItems: 'center' },
+    cancelBtn: { backgroundColor: '#6c757d', color: 'white', border: 'none', padding: '9px 14px', borderRadius: '8px', cursor: 'pointer', fontSize: '12px', display: 'flex', alignItems: 'center' },
+    statsRow: { display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '14px', marginBottom: '22px' },
+    statCard: { backgroundColor: 'white', borderRadius: '14px', padding: '16px', display: 'flex', alignItems: 'center', gap: '12px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)', transition: 'transform 0.2s ease, box-shadow 0.2s ease' },
+    statIcon: { width: '46px', height: '46px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '18px', flexShrink: 0 },
     statInfo: { flex: 1 },
-    statNum: { fontSize: '26px', fontWeight: 'bold', display: 'block' },
+    statNum: { fontSize: '26px', fontWeight: 800, display: 'block' },
     statLabel: { fontSize: '12px', color: '#333', fontWeight: 'bold' },
     statMeta: { fontSize: '11px', color: '#999' },
-    searchCard: { backgroundColor: 'white', padding: '15px', borderRadius: '10px', marginBottom: '20px', boxShadow: '0 2px 4px rgba(0,0,0,0.08)', display: 'flex', gap: '10px', flexWrap: 'wrap' },
-    searchInput: { flex: 1, padding: '10px', borderRadius: '5px', border: '1px solid #ddd', fontSize: '14px', minWidth: '200px' },
-    filterSelect: { padding: '10px', borderRadius: '5px', border: '1px solid #ddd', fontSize: '14px' },
-    clearBtn: { backgroundColor: '#6c757d', color: 'white', border: 'none', padding: '10px 15px', borderRadius: '5px', cursor: 'pointer' },
-    sectionBlock: { marginBottom: '25px', borderRadius: '10px', overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' },
-    sectionTitle: { padding: '12px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
+    searchCard: { backgroundColor: 'white', padding: '16px', borderRadius: '14px', marginBottom: '22px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)', display: 'flex', gap: '10px', flexWrap: 'wrap' },
+    searchInputWrap: { flex: 1, minWidth: '200px', display: 'flex', alignItems: 'center', border: '1.5px solid #ddd', borderRadius: '8px', padding: '0 12px' },
+    searchInput: { flex: 1, padding: '10px 0', border: 'none', outline: 'none', fontSize: '14px' },
+    filterSelect: { padding: '10px', borderRadius: '8px', border: '1.5px solid #ddd', fontSize: '14px' },
+    clearBtn: { backgroundColor: '#6c757d', color: 'white', border: 'none', padding: '10px 15px', borderRadius: '8px', cursor: 'pointer' },
+    sectionBlock: { marginBottom: '25px', borderRadius: '14px', overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' },
+    sectionTitle: { padding: '13px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
     sectionLabel: { color: 'white', fontWeight: 'bold', fontSize: '15px', marginRight: '10px' },
     sectionMeta: { color: 'rgba(255,255,255,0.8)', fontSize: '12px' },
     sectionCount: { backgroundColor: 'rgba(255,255,255,0.2)', color: 'white', padding: '4px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: 'bold' },
-    gradeTiles: { display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '12px', padding: '15px', backgroundColor: 'white' },
-    gradeTile: { backgroundColor: 'white', padding: '15px 10px', borderRadius: '10px', textAlign: 'center', cursor: 'pointer', boxShadow: '0 2px 6px rgba(0,0,0,0.08)', border: '1px solid #eee' },
-    gradeLabel: { fontSize: '22px', fontWeight: 'bold', marginBottom: '4px' },
+    gradeTiles: { display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '12px', padding: '16px', backgroundColor: 'white' },
+    gradeTile: { backgroundColor: 'white', padding: '16px 10px', borderRadius: '12px', textAlign: 'center', cursor: 'pointer', boxShadow: '0 2px 8px rgba(0,0,0,0.06)', border: '1px solid #f0f0f0', transition: 'transform 0.2s ease, box-shadow 0.2s ease' },
+    gradeLabel: { fontSize: '22px', fontWeight: 800, marginBottom: '4px' },
     gradeStudentCount: { fontSize: '13px', color: '#333', fontWeight: 'bold', marginBottom: '4px' },
-    genderRow: { display: 'flex', justifyContent: 'center', gap: '8px', marginBottom: '4px' },
-    maleCount: { fontSize: '11px', color: '#2E75B6', fontWeight: 'bold' },
-    femaleCount: { fontSize: '11px', color: '#e83e8c', fontWeight: 'bold' },
+    genderRow: { display: 'flex', justifyContent: 'center', gap: '10px', marginBottom: '4px' },
+    maleCount: { fontSize: '11px', color: '#2E75B6', fontWeight: 'bold', display: 'flex', alignItems: 'center' },
+    femaleCount: { fontSize: '11px', color: '#e83e8c', fontWeight: 'bold', display: 'flex', alignItems: 'center' },
     gradeClasses: { fontSize: '11px', color: '#999', marginBottom: '6px' },
     viewArrow: { fontSize: '12px', fontWeight: 'bold' },
-    streamTiles: { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '15px', padding: '15px', backgroundColor: 'white', borderRadius: '0 0 10px 10px' },
-    streamTile: { backgroundColor: 'white', borderRadius: '10px', padding: '20px', cursor: 'pointer', boxShadow: '0 2px 8px rgba(0,0,0,0.1)', border: '1px solid #eee', textAlign: 'center' },
+
+    streamTiles: { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '15px', padding: '16px', backgroundColor: 'white', borderRadius: '0 0 14px 14px' },
+    streamTile: { backgroundColor: 'white', borderRadius: '12px', padding: '20px', cursor: 'pointer', boxShadow: '0 2px 8px rgba(0,0,0,0.08)', border: '1px solid #f0f0f0', textAlign: 'center', transition: 'transform 0.2s ease, box-shadow 0.2s ease' },
     streamBadge: { color: 'white', padding: '4px 14px', borderRadius: '20px', fontSize: '12px', fontWeight: 'bold', display: 'inline-block', marginBottom: '10px' },
-    streamName: { fontSize: '20px', fontWeight: 'bold', color: '#1F3864', marginBottom: '12px' },
+    streamName: { fontSize: '20px', fontWeight: 800, color: '#1F3864', marginBottom: '12px' },
     streamStats: { display: 'flex', justifyContent: 'center', gap: '20px', marginBottom: '10px' },
     streamStatItem: { textAlign: 'center' },
-    streamStatNum: { fontSize: '20px', fontWeight: 'bold', color: '#1F3864', display: 'block' },
+    streamStatNum: { fontSize: '20px', fontWeight: 800, color: '#1F3864', display: 'block' },
     streamStatLabel: { fontSize: '11px', color: '#999' },
-    streamTeacher: { fontSize: '12px', color: '#666', marginBottom: '10px' },
-    viewStudentsBtn: { fontSize: '13px', fontWeight: 'bold' },
-    classHeader: { padding: '20px', borderRadius: '10px 10px 0 0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '15px' },
-    classHeaderTitle: { color: 'white', margin: '0 0 5px 0', fontSize: '20px' },
+    streamTeacher: { fontSize: '12px', color: '#666', marginBottom: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' },
+    viewStudentsBtn: { fontSize: '13px', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' },
+    classHeader: { padding: '20px', borderRadius: '14px 14px 0 0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '15px' },
+    classHeaderTitle: { color: 'white', margin: '0 0 5px 0', fontSize: '20px', fontWeight: 800 },
     classHeaderMeta: { color: 'rgba(255,255,255,0.8)', margin: 0, fontSize: '13px' },
     classHeaderStats: { display: 'flex', gap: '15px' },
-    classStatBox: { textAlign: 'center', backgroundColor: 'rgba(255,255,255,0.15)', padding: '8px 15px', borderRadius: '8px' },
-    classStatNum: { color: 'white', fontSize: '24px', fontWeight: 'bold', display: 'block' },
+    classStatBox: { textAlign: 'center', backgroundColor: 'rgba(255,255,255,0.15)', padding: '8px 15px', borderRadius: '10px' },
+    classStatNum: { color: 'white', fontSize: '24px', fontWeight: 800, display: 'block' },
     classStatLabel: { color: 'rgba(255,255,255,0.8)', fontSize: '11px' },
-    classSearchBar: { display: 'flex', gap: '10px', padding: '12px 15px', backgroundColor: 'white', marginBottom: '2px', flexWrap: 'wrap' },
-    studentGrid: { display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px', padding: '15px', backgroundColor: 'white', borderRadius: '0 0 10px 10px', boxShadow: '0 2px 4px rgba(0,0,0,0.08)' },
-    studentCard: { backgroundColor: '#f8f9fa', borderRadius: '10px', overflow: 'visible', border: '1px solid #eee', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' },
+    classSearchBar: { display: 'flex', gap: '10px', padding: '13px 15px', backgroundColor: 'white', marginBottom: '2px', flexWrap: 'wrap' },
+    studentGrid: { display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px', padding: '16px', backgroundColor: 'white', borderRadius: '0 0 14px 14px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' },
+    studentCard: { backgroundColor: '#f8f9fa', borderRadius: '12px', overflow: 'visible', border: '1px solid #f0f0f0', boxShadow: '0 1px 4px rgba(0,0,0,0.06)', transition: 'transform 0.2s ease, box-shadow 0.2s ease' },
     studentCardTop: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 12px 0 12px' },
     studentRankBadge: { fontSize: '11px', color: '#999', fontWeight: 'bold' },
     studentAvatar: { width: '44px', height: '44px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 'bold', fontSize: '15px' },
     studentCardBody: { padding: '8px 12px', display: 'flex', flexDirection: 'column', gap: '4px' },
     studentName: { fontSize: '13px', color: '#1F3864' },
     studentAdm: { fontSize: '11px', color: '#999', fontFamily: 'monospace' },
-    genderBadge: { color: 'white', padding: '2px 8px', borderRadius: '3px', fontSize: '11px', display: 'inline-block', width: 'fit-content' },
-    studentCardActions: { display: 'flex', gap: '4px', padding: '8px 12px', borderTop: '1px solid #eee', backgroundColor: 'white', borderRadius: '0 0 10px 10px' },
-    profileBtn: { flex: 1, backgroundColor: '#6f42c1', color: 'white', border: 'none', padding: '5px', borderRadius: '4px', cursor: 'pointer', fontSize: '11px', fontWeight: 'bold' },
-    editBtnSm: { backgroundColor: '#2E75B6', color: 'white', border: 'none', padding: '5px 8px', borderRadius: '4px', cursor: 'pointer', fontSize: '12px' },
-    cancelEditBtnSm: { backgroundColor: '#6c757d', color: 'white', border: 'none', padding: '5px 8px', borderRadius: '4px', cursor: 'pointer', fontSize: '12px' },
-    deleteBtnSm: { backgroundColor: '#dc3545', color: 'white', border: 'none', padding: '5px 8px', borderRadius: '4px', cursor: 'pointer', fontSize: '12px' },
-    tableCard: { backgroundColor: 'white', borderRadius: '10px', overflow: 'hidden', boxShadow: '0 2px 4px rgba(0,0,0,0.1)', marginTop: '20px' },
-    tableTopBar: { backgroundColor: '#1F3864', padding: '12px 20px' },
-    tableTitle: { color: 'white', margin: 0, fontSize: '15px' },
+    genderBadge: { color: 'white', padding: '2px 8px', borderRadius: '6px', fontSize: '11px', display: 'inline-flex', alignItems: 'center', width: 'fit-content' },
+    studentCardActions: { display: 'flex', gap: '4px', padding: '8px 12px', borderTop: '1px solid #eee', backgroundColor: 'white', borderRadius: '0 0 12px 12px' },
+    profileBtn: { flex: 1, backgroundColor: '#6f42c1', color: 'white', border: 'none', padding: '5px', borderRadius: '6px', cursor: 'pointer', fontSize: '11px', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center' },
+    editBtnSm: { backgroundColor: '#2E75B6', color: 'white', border: 'none', padding: '5px 8px', borderRadius: '6px', cursor: 'pointer', fontSize: '12px' },
+    cancelEditBtnSm: { backgroundColor: '#6c757d', color: 'white', border: 'none', padding: '5px 8px', borderRadius: '6px', cursor: 'pointer', fontSize: '12px' },
+    deleteBtnSm: { backgroundColor: '#dc3545', color: 'white', border: 'none', padding: '5px 8px', borderRadius: '6px', cursor: 'pointer', fontSize: '12px' },
+    tableCard: { backgroundColor: 'white', borderRadius: '14px', overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.06)', marginTop: '22px' },
+    tableTopBar: { backgroundColor: '#1F3864', padding: '13px 20px' },
+    tableTitle: { color: 'white', margin: 0, fontSize: '15px', fontWeight: 700, display: 'flex', alignItems: 'center' },
     table: { width: '100%', borderCollapse: 'collapse', minWidth: '600px' },
     thead: { backgroundColor: '#f8f9fa' },
-    th: { padding: '10px 15px', textAlign: 'left', fontWeight: 'bold', color: '#1F3864', borderBottom: '2px solid #ddd', fontSize: '12px' },
-    td: { padding: '10px 15px', borderBottom: '1px solid #eee', fontSize: '13px' },
+    th: { padding: '11px 15px', textAlign: 'left', fontWeight: 'bold', color: '#1F3864', borderBottom: '2px solid #eee', fontSize: '12px' },
+    td: { padding: '10px 15px', borderBottom: '1px solid #f0f0f0', fontSize: '13px' },
     trEven: { backgroundColor: '#f9f9f9' },
     trOdd: { backgroundColor: 'white' },
-    admNo: { backgroundColor: '#e3f2fd', color: '#1F3864', padding: '2px 6px', borderRadius: '3px', fontSize: '11px', fontFamily: 'monospace' },
-    viewBtn: { backgroundColor: '#6f42c1', color: 'white', border: 'none', padding: '4px 8px', borderRadius: '3px', cursor: 'pointer', marginRight: '4px', fontSize: '12px' },
-    editBtn: { backgroundColor: '#2E75B6', color: 'white', border: 'none', padding: '4px 8px', borderRadius: '3px', cursor: 'pointer', marginRight: '4px', fontSize: '12px' },
-    deleteBtn: { backgroundColor: '#dc3545', color: 'white', border: 'none', padding: '4px 8px', borderRadius: '3px', cursor: 'pointer', fontSize: '12px' },
-    emptyState: { backgroundColor: 'white', padding: '60px', borderRadius: '0 0 10px 10px', textAlign: 'center', boxShadow: '0 2px 4px rgba(0,0,0,0.08)' },
-    emptyIcon: { fontSize: '48px', marginBottom: '15px' },
+    admNo: { backgroundColor: '#e3f2fd', color: '#1F3864', padding: '2px 6px', borderRadius: '6px', fontSize: '11px', fontFamily: 'monospace' },
+    viewBtn: { backgroundColor: '#6f42c1', color: 'white', border: 'none', padding: '4px 8px', borderRadius: '6px', cursor: 'pointer', marginRight: '4px', fontSize: '12px' },
+    editBtn: { backgroundColor: '#2E75B6', color: 'white', border: 'none', padding: '4px 8px', borderRadius: '6px', cursor: 'pointer', marginRight: '4px', fontSize: '12px' },
+    deleteBtn: { backgroundColor: '#dc3545', color: 'white', border: 'none', padding: '4px 8px', borderRadius: '6px', cursor: 'pointer', fontSize: '12px' },
+    emptyState: { backgroundColor: 'white', padding: '60px', borderRadius: '0 0 14px 14px', textAlign: 'center', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' },
+    emptyIcon: { fontSize: '48px', marginBottom: '15px', color: '#ccc' },
 };
 
 export default Students;
