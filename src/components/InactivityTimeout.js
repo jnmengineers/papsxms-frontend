@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 
-const TIMEOUT_MS = 30 * 60 * 1000;   // 30 minutes of inactivity
+const TIMEOUT_MS = 15 * 60 * 1000;   // 30 minutes of inactivity
 const WARNING_MS = 2 * 60 * 1000;    // show warning 2 minutes before logout
 
 const PUBLIC_PATHS = ['/', '/unauthorized'];

@@ -1,13 +1,63 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useReactToPrint } from 'react-to-print';
 import api from '../services/api';
-import logo1 from '../assets/logo1.png';
-import logo2 from '../assets/logo2.png';
-import { classDisplayName, streamLabel, gradeLabel } from '../utils/classUtils';
+import { pctColor } from '../utils/grading';
+import { useSchoolSettings } from '../context/SchoolSettingsContext';
+import { classDisplayName, gradeLabel } from '../utils/classUtils';
 import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
 import Footer from '../components/Footer';
+import { schoolName, schoolShortName, schoolMotto, schoolContact, logoLeftUrl, logoRightUrl } from '../utils/school';
+import { GRADE_ORDER_LIVE, SECTION_CODES } from '../utils/schoolData';
 
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+const Bi = ({ name, style }) => (
+    <i className={`bi bi-${name}`} aria-hidden="true" style={{ marginRight: '6px', ...style }} />
+);
+
+// Grade and section order from School Settings
+const GRADE_ORDER = GRADE_ORDER_LIVE;
+const SECTION_ORDER = SECTION_CODES;
+const orderIndex = (list, v) => { const i = list.indexOf(v); return i === -1 ? 99 : i; };
+const MEDAL_COLORS = { 1: '#D4A017', 2: '#9E9E9E', 3: '#CD7F32' };
+
+const num = (v) => { const n = Number(v); return isNaN(n) ? 0 : n; };
+const fmtPct = (v) => (v === null || v === undefined || v === '' || isNaN(Number(v))) ? '-' : Number(v).toFixed(1) + '%';
+
+// Colours from the Grading Scales table (utils/grading), same as every other page
+const avgBadgeColor = (avg) => pctColor(num(avg));
+
+// Does this report card belong to this class (stream)?
+const cardInClass = (card, cls) => {
+    if (!cls) return false;
+    const st = card.student;
+    if (st?.schoolClass?.classId != null) return String(st.schoolClass.classId) === String(cls.classId);
+    const stream = st?.schoolClass?.stream || st?.stream || null;
+    return st?.className === cls.className && (cls.stream ? stream === cls.stream : !stream);
+};
+
+// Orders cards for a merit list. Uses the server-calculated rank when every card has one;
+// otherwise ranks by total so the list is still correct (ties share a rank: 1, 2, 2, 4).
+const rankCards = (cards, rankField) => {
+    const hasAll = cards.length > 0 && cards.every(c => c[rankField] != null && c[rankField] !== '' && num(c[rankField]) > 0);
+    if (hasAll) {
+        return {
+            computed: false,
+            rows: [...cards]
+                .sort((a, b) => num(a[rankField]) - num(b[rankField]) || num(b.averageMarks) - num(a.averageMarks))
+                .map(card => ({ card, rank: num(card[rankField]) }))
+        };
+    }
+    const sorted = [...cards].sort((a, b) => num(b.totalMarks) - num(a.totalMarks) || num(b.averageMarks) - num(a.averageMarks));
+    return {
+        computed: cards.length > 0,
+        rows: sorted.map(card => ({ card, rank: 1 + sorted.filter(o => num(o.totalMarks) > num(card.totalMarks)).length }))
+    };
+};
+
+// Section subjects = every subject any class in the section has, in first-seen order
+const unionSubjectNames = (classBreakdown) =>
+    [...new Set((classBreakdown || []).flatMap(cl => (cl.subjectPerformance || []).map(s => s.subjectName)))];
 
 // ─── Orientation Toggle ───────────────────────────────────────────────────────
 const OrientationToggle = ({ value, onChange }) => (
@@ -22,13 +72,13 @@ const OrientationToggle = ({ value, onChange }) => (
 const PrintHeader = ({ title, subtitle }) => (
     <div style={pStyles.header}>
         <div style={pStyles.headerRow}>
-            <img src={logo1} alt="Logo" style={pStyles.logo} />
+            <img src={logoLeftUrl()} alt="" style={pStyles.logo} />
             <div style={pStyles.schoolInfo}>
-                <h1 style={pStyles.schoolName}>PIPELINE ADVENTIST PRIMARY & JUNIOR SECONDARY SCHOOL</h1>
-                <p style={pStyles.motto}>Abreast with the Best in Holistic Education</p>
-                <p style={pStyles.contact}>P.O. BOX 61774-00200, NAIROBI | Tel: 0713 301 521 / 0721 885 996</p>
+                <h1 style={pStyles.schoolName}>{schoolName().toUpperCase()}</h1>
+                <p style={pStyles.motto}>{schoolMotto()}</p>
+                <p style={pStyles.contact}>{schoolContact()}</p>
             </div>
-            <img src={logo2} alt="Logo" style={pStyles.logo} />
+            <img src={logoRightUrl()} alt="" style={pStyles.logo} />
         </div>
         <div style={pStyles.reportBanner}>
             <h2 style={pStyles.reportTitle}>{title}</h2>
@@ -37,16 +87,10 @@ const PrintHeader = ({ title, subtitle }) => (
     </div>
 );
 
-// ─── Printable Merit List ─────────────────────────────────────────────────────
-const PrintableMeritList = React.forwardRef(({ reportCards, results, title, subtitle, level, subjects }, ref) => {
-    const sorted = [...reportCards].sort((a, b) => (a.classRank || 999) - (b.classRank || 999));
-    const getMark = (studentId, subjectId) => {
-        const r = results.find(res =>
-            String(res.student?.studentId) === String(studentId) &&
-            String(res.subject?.subjectId) === String(subjectId)
-        );
-        return r ? r.marksObtained : '-';
-    };
+// ─── Printable Merit List (stream or grade) ───────────────────────────────────
+const PrintableMeritList = React.forwardRef(({ rows, getMark, title, subtitle, level, subjects }, ref) => {
+    const avg = rows.length ? rows.reduce((s, r) => s + num(r.card.averageMarks), 0) / rows.length : null;
+    const top = rows[0]?.card;
     return (
         <div ref={ref} style={pStyles.page}>
             <PrintHeader title={title} subtitle={subtitle} />
@@ -58,240 +102,242 @@ const PrintableMeritList = React.forwardRef(({ reportCards, results, title, subt
                         <th style={pStyles.th}>ADM NO</th>
                         <th style={pStyles.th}>NAME</th>
                         {subjects.map(sub => (
-                            <th key={sub.subjectId} style={pStyles.thSubject}>{sub.subjectName.toUpperCase()}</th>
+                            <th key={sub.subjectId} style={pStyles.thSubject}>{String(sub.subjectName).toUpperCase()}</th>
                         ))}
-                        <th style={pStyles.thTotal}>TOTAL MEAN</th>
+                        <th style={pStyles.thTotal}>TOTAL</th>
                         <th style={pStyles.thTotal}>AVG %</th>
                     </tr>
                 </thead>
                 <tbody>
-                    {sorted.map((card, i) => (
+                    {rows.map(({ card, rank }, i) => (
                         <tr key={card.reportId} style={i % 2 === 0 ? pStyles.trEven : pStyles.trOdd}>
-                            <td style={pStyles.tdCenter}><strong>{card.classRank || i + 1}</strong></td>
+                            <td style={pStyles.tdCenter}><strong>{rank}</strong></td>
                             {level === 'grade' && <td style={pStyles.tdCenter}>{classDisplayName(card.student)}</td>}
                             <td style={pStyles.td}>{card.student?.admissionNumber || '-'}</td>
                             <td style={pStyles.tdName}><strong>{card.student?.firstName} {card.student?.lastName}</strong></td>
                             {subjects.map(sub => (
-                                <td key={sub.subjectId} style={pStyles.tdCenter}>
-                                    {getMark(card.student?.studentId, sub.subjectId)}
-                                </td>
+                                <td key={sub.subjectId} style={pStyles.tdCenter}>{getMark(card.student?.studentId, sub.subjectId)}</td>
                             ))}
-                            <td style={pStyles.tdTotal}><strong>{card.totalMarks}</strong></td>
-                            <td style={pStyles.tdTotal}><strong>{card.averageMarks?.toFixed(1)}%</strong></td>
+                            <td style={pStyles.tdTotal}><strong>{card.totalMarks ?? '-'}</strong></td>
+                            <td style={pStyles.tdTotal}><strong>{fmtPct(card.averageMarks)}</strong></td>
                         </tr>
                     ))}
                 </tbody>
             </table>
             <div style={pStyles.summaryRow}>
-                <span>Total Students: {sorted.length}</span>
-                <span>Class Average: {sorted.length > 0 ? (sorted.reduce((s, c) => s + (c.averageMarks || 0), 0) / sorted.length).toFixed(2) : 0}%</span>
-                <span>Top: {sorted[0] ? `${sorted[0].student?.firstName} ${sorted[0].student?.lastName} (${sorted[0].averageMarks?.toFixed(1)}%)` : '-'}</span>
+                <span>Total Students: {rows.length}</span>
+                <span>Average: {avg === null ? '-' : avg.toFixed(2) + '%'}</span>
+                <span>Top: {top ? `${top.student?.firstName} ${top.student?.lastName} (${fmtPct(top.averageMarks)})` : '-'}</span>
             </div>
             <div style={pStyles.footer}>
-                <img src={logo1} alt="" style={pStyles.footerLogo} />
+                <img src={logoLeftUrl()} alt="" style={pStyles.footerLogo} />
                 <div style={pStyles.footerSigs}>
                     <p>Class Teacher: _________________________ Signature: _________________ Date: ___________</p>
                     <p>Principal: _________________________ Signature: _________________ Date: ___________</p>
                 </div>
-                <img src={logo2} alt="" style={pStyles.footerLogo} />
+                <img src={logoRightUrl()} alt="" style={pStyles.footerLogo} />
             </div>
         </div>
     );
 });
 
-// ─── Printable Section Performance Report (like the cover page) ───────────────
+// ─── Printable Section Performance Report ─────────────────────────────────────
 const PrintableSectionReport = React.forwardRef(({ report, examName, term, year }, ref) => (
     <div ref={ref} style={pStyles.page}>
-        <PrintHeader
-            title="ACADEMIC PERFORMANCE REPORT"
-            subtitle={`${examName} — Term ${term} ${year}`}
-        />
-        {report && Object.entries(report).sort(([a], [b]) => {
-            const order = ['PRE_SCHOOL','LOWER_PRIMARY','UPPER_PRIMARY','JUNIOR_SCHOOL'];
-            return (order.indexOf(a) === -1 ? 99 : order.indexOf(a)) - (order.indexOf(b) === -1 ? 99 : order.indexOf(b));
-        }).map(([key, section]) => (
-            <div key={key} style={{ marginBottom: '16px' }}>
-                {/* Section banner */}
-                <div style={{ backgroundColor: '#1F3864', color: 'white', padding: '6px 10px', marginBottom: '6px' }}>
-                    <strong style={{ fontSize: '12px' }}>{section.sectionName}</strong>
-                    <span style={{ fontSize: '10px', opacity: 0.85 }}>
-                        {' '}| Target: {section.meanTarget}% | Students: {section.totalStudents}
-                        | Section Avg: {section.sectionAverage}%
-                        | {section.meetingTarget ? '✅ Above Target' : '❌ Below Target'}
-                    </span>
-                </div>
-
-                {/* Class averages table — like cover page */}
-                {section.classBreakdown?.length > 0 && (() => {
-                    const gradeOrder = ['PG','PP1','PP2','G1','G2','G3','G4','G5','G6','G7','G8','G9'];
-                    const sortedClasses = [...section.classBreakdown].sort((a, b) =>
-                        (gradeOrder.indexOf(a.className) === -1 ? 99 : gradeOrder.indexOf(a.className)) -
-                        (gradeOrder.indexOf(b.className) === -1 ? 99 : gradeOrder.indexOf(b.className)));
-                    const sectionSubjects = [...new Set(sortedClasses.flatMap(cl => (cl.subjectPerformance || []).map(s => s.subjectName)))];
-                    return (
-                    <table style={{ ...pStyles.table, marginBottom: '8px' }}>
-                        <thead>
-                            <tr style={pStyles.thead}>
-                                <th style={pStyles.th}>CLASS</th>
-                                {sectionSubjects.map(name => (
-                                    <th key={name} style={pStyles.thSubject}>{name.toUpperCase()}</th>
-                                ))}
-                                <th style={pStyles.thTotal}>TOTAL MEAN</th>
-                                <th style={pStyles.thTotal}>STATUS</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {sortedClasses.map((cls, i) => (
-                                <tr key={i} style={i % 2 === 0 ? pStyles.trEven : pStyles.trOdd}>
-                                    <td style={{ ...pStyles.td, fontWeight: 'bold' }}>{classDisplayName(cls)}</td>
-                                    {sectionSubjects.map((name, j) => {
-                                        const sub = cls.subjectPerformance?.find(s => s.subjectName === name);
-                                        return (
-                                            <td key={j} style={{ ...pStyles.tdCenter, color: sub ? (sub.meetingTarget ? '#155724' : '#721c24') : '#999' }}>
-                                                {sub ? sub.average : '-'}
-                                            </td>
-                                        );
-                                    })}
-                                    <td style={{ ...pStyles.tdTotal, color: cls.meetingTarget ? '#155724' : '#721c24' }}>
-                                        <strong>{cls.classAverage}</strong>
-                                    </td>
-                                    <td style={pStyles.tdCenter}>{cls.meetingTarget ? '✅' : '❌'}</td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                    );
-                })()}
-
-            </div>
-        ))}
+        <PrintHeader title="ACADEMIC PERFORMANCE REPORT" subtitle={`${examName} — Term ${term} ${year}`} />
+        {report && Object.entries(report)
+            .sort(([a], [b]) => orderIndex(SECTION_ORDER, a) - orderIndex(SECTION_ORDER, b))
+            .map(([key, section]) => {
+                const sortedClasses = [...(section.classBreakdown || [])].sort((a, b) =>
+                    orderIndex(GRADE_ORDER, a.className) - orderIndex(GRADE_ORDER, b.className) ||
+                    String(a.stream || '').localeCompare(String(b.stream || '')));
+                const sectionSubjects = unionSubjectNames(sortedClasses);
+                return (
+                    <div key={key} style={{ marginBottom: '16px', pageBreakInside: 'avoid' }}>
+                        <div style={{ backgroundColor: '#1F3864', color: 'white', padding: '6px 10px', marginBottom: '6px' }}>
+                            <strong style={{ fontSize: '12px' }}>{section.sectionName}</strong>
+                            <span style={{ fontSize: '10px', opacity: 0.9 }}>
+                                {' '}| Target: {section.meanTarget}% | Students: {section.totalStudents} | Section Avg: {section.sectionAverage}% |{' '}
+                                <strong style={{ color: section.meetingTarget ? '#90EE90' : '#ffb3b3' }}>{section.meetingTarget ? 'ABOVE TARGET' : 'BELOW TARGET'}</strong>
+                            </span>
+                        </div>
+                        {sortedClasses.length > 0 && (
+                            <table style={{ ...pStyles.table, marginBottom: '8px' }}>
+                                <thead>
+                                    <tr style={pStyles.thead}>
+                                        <th style={pStyles.th}>CLASS</th>
+                                        {sectionSubjects.map(name => <th key={name} style={pStyles.thSubject}>{String(name).toUpperCase()}</th>)}
+                                        <th style={pStyles.thTotal}>TOTAL MEAN</th>
+                                        <th style={pStyles.thTotal}>STATUS</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {sortedClasses.map((cls, i) => (
+                                        <tr key={i} style={i % 2 === 0 ? pStyles.trEven : pStyles.trOdd}>
+                                            <td style={{ ...pStyles.td, fontWeight: 'bold' }}>{classDisplayName(cls)}</td>
+                                            {sectionSubjects.map(name => {
+                                                const sub = cls.subjectPerformance?.find(s => s.subjectName === name);
+                                                return (
+                                                    <td key={name} style={{ ...pStyles.tdCenter, color: sub ? (sub.meetingTarget ? '#155724' : '#721c24') : '#999' }}>
+                                                        {sub ? sub.average : '-'}
+                                                    </td>
+                                                );
+                                            })}
+                                            <td style={{ ...pStyles.tdTotal, color: cls.meetingTarget ? '#155724' : '#721c24' }}><strong>{cls.classAverage}</strong></td>
+                                            <td style={{ ...pStyles.tdCenter, fontWeight: 'bold', color: cls.meetingTarget ? '#155724' : '#721c24' }}>{cls.meetingTarget ? 'Above' : 'Below'}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        )}
+                    </div>
+                );
+            })}
         <div style={pStyles.footer}>
-            <img src={logo1} alt="" style={pStyles.footerLogo} />
+            <img src={logoLeftUrl()} alt="" style={pStyles.footerLogo} />
             <p style={{ textAlign: 'center', fontSize: '10px', color: '#333' }}>
-                Printed: {new Date().toLocaleDateString()} — Pipeline Adventist School Official Document
+                Printed: {new Date().toLocaleDateString()} — {schoolShortName()} Official Document
             </p>
-            <img src={logo2} alt="" style={pStyles.footerLogo} />
+            <img src={logoRightUrl()} alt="" style={pStyles.footerLogo} />
         </div>
     </div>
 ));
 
+// ─── Rank cell with trophies for places 1–3 ───────────────────────────────────
+const RankCell = ({ rank }) => (
+    <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
+        {MEDAL_COLORS[rank] && <Bi name="trophy-fill" style={{ color: MEDAL_COLORS[rank], marginRight: 0, fontSize: '15px' }} />}
+        <strong>{rank}</strong>
+    </span>
+);
+
 // ─── Main Component ───────────────────────────────────────────────────────────
 function SectionReport() {
+    useSchoolSettings();   // re-draws when the grading scale (database) has loaded
     const role = localStorage.getItem('role');
     const linkedClassId = localStorage.getItem('linkedClassId');
     const linkedClassName = localStorage.getItem('linkedClassName');
+    const isTeacher = role === 'TEACHER';
 
     const [exams, setExams] = useState([]);
     const [classes, setClasses] = useState([]);
     const [allReportCards, setAllReportCards] = useState([]);
     const [allResults, setAllResults] = useState([]);
+    const [loadingCards, setLoadingCards] = useState(false);
     const [classSubjects, setClassSubjects] = useState([]);
+    const [gradeSubjects, setGradeSubjects] = useState([]);
     const [selectedExam, setSelectedExam] = useState('');
-    const [selectedClass, setSelectedClass] = useState('');
+    const [selectedClass, setSelectedClass] = useState(isTeacher && linkedClassId ? linkedClassId : '');
+    const [selectedGrade, setSelectedGrade] = useState('');
     const [report, setReport] = useState(null);
-    const [activeTab, setActiveTab] = useState(role === 'TEACHER' ? 'stream' : 'section');
+    const [activeTab, setActiveTab] = useState(role === 'ADMIN' ? 'section' : 'stream');
     const [loading, setLoading] = useState(false);
     const [calculating, setCalculating] = useState(false);
     const [error, setError] = useState('');
     const [successMsg, setSuccessMsg] = useState('');
-    const [expandedStreams, setExpandedStreams] = useState({});
-    const [selectedGrade, setSelectedGrade] = useState('');
-    const [gradeSubjects, setGradeSubjects] = useState([]);
 
     const sectionReportRef = useRef();
     const streamMeritRef = useRef();
     const gradeMeritRef = useRef();
+    const latestExam = useRef('');
+    const successTimer = useRef(null);
 
     const [sectionOrientation, setSectionOrientation] = useState('portrait');
     const [streamMeritOrientation, setStreamMeritOrientation] = useState('landscape');
     const [gradeMeritOrientation, setGradeMeritOrientation] = useState('landscape');
 
-    const handlePrintSectionReport = useReactToPrint({ contentRef: sectionReportRef, documentTitle: 'Section_Performance_Report', pageStyle: `@page { size: A4 ${sectionOrientation}; margin: 10mm; } @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }` });
-    const handlePrintStreamMerit = useReactToPrint({ contentRef: streamMeritRef, documentTitle: `Merit_List_${selectedClass}`, pageStyle: `@page { size: A4 ${streamMeritOrientation}; margin: 10mm; } @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }` });
-    const handlePrintGradeMerit = useReactToPrint({ contentRef: gradeMeritRef, documentTitle: `Grade_Merit_List`, pageStyle: `@page { size: A4 ${gradeMeritOrientation}; margin: 10mm; } @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }` });
+    const pageStyle = (o) => `@page { size: A4 ${o}; margin: 10mm; } @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }`;
+
+    const selectedExamObj = exams.find(e => String(e.examId) === String(selectedExam));
+    const selectedClassObj = classes.find(c => String(c.classId) === String(selectedClass));
+    const selectedClassLabel = selectedClassObj ? classDisplayName(selectedClassObj) : (linkedClassName || '');
+    const examSubtitle = `${selectedExamObj?.examName || ''} | Term ${selectedExamObj?.term || ''} ${selectedExamObj?.academicYear || ''}`;
+    const fileSafe = (s) => String(s || '').replace(/[^\w-]+/g, '_');
+
+    const handlePrintSectionReport = useReactToPrint({ contentRef: sectionReportRef, documentTitle: `Section_Report_${fileSafe(selectedExamObj?.examName)}`, pageStyle: pageStyle(sectionOrientation) });
+    const handlePrintStreamMerit = useReactToPrint({ contentRef: streamMeritRef, documentTitle: `Merit_List_${fileSafe(selectedClassLabel)}_${fileSafe(selectedExamObj?.examName)}`, pageStyle: pageStyle(streamMeritOrientation) });
+    const handlePrintGradeMerit = useReactToPrint({ contentRef: gradeMeritRef, documentTitle: `Grade_Merit_List_${fileSafe(gradeLabel(selectedGrade))}_${fileSafe(selectedExamObj?.examName)}`, pageStyle: pageStyle(gradeMeritOrientation) });
+
+    const flashSuccess = (msg, ms = 4000) => {
+        setSuccessMsg(msg);
+        clearTimeout(successTimer.current);
+        successTimer.current = setTimeout(() => setSuccessMsg(''), ms);
+    };
 
     useEffect(() => {
-        fetchExams();
-        fetchClasses();
+        fetchExams(); fetchClasses();
+        return () => clearTimeout(successTimer.current);
     }, []);
 
+    // Teachers: their grade is picked automatically once classes load
     useEffect(() => {
-        if (role === 'TEACHER' && linkedClassId) setSelectedClass(linkedClassId);
-    }, [linkedClassId]);
-
-    // Once classes load, auto-set the grade for teachers
-    useEffect(() => {
-        if (role === 'TEACHER' && linkedClassId && classes.length > 0) {
+        if (isTeacher && linkedClassId && classes.length > 0) {
             const teacherClass = classes.find(c => String(c.classId) === String(linkedClassId));
             if (teacherClass?.gradeLevel) setSelectedGrade(teacherClass.gradeLevel);
         }
     }, [classes]);
 
-    useEffect(() => {
-        if (selectedExam && selectedClass) {
-            fetchAllReportCards();
-            fetchClassSubjects();
-        }
-    }, [selectedExam, selectedClass]);
+    // One load per exam: report cards + results together
+    useEffect(() => { loadExamData(selectedExam); }, [selectedExam]);
 
     useEffect(() => {
-        if (selectedExam && allReportCards.length > 0) fetchResults();
-    }, [allReportCards]);
+        if (!selectedClass) { setClassSubjects([]); return; }
+        api.get(`/api/class-subjects/by-class/${selectedClass}`)
+            .then(r => setClassSubjects((r.data || []).map(cs => cs.subject).filter(Boolean)))
+            .catch(() => setClassSubjects([]));
+    }, [selectedClass]);
+
+    // Grade subjects = every subject taught in ANY stream of the grade
+    useEffect(() => {
+        const gradeClasses = classes.filter(c => c.gradeLevel === selectedGrade);
+        if (!selectedGrade || !gradeClasses.length) { setGradeSubjects([]); return; }
+        Promise.allSettled(gradeClasses.map(c => api.get(`/api/class-subjects/by-class/${c.classId}`)))
+            .then(outs => {
+                const map = {};
+                outs.forEach(o => {
+                    if (o.status !== 'fulfilled') return;
+                    (o.value.data || []).map(cs => cs.subject).filter(Boolean).forEach(s => { map[s.subjectId] = s; });
+                });
+                setGradeSubjects(Object.values(map).sort((a, b) => String(a.subjectName).localeCompare(String(b.subjectName))));
+            });
+    }, [selectedGrade, classes]);
 
     const fetchExams = async () => {
-        try { const r = await api.get('/api/exams'); setExams(r.data); } catch (e) {}
+        try {
+            const r = await api.get('/api/exams');
+            setExams([...r.data].sort((a, b) => String(b.academicYear).localeCompare(String(a.academicYear)) || num(b.term) - num(a.term)));
+        } catch (e) { setError('Failed to load exams'); }
     };
 
     const fetchClasses = async () => {
-        try { const r = await api.get('/api/classes'); setClasses(r.data); } catch (e) {}
+        try { const r = await api.get('/api/classes'); setClasses(r.data); } catch (e) { setError('Failed to load classes'); }
     };
 
-    const fetchAllReportCards = async () => {
-        try {
-            const r = await api.get(`/api/reportCards/by-exam/${selectedExam}`);
-            setAllReportCards(r.data);
-        } catch (e) { console.error('Report cards failed:', e.message); }
+    const loadExamData = async (examId) => {
+        latestExam.current = String(examId || '');
+        setAllReportCards([]); setAllResults([]);
+        if (!examId) return;
+        setLoadingCards(true);
+        const [cardsRes, resultsRes] = await Promise.allSettled([
+            api.get(`/api/reportCards/by-exam/${examId}`),
+            api.get(`/api/results/by-exam/${examId}`)
+        ]);
+        if (latestExam.current !== String(examId)) return; // another exam was chosen meanwhile
+        if (cardsRes.status === 'fulfilled') setAllReportCards(cardsRes.value.data || []);
+        else setError('Failed to load report cards for this exam.');
+        if (resultsRes.status === 'fulfilled') setAllResults(resultsRes.value.data || []);
+        setLoadingCards(false);
     };
-
-    const fetchResults = async () => {
-        try {
-            const r = await api.get(`/api/results/by-exam/${selectedExam}`);
-            setAllResults(r.data);
-        } catch (e) { console.error('Results failed:', e.message); }
-    };
-
-    const fetchClassSubjects = async () => {
-        try {
-            const r = await api.get(`/api/class-subjects/by-class/${selectedClass}`);
-            setClassSubjects(r.data.map(cs => cs.subject).filter(Boolean));
-        } catch (e) {}
-    };
-
-    const fetchGradeSubjects = async (gradeLevel) => {
-        const firstClass = classes.find(c => c.gradeLevel === gradeLevel);
-        if (!firstClass) return;
-        try {
-            const r = await api.get(`/api/class-subjects/by-class/${firstClass.classId}`);
-            setGradeSubjects(r.data.map(cs => cs.subject).filter(Boolean));
-        } catch (e) {}
-    };
-
-    useEffect(() => {
-        if (selectedGrade && selectedExam) {
-            fetchGradeSubjects(selectedGrade);
-            fetchAllReportCards();
-        }
-    }, [selectedGrade, selectedExam]);
 
     const handleCalculateRanks = async () => {
         if (!selectedExam) return;
         setCalculating(true); setError('');
         try {
             await api.post(`/api/rankings/calculate/${selectedExam}`);
-            setSuccessMsg('✅ Ranks calculated!');
-            fetchAllReportCards();
-            setTimeout(() => setSuccessMsg(''), 3000);
-        } catch (e) { setError('Failed to calculate ranks'); }
+            flashSuccess('Ranks calculated!');
+            await loadExamData(selectedExam);
+            if (report) await handleGetReport(); // keep an open report in step with the new ranks
+        } catch (e) { setError('Failed to calculate ranks: ' + (e.response?.data?.message || e.message)); }
         setCalculating(false);
     };
 
@@ -305,132 +351,138 @@ function SectionReport() {
         setLoading(false);
     };
 
-    const selectedExamObj = exams.find(e => String(e.examId) === String(selectedExam));
-    const selectedClassObj = classes.find(c => String(c.classId) === String(selectedClass));
-    const gradeLevel = selectedClassObj?.gradeLevel;
-    const gradeClasses = classes.filter(c => c.gradeLevel === gradeLevel);
-    const gradeClassNames = gradeClasses.map(c => c.className);
-
-    const streamCards = allReportCards.filter(c =>
-        String(c.student?.schoolClass?.classId) === String(selectedClass) ||
-        c.student?.className === selectedClassObj?.className
-    );
-
-    const gradeCards = allReportCards.filter(c =>
-        gradeClassNames.includes(c.student?.className)
-    );
-
-    // Grade merit: unique grade levels across all classes, for the dedicated grade dropdown
-    const uniqueGrades = [...new Map(
-        classes.filter(c => c.gradeLevel).map(c => [c.gradeLevel, c])
-    ).values()].sort((a, b) => {
-        const order = ['PG','PP1','PP2','G1','G2','G3','G4','G5','G6','G7','G8','G9'];
-        return (order.indexOf(a.gradeLevel) ?? 99) - (order.indexOf(b.gradeLevel) ?? 99);
-    });
-
-    const selectedGradeClasses = classes.filter(c => c.gradeLevel === selectedGrade);
-    const selectedGradeClassNames = selectedGradeClasses.map(c => c.className);
-    const selectedGradeCards = allReportCards.filter(c =>
-        selectedGradeClassNames.includes(c.student?.className)
-    );
-
+    // ── Marks lookup (built once per exam instead of searching every cell) ─────
+    const markMap = useMemo(() => {
+        const m = {};
+        allResults.forEach(r => {
+            const sid = r.student?.studentId, subId = r.subject?.subjectId;
+            if (sid != null && subId != null) m[`${sid}_${subId}`] = r.marksObtained;
+        });
+        return m;
+    }, [allResults]);
     const getMark = (studentId, subjectId) => {
-        const r = allResults.find(res =>
-            String(res.student?.studentId) === String(studentId) &&
-            String(res.subject?.subjectId) === String(subjectId)
-        );
-        return r ? r.marksObtained : '-';
+        const v = markMap[`${studentId}_${subjectId}`];
+        return v === null || v === undefined ? '-' : v;
     };
 
+    // Subjects that actually have marks for these cards (used when class subjects aren't set up)
+    const subjectsFromResults = (cards) => {
+        const ids = new Set(cards.map(c => String(c.student?.studentId)));
+        const map = {};
+        allResults.forEach(r => { if (ids.has(String(r.student?.studentId)) && r.subject) map[r.subject.subjectId] = r.subject; });
+        return Object.values(map).sort((a, b) => String(a.subjectName).localeCompare(String(b.subjectName)));
+    };
+
+    // ── Stream merit ──────────────────────────────────────────────────────────
+    const streamCards = allReportCards.filter(c => cardInClass(c, selectedClassObj) ||
+        (!selectedClassObj && isTeacher && String(c.student?.schoolClass?.classId) === String(linkedClassId)));
+    const streamRanked = rankCards(streamCards, 'classRank');
+    const streamSubjects = classSubjects.length ? classSubjects : subjectsFromResults(streamCards);
+
+    // ── Grade merit ───────────────────────────────────────────────────────────
+    const uniqueGrades = [...new Map(classes.filter(c => c.gradeLevel).map(c => [c.gradeLevel, c])).values()]
+        .sort((a, b) => orderIndex(GRADE_ORDER, a.gradeLevel) - orderIndex(GRADE_ORDER, b.gradeLevel) || String(a.gradeLevel).localeCompare(String(b.gradeLevel)));
+    const selectedGradeClasses = classes.filter(c => c.gradeLevel === selectedGrade);
+    const selectedGradeCards = allReportCards.filter(c => selectedGradeClasses.some(cls => cardInClass(c, cls)));
+    const gradeRanked = rankCards(selectedGradeCards, 'termRank');
+    const gradeMeritSubjects = gradeSubjects.length ? gradeSubjects : subjectsFromResults(selectedGradeCards);
+    const gradeStreamNames = selectedGradeClasses.map(c => classDisplayName(c)).join(', ');
+
     const getAvgColor = (avg, target) => {
-        if (!avg || avg === '-') return '#666';
+        if (avg === null || avg === undefined || avg === '' || avg === '-' || isNaN(parseFloat(avg))) return '#666';
         const a = parseFloat(avg);
         if (a >= target) return '#28a745';
         if (a >= target * 0.9) return '#fd7e14';
         return '#dc3545';
     };
 
-    // Section stats summary
-    const getSectionSummary = () => {
-        if (!report) return null;
-        return Object.entries(report).map(([key, section]) => ({
-            name: section.sectionName,
-            avg: section.sectionAverage,
-            target: section.meanTarget,
-            meeting: section.meetingTarget,
-            students: section.totalStudents
-        }));
-    };
+    const sectionEntries = report
+        ? Object.entries(report).sort(([a], [b]) => orderIndex(SECTION_ORDER, a) - orderIndex(SECTION_ORDER, b))
+        : [];
+
+    const meanOf = (rows) => rows.length ? (rows.reduce((s, r) => s + num(r.card.averageMarks), 0) / rows.length).toFixed(2) : '-';
+
+    const RankNotice = ({ show }) => show ? (
+        <div style={styles.notice}>
+            <Bi name="info-circle-fill" />Ranks haven't been calculated for all students yet, so this list is ordered by total marks. Click <strong>Calculate Ranks</strong> to save official ranks.
+        </div>
+    ) : null;
+
+    const TabButton = ({ id, icon, children }) => (
+        <button onClick={() => setActiveTab(id)} style={{
+            ...styles.tab,
+            backgroundColor: activeTab === id ? '#1F3864' : 'white',
+            color: activeTab === id ? 'white' : '#1F3864'
+        }}><Bi name={icon} />{children}</button>
+    );
+
+    const LoadingState = () => (
+        <div style={styles.emptyState}><Bi name="hourglass-split" style={{ ...styles.emptyIcon, marginRight: 0 }} /><p>Loading report cards…</p></div>
+    );
 
     return (
         <div style={styles.container}>
-           <Navbar />
+            <Navbar />
             <div style={styles.layoutRow}>
                 <Sidebar />
                 <div style={styles.content}>
                 <div style={styles.pageHeader}>
-                    <div>
-                        <h2 style={styles.title}>📊 Reports & Merit Lists</h2>
-                        <p style={styles.subtitle}>Section performance, stream and grade merit lists</p>
-                    </div>
+                    <h2 style={styles.title}><Bi name="bar-chart-line-fill" style={{ marginRight: '10px' }} />Reports & Merit Lists</h2>
+                    <p style={styles.subtitle}>Section performance, stream and grade merit lists</p>
                 </div>
 
-                {error && <div style={styles.error}>{error}</div>}
-                {successMsg && <div style={styles.success}>{successMsg}</div>}
+                {error && <div style={styles.error} role="alert"><Bi name="exclamation-triangle-fill" />{error}</div>}
+                {successMsg && <div style={styles.success}><Bi name="check-circle-fill" />{successMsg}</div>}
 
                 {/* Controls */}
                 <div style={styles.controlCard}>
                     <div style={styles.controlGrid}>
                         <div style={styles.formGroup}>
-                            <label style={styles.label}>📝 Exam</label>
+                            <label style={styles.label}><Bi name="file-earmark-text" />Exam</label>
                             <select style={styles.select} value={selectedExam}
-                                onChange={e => { setSelectedExam(e.target.value); setReport(null); setAllReportCards([]); setAllResults([]); }}>
+                                onChange={e => { setSelectedExam(e.target.value); setReport(null); setError(''); }}>
                                 <option value="">-- Select Exam --</option>
                                 {exams.map(exam => (
-                                    <option key={exam.examId} value={exam.examId}>
-                                        {exam.examName} — Term {exam.term} {exam.academicYear}
-                                    </option>
+                                    <option key={exam.examId} value={exam.examId}>{exam.examName} — Term {exam.term} {exam.academicYear}</option>
                                 ))}
                             </select>
                         </div>
                         <div style={styles.formGroup}>
-                            <label style={styles.label}>🏫 Class (for Merit Lists)</label>
-                            {role === 'TEACHER' ? (
-                                <div style={styles.classDisplay}>🔒 {linkedClassName}</div>
+                            <label style={styles.label}><Bi name="building" />Class (for Stream Merit List)</label>
+                            {isTeacher ? (
+                                <div style={styles.classDisplay}><Bi name="lock-fill" />{selectedClassLabel}</div>
                             ) : (
-                                <select style={styles.select} value={selectedClass}
-                                    onChange={e => setSelectedClass(e.target.value)}>
+                                <select style={styles.select} value={selectedClass} onChange={e => setSelectedClass(e.target.value)}>
                                     <option value="">-- Select Class --</option>
-                                    {classes.map(cls => (
-                                        <option key={cls.classId} value={cls.classId}>{classDisplayName(cls)}</option>
-                                    ))}
+                                    {[...classes].sort((a, b) => orderIndex(GRADE_ORDER, a.gradeLevel) - orderIndex(GRADE_ORDER, b.gradeLevel) || classDisplayName(a).localeCompare(classDisplayName(b)))
+                                        .map(cls => <option key={cls.classId} value={cls.classId}>{classDisplayName(cls)}</option>)}
                                 </select>
                             )}
                         </div>
                         <div style={styles.btnCol}>
                             <button onClick={handleCalculateRanks} style={styles.rankBtn} disabled={!selectedExam || calculating}>
-                                {calculating ? '⏳ Calculating...' : '🔢 Calculate Ranks'}
+                                {calculating ? <><Bi name="hourglass-split" />Calculating...</> : <><Bi name="sort-numeric-down" />Calculate Ranks</>}
                             </button>
                             {role === 'ADMIN' && (
                                 <button onClick={handleGetReport} style={styles.reportBtn} disabled={!selectedExam || loading}>
-                                    {loading ? '⏳ Loading...' : '📊 Generate Report'}
+                                    {loading ? <><Bi name="hourglass-split" />Loading...</> : <><Bi name="bar-chart-fill" />Generate Report</>}
                                 </button>
                             )}
                         </div>
                     </div>
-                    <p style={styles.hint}>💡 First click <strong>Calculate Ranks</strong>, then view merit lists or generate the section report</p>
+                    <p style={styles.hint}><Bi name="lightbulb" />First click <strong>Calculate Ranks</strong>, then view merit lists or generate the section report</p>
                 </div>
 
-                {/* Quick stats if report loaded */}
-                {report && getSectionSummary() && (
+                {/* Quick stats */}
+                {sectionEntries.length > 0 && (
                     <div style={styles.quickStats}>
-                        {getSectionSummary().map((s, i) => (
-                            <div key={i} style={{ ...styles.quickStatCard, borderTop: `4px solid ${s.meeting ? '#28a745' : '#dc3545'}` }}>
-                                <div style={styles.quickStatName}>{s.name}</div>
-                                <div style={{ ...styles.quickStatAvg, color: s.meeting ? '#28a745' : '#dc3545' }}>{s.avg}%</div>
-                                <div style={styles.quickStatMeta}>Target: {s.target}% | {s.students} students</div>
-                                <div style={{ ...styles.quickStatBadge, backgroundColor: s.meeting ? '#d4edda' : '#f8d7da', color: s.meeting ? '#155724' : '#721c24' }}>
-                                    {s.meeting ? '✅ Above Target' : '❌ Below Target'}
+                        {sectionEntries.map(([key, s]) => (
+                            <div key={key} style={{ ...styles.quickStatCard, borderTop: `4px solid ${s.meetingTarget ? '#28a745' : '#dc3545'}` }}>
+                                <div style={styles.quickStatName}>{s.sectionName}</div>
+                                <div style={{ ...styles.quickStatAvg, color: s.meetingTarget ? '#28a745' : '#dc3545' }}>{s.sectionAverage}%</div>
+                                <div style={styles.quickStatMeta}>Target: {s.meanTarget}% | {s.totalStudents} students</div>
+                                <div style={{ ...styles.quickStatBadge, backgroundColor: s.meetingTarget ? '#d4edda' : '#f8d7da', color: s.meetingTarget ? '#155724' : '#721c24' }}>
+                                    <Bi name={s.meetingTarget ? 'check-circle-fill' : 'x-circle-fill'} style={{ marginRight: '4px' }} />{s.meetingTarget ? 'Above Target' : 'Below Target'}
                                 </div>
                             </div>
                         ))}
@@ -439,161 +491,126 @@ function SectionReport() {
 
                 {/* Tabs */}
                 <div style={styles.tabs}>
-                    {role === 'ADMIN' && (
-                        <button onClick={() => setActiveTab('section')} style={{
-                            ...styles.tab,
-                            backgroundColor: activeTab === 'section' ? '#1F3864' : 'white',
-                            color: activeTab === 'section' ? 'white' : '#1F3864'
-                        }}>📊 Section Report</button>
-                    )}
-                    <button onClick={() => setActiveTab('stream')} style={{
-                        ...styles.tab,
-                        backgroundColor: activeTab === 'stream' ? '#1F3864' : 'white',
-                        color: activeTab === 'stream' ? 'white' : '#1F3864'
-                    }}>📋 Stream Merit List</button>
-                    <button onClick={() => setActiveTab('grade')} style={{
-                        ...styles.tab,
-                        backgroundColor: activeTab === 'grade' ? '#1F3864' : 'white',
-                        color: activeTab === 'grade' ? 'white' : '#1F3864'
-                    }}>🏫 Grade Merit List</button>
+                    {role === 'ADMIN' && <TabButton id="section" icon="bar-chart-fill">Section Report</TabButton>}
+                    <TabButton id="stream" icon="list-ol">Stream Merit List</TabButton>
+                    <TabButton id="grade" icon="building">Grade Merit List</TabButton>
                 </div>
 
                 {/* ── SECTION REPORT TAB ── */}
-                {activeTab === 'section' && (
+                {activeTab === 'section' && role === 'ADMIN' && (
                     <div>
                         {report && (
                             <div style={styles.printBar}>
-                                <span style={styles.printBarInfo}>📊 {selectedExamObj?.examName} — Section Performance Report</span>
+                                <span style={styles.printBarInfo}><Bi name="bar-chart-fill" />{selectedExamObj?.examName} — Section Performance Report</span>
                                 <OrientationToggle value={sectionOrientation} onChange={setSectionOrientation} />
-                                <button onClick={handlePrintSectionReport} style={styles.printBtn}>🖨️ Print Report</button>
+                                <button onClick={handlePrintSectionReport} style={styles.printBtn}><Bi name="printer-fill" />Print Report</button>
                             </div>
                         )}
 
-                        {report ? Object.entries(report).sort(([a], [b]) => {
-                            const order = ['PRE_SCHOOL','LOWER_PRIMARY','UPPER_PRIMARY','JUNIOR_SCHOOL'];
-                            return (order.indexOf(a) === -1 ? 99 : order.indexOf(a)) - (order.indexOf(b) === -1 ? 99 : order.indexOf(b));
-                        }).map(([key, section]) => (
-                            <div key={key} style={styles.sectionCard}>
-                                {/* Section header */}
-                                <div style={{ ...styles.sectionHeader, backgroundColor: section.meetingTarget ? '#1F3864' : '#7b1c1c' }}>
-                                    <div>
-                                        <h3 style={styles.sectionTitle}>{section.sectionName}</h3>
-                                        <p style={styles.sectionSub}>
-                                            Grades: {section.grades?.join(', ')} | Target: {section.meanTarget}%
-                                        </p>
-                                    </div>
-                                    <div style={styles.sectionStats}>
-                                        {[
-                                            { n: section.totalStudents, l: 'Students' },
-                                            { n: `${section.sectionAverage}%`, l: 'Section Avg' },
-                                            { n: section.aboveTarget, l: 'Above Target' },
-                                            { n: section.belowTarget, l: 'Below Target' },
-                                        ].map((s, i) => (
-                                            <div key={i} style={styles.statBox}>
-                                                <span style={styles.statNum}>{s.n}</span>
-                                                <span style={styles.statLbl}>{s.l}</span>
+                        {sectionEntries.length > 0 ? sectionEntries.map(([key, section]) => {
+                            const subjectNames = unionSubjectNames(section.classBreakdown);
+                            const byAvg = [...(section.classBreakdown || [])].sort((a, b) => num(b.classAverage) - num(a.classAverage));
+                            const classPlaces = rankBy(byAvg, c => num(c.classAverage));
+                            return (
+                                <div key={key} style={styles.sectionCard}>
+                                    <div style={{ ...styles.sectionHeader, backgroundColor: section.meetingTarget ? '#1F3864' : '#7b1c1c' }}>
+                                        <div>
+                                            <h3 style={styles.sectionTitle}>{section.sectionName}</h3>
+                                            <p style={styles.sectionSub}>Grades: {section.grades?.join(', ')} | Target: {section.meanTarget}%</p>
+                                        </div>
+                                        <div style={styles.sectionStats}>
+                                            {[
+                                                { n: section.totalStudents, l: 'Students' },
+                                                { n: `${section.sectionAverage}%`, l: 'Section Avg' },
+                                                { n: section.aboveTarget, l: 'Above Target' },
+                                                { n: section.belowTarget, l: 'Below Target' },
+                                            ].map((s, i) => (
+                                                <div key={i} style={styles.statBox}>
+                                                    <span style={styles.statNum}>{s.n}</span>
+                                                    <span style={styles.statLbl}>{s.l}</span>
+                                                </div>
+                                            ))}
+                                            <div style={{ ...styles.targetBadge, backgroundColor: section.meetingTarget ? '#28a745' : '#dc3545' }}>
+                                                <Bi name={section.meetingTarget ? 'check-circle-fill' : 'x-circle-fill'} />{section.meetingTarget ? 'Above Target' : 'Below Target'}
                                             </div>
-                                        ))}
-                                        <div style={{ ...styles.targetBadge, backgroundColor: section.meetingTarget ? '#28a745' : '#dc3545' }}>
-                                            {section.meetingTarget ? '✅ Above Target' : '❌ Below Target'}
                                         </div>
                                     </div>
-                                </div>
 
-                                <div style={styles.sectionBody}>
-                                    {/* Class averages table — like the cover page */}
-                                    {section.classBreakdown?.length > 0 && (
-                                        <div style={{ overflowX: 'auto', marginBottom: '20px' }}>
-                                            <h4 style={styles.subTitle}>📊 Class Averages by Subject</h4>
-                                            <table style={styles.table}>
-                                                <thead>
-                                                    <tr style={styles.thead}>
-                                                        <th style={styles.th}>CLASS</th>
-                                                        {section.classBreakdown[0]?.subjectPerformance?.map(sub => (
-                                                            <th key={sub.subjectName} style={styles.thSub}>{sub.subjectName}</th>
-                                                        ))}
-                                                        <th style={styles.thTotal}>AVG %</th>
-                                                        <th style={styles.thTotal}>STATUS</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    {[...section.classBreakdown]
-                                                        .sort((a, b) => b.classAverage - a.classAverage)
-                                                        .map((cls, i) => (
+                                    <div style={styles.sectionBody}>
+                                        {byAvg.length > 0 && (
+                                            <div style={{ overflowX: 'auto', marginBottom: '20px' }}>
+                                                <h4 style={styles.subTitle}><Bi name="table" />Class Averages by Subject</h4>
+                                                <table style={styles.table}>
+                                                    <thead>
+                                                        <tr style={styles.thead}>
+                                                            <th style={styles.th}>CLASS</th>
+                                                            {subjectNames.map(name => <th key={name} style={styles.thSub}>{name}</th>)}
+                                                            <th style={styles.thTotal}>AVG %</th>
+                                                            <th style={styles.thTotal}>STATUS</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        {byAvg.map((cls, i) => (
                                                             <tr key={i} style={i % 2 === 0 ? styles.trEven : styles.trOdd}>
-                                                                <td style={{ ...styles.td, fontWeight: 'bold' }}>
-                                                                    {i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : ''} {classDisplayName(cls)}
+                                                                <td style={{ ...styles.td, fontWeight: 'bold', whiteSpace: 'nowrap' }}>
+                                                                    {MEDAL_COLORS[classPlaces[i]] && <Bi name="trophy-fill" style={{ color: MEDAL_COLORS[classPlaces[i]] }} />}
+                                                                    {classDisplayName(cls)}
                                                                 </td>
-                                                                {cls.subjectPerformance?.map((sub, j) => (
-                                                                    <td key={j} style={{
-                                                                        ...styles.tdC,
-                                                                        color: getAvgColor(sub.average, section.meanTarget),
-                                                                        fontWeight: 'bold'
-                                                                    }}>
-                                                                        {sub.average}
-                                                                    </td>
-                                                                ))}
-                                                                <td style={{
-                                                                    ...styles.tdTotal,
-                                                                    color: cls.meetingTarget ? '#28a745' : '#dc3545'
-                                                                }}>
-                                                                    <strong>{cls.classAverage}%</strong>
-                                                                </td>
+                                                                {subjectNames.map(name => {
+                                                                    const sub = cls.subjectPerformance?.find(s => s.subjectName === name);
+                                                                    return (
+                                                                        <td key={name} style={{ ...styles.tdC, color: sub ? getAvgColor(sub.average, section.meanTarget) : '#bbb', fontWeight: 'bold' }}>
+                                                                            {sub ? sub.average : '-'}
+                                                                        </td>
+                                                                    );
+                                                                })}
+                                                                <td style={{ ...styles.tdTotal, color: cls.meetingTarget ? '#28a745' : '#dc3545' }}><strong>{cls.classAverage}%</strong></td>
                                                                 <td style={styles.tdC}>
                                                                     <span style={{
                                                                         backgroundColor: cls.meetingTarget ? '#d4edda' : '#f8d7da',
                                                                         color: cls.meetingTarget ? '#155724' : '#721c24',
-                                                                        padding: '3px 8px', borderRadius: '3px', fontSize: '11px', fontWeight: 'bold'
+                                                                        padding: '3px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: 'bold', whiteSpace: 'nowrap'
                                                                     }}>
-                                                                        {cls.meetingTarget ? '✅ Above' : '❌ Below'}
+                                                                        <Bi name={cls.meetingTarget ? 'check-circle-fill' : 'x-circle-fill'} style={{ marginRight: '4px' }} />{cls.meetingTarget ? 'Above' : 'Below'}
                                                                     </span>
                                                                 </td>
                                                             </tr>
                                                         ))}
-                                                </tbody>
-                                            </table>
-                                        </div>
-                                    )}
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        )}
 
-
-                                    {/* Stream comparison bars */}
-                                    {section.classBreakdown?.some(c => c.streams?.length > 1) && (
-                                        <div style={{ marginTop: '15px' }}>
-                                            {section.classBreakdown.map((cls, i) => {
-                                                if (!cls.streams || cls.streams.length <= 1) return null;
-                                                const sorted = [...cls.streams].sort((a, b) => b.classAverage - a.classAverage);
-                                                const maxAvg = Math.max(...sorted.map(s => s.classAverage));
-                                                return (
-                                                    <div key={i} style={styles.streamCompCard}>
-                                                        <h4 style={styles.subTitle}>📈 {cls.className} — Stream Comparison</h4>
-                                                        {sorted.map((stream, k) => (
-                                                            <div key={k} style={styles.streamBarRow}>
-                                                                <div style={styles.streamBarLabel}>{classDisplayName(stream)}</div>
-                                                                <div style={styles.streamBarOuter}>
-                                                                    <div style={{
-                                                                        ...styles.streamBarInner,
-                                                                        width: `${(stream.classAverage / maxAvg) * 100}%`,
-                                                                        backgroundColor: stream.meetingTarget ? '#28a745' : '#dc3545'
-                                                                    }} />
-                                                                </div>
-                                                                <div style={{ ...styles.streamBarVal, color: stream.meetingTarget ? '#28a745' : '#dc3545' }}>
-                                                                    {stream.classAverage}%
-                                                                </div>
-                                                                <div style={styles.streamBarMeta}>
-                                                                    👥 {stream.totalStudents} | 🏆 {stream.topStudent}
-                                                                </div>
+                                        {/* Stream comparison bars */}
+                                        {(section.classBreakdown || []).map((cls, i) => {
+                                            if (!cls.streams || cls.streams.length <= 1) return null;
+                                            const sorted = [...cls.streams].sort((a, b) => num(b.classAverage) - num(a.classAverage));
+                                            const maxAvg = Math.max(...sorted.map(s => num(s.classAverage)), 1);
+                                            return (
+                                                <div key={i} style={styles.streamCompCard}>
+                                                    <h4 style={styles.subTitle}><Bi name="bar-chart-steps" />{cls.className} — Stream Comparison</h4>
+                                                    {sorted.map((stream, k) => (
+                                                        <div key={k} style={styles.streamBarRow}>
+                                                            <div style={styles.streamBarLabel}>{classDisplayName(stream)}</div>
+                                                            <div style={styles.streamBarOuter}>
+                                                                <div style={{ ...styles.streamBarInner, width: `${(num(stream.classAverage) / maxAvg) * 100}%`, backgroundColor: stream.meetingTarget ? '#28a745' : '#dc3545' }} />
                                                             </div>
-                                                        ))}
-                                                    </div>
-                                                );
-                                            })}
-                                        </div>
-                                    )}
+                                                            <div style={{ ...styles.streamBarVal, color: stream.meetingTarget ? '#28a745' : '#dc3545' }}>{stream.classAverage}%</div>
+                                                            <div style={styles.streamBarMeta}>
+                                                                <Bi name="people-fill" style={{ marginRight: '3px' }} />{stream.totalStudents}
+                                                                {stream.topStudent && <> | <Bi name="trophy-fill" style={{ marginRight: '3px', color: MEDAL_COLORS[1] }} />{String(stream.topStudent)}</>}
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
                                 </div>
-                            </div>
-                        )) : (
+                            );
+                        }) : (
                             <div style={styles.emptyState}>
-                                <div style={styles.emptyIcon}>📊</div>
+                                <Bi name="bar-chart" style={{ ...styles.emptyIcon, marginRight: 0 }} />
                                 <p>Select an exam, click <strong>Calculate Ranks</strong>, then click <strong>Generate Report</strong></p>
                             </div>
                         )}
@@ -603,70 +620,59 @@ function SectionReport() {
                 {/* ── STREAM MERIT LIST TAB ── */}
                 {activeTab === 'stream' && (
                     <div>
-                        {selectedExam && selectedClass && streamCards.length > 0 && (
-                            <div style={styles.printBar}>
-                                <span style={styles.printBarInfo}>📋 {classDisplayName(selectedClassObj)} — {streamCards.length} students</span>
-                                <OrientationToggle value={streamMeritOrientation} onChange={setStreamMeritOrientation} />
-                                <button onClick={handlePrintStreamMerit} style={styles.printBtn}>🖨️ Print Merit List</button>
-                            </div>
-                        )}
-                        {selectedExam && selectedClass && streamCards.length > 0 ? (
-                            <div style={styles.meritCard}>
-                                <div style={styles.meritHeader}>
-                                    <h3 style={styles.meritTitle}>📋 {classDisplayName(selectedClassObj)} — Stream Merit List</h3>
-                                    <p style={styles.meritSub}>{selectedExamObj?.examName} | Term {selectedExamObj?.term} {selectedExamObj?.academicYear}</p>
+                        {selectedExam && selectedClass && loadingCards ? <LoadingState /> :
+                         selectedExam && selectedClass && streamCards.length > 0 ? (
+                            <>
+                                <div style={styles.printBar}>
+                                    <span style={styles.printBarInfo}><Bi name="list-ol" />{selectedClassLabel} — {streamCards.length} students</span>
+                                    <OrientationToggle value={streamMeritOrientation} onChange={setStreamMeritOrientation} />
+                                    <button onClick={handlePrintStreamMerit} style={styles.printBtn}><Bi name="printer-fill" />Print Merit List</button>
                                 </div>
-                                <div style={{ overflowX: 'auto' }}>
-                                    <table style={styles.table}>
-                                        <thead>
-                                            <tr style={styles.thead}>
-                                                <th style={styles.th}>RANK</th>
-                                                <th style={styles.th}>ADM NO</th>
-                                                <th style={styles.th}>NAME</th>
-                                                {classSubjects.map(sub => (
-                                                    <th key={sub.subjectId} style={styles.thSub}>{sub.subjectName}</th>
-                                                ))}
-                                                <th style={styles.thTotal}>TOTAL</th>
-                                                <th style={styles.thTotal}>AVG %</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {[...streamCards].sort((a, b) => (a.classRank || 999) - (b.classRank || 999)).map((card, i) => (
-                                                <tr key={card.reportId} style={i % 2 === 0 ? styles.trEven : styles.trOdd}>
-                                                    <td style={styles.tdC}>
-                                                        <strong>{i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : card.classRank || i + 1}</strong>
-                                                    </td>
-                                                    <td style={styles.td}><span style={styles.admNo}>{card.student?.admissionNumber}</span></td>
-                                                    <td style={styles.td}><strong>{card.student?.firstName} {card.student?.lastName}</strong></td>
-                                                    {classSubjects.map(sub => (
-                                                        <td key={sub.subjectId} style={styles.tdC}>
-                                                            {getMark(card.student?.studentId, sub.subjectId)}
-                                                        </td>
-                                                    ))}
-                                                    <td style={styles.tdTotal}><strong>{card.totalMarks}</strong></td>
-                                                    <td style={styles.tdTotal}>
-                                                        <span style={{
-                                                            backgroundColor: card.averageMarks >= 80 ? '#28a745' : card.averageMarks >= 60 ? '#2E75B6' : card.averageMarks >= 40 ? '#ffc107' : '#dc3545',
-                                                            color: 'white', padding: '3px 8px', borderRadius: '3px', fontWeight: 'bold', fontSize: '12px'
-                                                        }}>
-                                                            {card.averageMarks?.toFixed(1)}%
-                                                        </span>
-                                                    </td>
+                                <RankNotice show={streamRanked.computed} />
+                                <div style={styles.meritCard}>
+                                    <div style={styles.meritHeader}>
+                                        <h3 style={styles.meritTitle}><Bi name="list-ol" />{selectedClassLabel} — Stream Merit List</h3>
+                                        <p style={styles.meritSub}>{examSubtitle}</p>
+                                    </div>
+                                    <div style={{ overflowX: 'auto' }}>
+                                        <table style={styles.table}>
+                                            <thead>
+                                                <tr style={styles.thead}>
+                                                    <th style={styles.th}>RANK</th>
+                                                    <th style={styles.th}>ADM NO</th>
+                                                    <th style={styles.th}>NAME</th>
+                                                    {streamSubjects.map(sub => <th key={sub.subjectId} style={styles.thSub}>{sub.subjectName}</th>)}
+                                                    <th style={styles.thTotal}>TOTAL</th>
+                                                    <th style={styles.thTotal}>AVG %</th>
                                                 </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
+                                            </thead>
+                                            <tbody>
+                                                {streamRanked.rows.map(({ card, rank }, i) => (
+                                                    <tr key={card.reportId} style={i % 2 === 0 ? styles.trEven : styles.trOdd}>
+                                                        <td style={styles.tdC}><RankCell rank={rank} /></td>
+                                                        <td style={styles.td}><span style={styles.admNo}>{card.student?.admissionNumber}</span></td>
+                                                        <td style={{ ...styles.td, whiteSpace: 'nowrap' }}><strong>{card.student?.firstName} {card.student?.lastName}</strong></td>
+                                                        {streamSubjects.map(sub => <td key={sub.subjectId} style={styles.tdC}>{getMark(card.student?.studentId, sub.subjectId)}</td>)}
+                                                        <td style={styles.tdTotal}><strong>{card.totalMarks ?? '-'}</strong></td>
+                                                        <td style={styles.tdTotal}>
+                                                            <span style={{ ...styles.avgBadge, backgroundColor: avgBadgeColor(card.averageMarks) }}>{fmtPct(card.averageMarks)}</span>
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                    <div style={styles.meritFooter}>
+                                        <span><Bi name="people-fill" />{streamCards.length} students</span>
+                                        <span><Bi name="graph-up" />Avg: {meanOf(streamRanked.rows)}%</span>
+                                        <span><Bi name="trophy-fill" style={{ color: MEDAL_COLORS[1] }} />Top: {streamRanked.rows[0]?.card.student?.firstName} {streamRanked.rows[0]?.card.student?.lastName}</span>
+                                    </div>
                                 </div>
-                                <div style={styles.meritFooter}>
-                                    <span>👥 {streamCards.length} students</span>
-                                    <span>📊 Avg: {(streamCards.reduce((s, c) => s + (c.averageMarks || 0), 0) / streamCards.length).toFixed(2)}%</span>
-                                    <span>🏆 Top: {[...streamCards].sort((a, b) => (a.classRank || 999) - (b.classRank || 999))[0]?.student?.firstName} {[...streamCards].sort((a, b) => (a.classRank || 999) - (b.classRank || 999))[0]?.student?.lastName}</span>
-                                </div>
-                            </div>
+                            </>
                         ) : (
                             <div style={styles.emptyState}>
-                                <div style={styles.emptyIcon}>📋</div>
-                                <p>{!selectedExam ? 'Select an exam first' : !selectedClass ? 'Select a class' : 'No report cards found. Calculate ranks first.'}</p>
+                                <Bi name="list-ol" style={{ ...styles.emptyIcon, marginRight: 0 }} />
+                                <p>{!selectedExam ? 'Select an exam first' : !selectedClass ? 'Select a class' : 'No report cards found for this class and exam. Generate report cards, then calculate ranks.'}</p>
                             </div>
                         )}
                     </div>
@@ -675,16 +681,12 @@ function SectionReport() {
                 {/* ── GRADE MERIT LIST TAB ── */}
                 {activeTab === 'grade' && (
                     <div>
-                        {/* Grade selector — dedicated to this tab, shows whole grades only */}
-                        <div style={{ backgroundColor: 'white', padding: '16px 20px', borderRadius: '10px', marginBottom: '16px', boxShadow: '0 2px 4px rgba(0,0,0,0.08)', display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
-                            <label style={{ ...styles.label, whiteSpace: 'nowrap' }}>🏫 Grade</label>
-                            {role === 'TEACHER' ? (
-                                <div style={styles.classDisplay}>
-                                    🔒 {gradeLabel(selectedGrade)} — All Streams
-                                </div>
+                        <div style={styles.gradePicker}>
+                            <label style={{ ...styles.label, whiteSpace: 'nowrap' }}><Bi name="building" />Grade</label>
+                            {isTeacher ? (
+                                <div style={styles.classDisplay}><Bi name="lock-fill" />{gradeLabel(selectedGrade)} — All Streams</div>
                             ) : (
-                                <select style={{ ...styles.select, minWidth: '220px' }} value={selectedGrade}
-                                    onChange={e => setSelectedGrade(e.target.value)}>
+                                <select style={{ ...styles.select, minWidth: '220px' }} value={selectedGrade} onChange={e => setSelectedGrade(e.target.value)}>
                                     <option value="">-- Select Grade --</option>
                                     {uniqueGrades.map(cls => {
                                         const streamCount = classes.filter(c => c.gradeLevel === cls.gradeLevel).length;
@@ -696,88 +698,72 @@ function SectionReport() {
                                     })}
                                 </select>
                             )}
-                            {selectedGrade && (
-                                <span style={{ color: '#666', fontSize: '13px' }}>
-                                    Combining: {selectedGradeClasses.map(c => classDisplayName(c)).join(', ')}
-                                </span>
-                            )}
+                            {selectedGrade && <span style={{ color: '#666', fontSize: '13px' }}>Combining: {gradeStreamNames}</span>}
                         </div>
 
-                        {selectedExam && selectedGrade && selectedGradeCards.length > 0 && (
-                            <div style={styles.printBar}>
-                                <span style={styles.printBarInfo}>🏫 {gradeLabel(selectedGrade)} — All Streams — {selectedGradeCards.length} students</span>
-                                <OrientationToggle value={gradeMeritOrientation} onChange={setGradeMeritOrientation} />
-                                <button onClick={handlePrintGradeMerit} style={styles.printBtn}>🖨️ Print Grade Merit List</button>
-                            </div>
-                        )}
-
-                        {selectedExam && selectedGrade && selectedGradeCards.length > 0 ? (
-                            <div style={styles.meritCard}>
-                                <div style={styles.meritHeader}>
-                                    <h3 style={styles.meritTitle}>🏫 {gradeLabel(selectedGrade)} — All Streams Merit List</h3>
-                                    <p style={styles.meritSub}>{selectedExamObj?.examName} | Term {selectedExamObj?.term} {selectedExamObj?.academicYear} | {selectedGradeClassNames.join(', ')}</p>
+                        {selectedExam && selectedGrade && loadingCards ? <LoadingState /> :
+                         selectedExam && selectedGrade && selectedGradeCards.length > 0 ? (
+                            <>
+                                <div style={styles.printBar}>
+                                    <span style={styles.printBarInfo}><Bi name="building" />{gradeLabel(selectedGrade)} — All Streams — {selectedGradeCards.length} students</span>
+                                    <OrientationToggle value={gradeMeritOrientation} onChange={setGradeMeritOrientation} />
+                                    <button onClick={handlePrintGradeMerit} style={styles.printBtn}><Bi name="printer-fill" />Print Grade Merit List</button>
                                 </div>
-                                <div style={{ overflowX: 'auto' }}>
-                                    <table style={styles.table}>
-                                        <thead>
-                                            <tr style={styles.thead}>
-                                                <th style={styles.th}>RANK</th>
-                                                <th style={styles.th}>STREAM</th>
-                                                <th style={styles.th}>ADM NO</th>
-                                                <th style={styles.th}>NAME</th>
-                                                {gradeSubjects.map(sub => (
-                                                    <th key={sub.subjectId} style={styles.thSub}>{sub.subjectName}</th>
-                                                ))}
-                                                <th style={styles.thTotal}>TOTAL</th>
-                                                <th style={styles.thTotal}>AVG %</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {[...selectedGradeCards].sort((a, b) => (a.termRank || 999) - (b.termRank || 999)).map((card, i) => (
-                                                <tr key={card.reportId} style={i % 2 === 0 ? styles.trEven : styles.trOdd}>
-                                                    <td style={styles.tdC}><strong>{card.termRank || i + 1}</strong></td>
-                                                    <td style={styles.tdC}>
-                                                        <span style={styles.streamBadge}>{classDisplayName(card.student)}</span>
-                                                    </td>
-                                                    <td style={styles.td}><span style={styles.admNo}>{card.student?.admissionNumber}</span></td>
-                                                    <td style={styles.td}><strong>{card.student?.firstName} {card.student?.lastName}</strong></td>
-                                                    {gradeSubjects.map(sub => (
-                                                        <td key={sub.subjectId} style={styles.tdC}>
-                                                            {getMark(card.student?.studentId, sub.subjectId)}
-                                                        </td>
-                                                    ))}
-                                                    <td style={styles.tdTotal}><strong>{card.totalMarks}</strong></td>
-                                                    <td style={styles.tdTotal}>
-                                                        <span style={{
-                                                            backgroundColor: card.averageMarks >= 80 ? '#28a745' : card.averageMarks >= 60 ? '#2E75B6' : card.averageMarks >= 40 ? '#ffc107' : '#dc3545',
-                                                            color: 'white', padding: '3px 8px', borderRadius: '3px', fontWeight: 'bold', fontSize: '12px'
-                                                        }}>
-                                                            {card.averageMarks?.toFixed(1)}%
-                                                        </span>
-                                                    </td>
+                                <RankNotice show={gradeRanked.computed} />
+                                <div style={styles.meritCard}>
+                                    <div style={styles.meritHeader}>
+                                        <h3 style={styles.meritTitle}><Bi name="building" />{gradeLabel(selectedGrade)} — All Streams Merit List</h3>
+                                        <p style={styles.meritSub}>{examSubtitle} | {gradeStreamNames}</p>
+                                    </div>
+                                    <div style={{ overflowX: 'auto' }}>
+                                        <table style={styles.table}>
+                                            <thead>
+                                                <tr style={styles.thead}>
+                                                    <th style={styles.th}>RANK</th>
+                                                    <th style={styles.th}>STREAM</th>
+                                                    <th style={styles.th}>ADM NO</th>
+                                                    <th style={styles.th}>NAME</th>
+                                                    {gradeMeritSubjects.map(sub => <th key={sub.subjectId} style={styles.thSub}>{sub.subjectName}</th>)}
+                                                    <th style={styles.thTotal}>TOTAL</th>
+                                                    <th style={styles.thTotal}>AVG %</th>
                                                 </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
+                                            </thead>
+                                            <tbody>
+                                                {gradeRanked.rows.map(({ card, rank }, i) => (
+                                                    <tr key={card.reportId} style={i % 2 === 0 ? styles.trEven : styles.trOdd}>
+                                                        <td style={styles.tdC}><RankCell rank={rank} /></td>
+                                                        <td style={styles.tdC}><span style={styles.streamBadge}>{classDisplayName(card.student)}</span></td>
+                                                        <td style={styles.td}><span style={styles.admNo}>{card.student?.admissionNumber}</span></td>
+                                                        <td style={{ ...styles.td, whiteSpace: 'nowrap' }}><strong>{card.student?.firstName} {card.student?.lastName}</strong></td>
+                                                        {gradeMeritSubjects.map(sub => <td key={sub.subjectId} style={styles.tdC}>{getMark(card.student?.studentId, sub.subjectId)}</td>)}
+                                                        <td style={styles.tdTotal}><strong>{card.totalMarks ?? '-'}</strong></td>
+                                                        <td style={styles.tdTotal}>
+                                                            <span style={{ ...styles.avgBadge, backgroundColor: avgBadgeColor(card.averageMarks) }}>{fmtPct(card.averageMarks)}</span>
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                    <div style={styles.meritFooter}>
+                                        <span><Bi name="people-fill" />{selectedGradeCards.length} students</span>
+                                        <span><Bi name="graph-up" />Avg: {meanOf(gradeRanked.rows)}%</span>
+                                        <span><Bi name="diagram-3-fill" />{selectedGradeClasses.length} stream{selectedGradeClasses.length !== 1 ? 's' : ''}</span>
+                                    </div>
                                 </div>
-                                <div style={styles.meritFooter}>
-                                    <span>👥 {selectedGradeCards.length} students</span>
-                                    <span>📊 Avg: {(selectedGradeCards.reduce((s, c) => s + (c.averageMarks || 0), 0) / selectedGradeCards.length).toFixed(2)}%</span>
-                                    <span>🏫 {selectedGradeClasses.length} stream{selectedGradeClasses.length !== 1 ? 's' : ''}</span>
-                                </div>
-                            </div>
+                            </>
                         ) : (
                             <div style={styles.emptyState}>
-                                <div style={styles.emptyIcon}>🏫</div>
-                                <p>{!selectedExam ? 'Select an exam first' : !selectedGrade ? 'Select a grade above' : 'No report cards found for this grade. Calculate ranks first.'}</p>
+                                <Bi name="building" style={{ ...styles.emptyIcon, marginRight: 0 }} />
+                                <p>{!selectedExam ? 'Select an exam first' : !selectedGrade ? 'Select a grade above' : 'No report cards found for this grade. Generate report cards, then calculate ranks.'}</p>
                             </div>
                         )}
                     </div>
                 )}
             </div>
 
-            {/* Hidden Print Areas — offscreen not display:none so react-to-print can read them */}
-            <div style={{ overflow: 'hidden', height: 0, position: 'fixed', top: 0, left: 0 }}>
+            {/* Hidden print areas — kept off-screen (not display:none) so react-to-print can read them */}
+            <div style={{ overflow: 'hidden', height: 0, width: 0, position: 'fixed', top: 0, left: 0 }}>
                 <PrintableSectionReport
                     ref={sectionReportRef}
                     report={report}
@@ -786,12 +772,21 @@ function SectionReport() {
                     year={selectedExamObj?.academicYear || ''}
                 />
                 <PrintableMeritList
+                    ref={streamMeritRef}
+                    rows={streamRanked.rows}
+                    getMark={getMark}
+                    subjects={streamSubjects}
+                    title={`${selectedClassLabel.toUpperCase()} MERIT LIST`}
+                    subtitle={examSubtitle}
+                    level="stream"
+                />
+                <PrintableMeritList
                     ref={gradeMeritRef}
-                    reportCards={selectedGradeCards}
-                    results={allResults}
-                    subjects={gradeSubjects}
-                    title={`${gradeLabel(selectedGrade) || ''} MERIT LIST — ALL STREAMS`}
-                    subtitle={`${selectedExamObj?.examName || ''} | Term ${selectedExamObj?.term || ''} ${selectedExamObj?.academicYear || ''} | ${selectedGradeClassNames.join(', ')}`}
+                    rows={gradeRanked.rows}
+                    getMark={getMark}
+                    subjects={gradeMeritSubjects}
+                    title={`${(gradeLabel(selectedGrade) || '').toUpperCase()} MERIT LIST — ALL STREAMS`}
+                    subtitle={`${examSubtitle} | ${gradeStreamNames}`}
                     level="grade"
                 />
             </div>
@@ -801,49 +796,53 @@ function SectionReport() {
     );
 }
 
+// Competition places for an already-sorted list (equal values share a place)
+function rankBy(sortedItems, valueFn) {
+    const places = [];
+    sortedItems.forEach((item, i) => {
+        places[i] = i > 0 && valueFn(item) === valueFn(sortedItems[i - 1]) ? places[i - 1] : i + 1;
+    });
+    return places;
+}
+
 const styles = {
     container: { minHeight: '100vh', backgroundColor: '#f0f2f5' },
     layoutRow: { display: 'flex' },
-    navbar: { backgroundColor: '#1F3864', padding: '15px 30px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
-    navLeft: { display: 'flex', alignItems: 'center', gap: '10px' },
-    navLogo: { width: '45px', height: '45px', objectFit: 'contain' },
-    navTitle: { color: 'white', margin: 0, fontSize: '18px' },
-    navRight: { display: 'flex', gap: '10px' },
-    navBtn: { backgroundColor: 'transparent', color: 'white', border: '1px solid white', padding: '8px 16px', borderRadius: '5px', cursor: 'pointer' },
-    logoutBtn: { backgroundColor: 'transparent', color: 'white', border: '1px solid white', padding: '8px 16px', borderRadius: '5px', cursor: 'pointer' },
-    content: { padding: '30px', flex: 1 },
+    content: { padding: '30px', flex: 1, minWidth: 0 },
     pageHeader: { marginBottom: '20px' },
-    title: { color: '#1F3864', margin: '0 0 5px 0', fontSize: '24px' },
+    title: { color: '#1F3864', margin: '0 0 5px 0', fontSize: '24px', fontWeight: 800 },
     subtitle: { color: '#666', margin: 0 },
-    error: { color: 'red', padding: '10px 15px', backgroundColor: '#fff3f3', borderRadius: '5px', marginBottom: '15px' },
-    success: { color: '#155724', padding: '10px 15px', backgroundColor: '#d4edda', borderRadius: '5px', marginBottom: '15px' },
+    error: { color: '#dc3545', padding: '10px 15px', backgroundColor: '#fff3f3', borderRadius: '10px', marginBottom: '15px', border: '1px solid #ffd6d6' },
+    success: { color: '#155724', padding: '10px 15px', backgroundColor: '#d4edda', borderRadius: '10px', marginBottom: '15px', border: '1px solid #c3e6cb' },
+    notice: { color: '#856404', padding: '10px 15px', backgroundColor: '#fff8e1', borderRadius: '10px', marginBottom: '15px', border: '1px solid #ffc107', fontSize: '13px' },
 
-    controlCard: { backgroundColor: 'white', padding: '20px', borderRadius: '10px', marginBottom: '20px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' },
-    controlGrid: { display: 'grid', gridTemplateColumns: '1fr 1fr auto', gap: '15px', alignItems: 'end', marginBottom: '10px' },
+    controlCard: { backgroundColor: 'white', padding: '20px', borderRadius: '14px', marginBottom: '20px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' },
+    controlGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '15px', alignItems: 'end', marginBottom: '10px' },
     formGroup: { display: 'flex', flexDirection: 'column', gap: '6px' },
     label: { fontWeight: 'bold', color: '#1F3864', fontSize: '13px' },
-    select: { padding: '10px', borderRadius: '5px', border: '2px solid #ddd', fontSize: '14px' },
-    classDisplay: { padding: '10px', borderRadius: '5px', border: '2px solid #1F3864', backgroundColor: '#e3f2fd', color: '#1F3864', fontWeight: 'bold', fontSize: '14px' },
+    select: { padding: '10px', borderRadius: '8px', border: '2px solid #ddd', fontSize: '16px', backgroundColor: 'white' },
+    classDisplay: { padding: '10px', borderRadius: '8px', border: '2px solid #1F3864', backgroundColor: '#e3f2fd', color: '#1F3864', fontWeight: 'bold', fontSize: '14px' },
     btnCol: { display: 'flex', flexDirection: 'column', gap: '8px' },
-    rankBtn: { backgroundColor: '#2E75B6', color: 'white', border: 'none', padding: '10px 20px', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold', whiteSpace: 'nowrap' },
-    reportBtn: { backgroundColor: '#1F3864', color: 'white', border: 'none', padding: '10px 20px', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold', whiteSpace: 'nowrap' },
+    rankBtn: { backgroundColor: '#2E75B6', color: 'white', border: 'none', padding: '10px 20px', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold', whiteSpace: 'nowrap' },
+    reportBtn: { backgroundColor: '#1F3864', color: 'white', border: 'none', padding: '10px 20px', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold', whiteSpace: 'nowrap' },
     hint: { color: '#666', fontSize: '13px', fontStyle: 'italic', margin: 0 },
 
     quickStats: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '12px', marginBottom: '20px' },
-    quickStatCard: { backgroundColor: 'white', borderRadius: '10px', padding: '15px', boxShadow: '0 2px 4px rgba(0,0,0,0.08)' },
+    quickStatCard: { backgroundColor: 'white', borderRadius: '14px', padding: '15px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' },
     quickStatName: { fontSize: '12px', fontWeight: 'bold', color: '#666', marginBottom: '4px' },
     quickStatAvg: { fontSize: '28px', fontWeight: 'bold', lineHeight: 1 },
     quickStatMeta: { fontSize: '11px', color: '#999', margin: '4px 0' },
-    quickStatBadge: { fontSize: '11px', fontWeight: 'bold', padding: '3px 8px', borderRadius: '3px', display: 'inline-block', marginTop: '4px' },
+    quickStatBadge: { fontSize: '11px', fontWeight: 'bold', padding: '3px 8px', borderRadius: '4px', display: 'inline-flex', alignItems: 'center', marginTop: '4px' },
 
     tabs: { display: 'flex', gap: '10px', marginBottom: '20px', flexWrap: 'wrap' },
-    tab: { padding: '10px 20px', borderRadius: '5px', border: '2px solid #1F3864', cursor: 'pointer', fontWeight: 'bold', fontSize: '14px' },
+    tab: { padding: '10px 20px', borderRadius: '10px', border: '2px solid #1F3864', cursor: 'pointer', fontWeight: 'bold', fontSize: '14px' },
+    gradePicker: { backgroundColor: 'white', padding: '16px 20px', borderRadius: '14px', marginBottom: '16px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)', display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' },
 
-    printBar: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: 'white', padding: '12px 20px', borderRadius: '8px', marginBottom: '15px', boxShadow: '0 2px 4px rgba(0,0,0,0.08)', flexWrap: 'wrap', gap: '10px' },
+    printBar: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: 'white', padding: '12px 20px', borderRadius: '10px', marginBottom: '15px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)', flexWrap: 'wrap', gap: '10px' },
     printBarInfo: { color: '#1F3864', fontWeight: 'bold', fontSize: '14px' },
-    printBtn: { backgroundColor: '#28a745', color: 'white', border: 'none', padding: '10px 20px', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold' },
+    printBtn: { backgroundColor: '#28a745', color: 'white', border: 'none', padding: '10px 20px', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' },
 
-    sectionCard: { backgroundColor: 'white', borderRadius: '10px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)', marginBottom: '25px', overflow: 'hidden' },
+    sectionCard: { backgroundColor: 'white', borderRadius: '14px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)', marginBottom: '25px', overflow: 'hidden' },
     sectionHeader: { padding: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '15px' },
     sectionTitle: { color: 'white', margin: '0 0 5px 0', fontSize: '20px' },
     sectionSub: { color: 'rgba(255,255,255,0.8)', margin: 0, fontSize: '13px' },
@@ -851,24 +850,16 @@ const styles = {
     statBox: { textAlign: 'center', backgroundColor: 'rgba(255,255,255,0.15)', padding: '8px 14px', borderRadius: '8px' },
     statNum: { color: 'white', fontSize: '22px', fontWeight: 'bold', display: 'block' },
     statLbl: { color: 'rgba(255,255,255,0.8)', fontSize: '11px', display: 'block' },
-    targetBadge: { color: 'white', padding: '8px 14px', borderRadius: '5px', fontWeight: 'bold', fontSize: '13px' },
+    targetBadge: { color: 'white', padding: '8px 14px', borderRadius: '8px', fontWeight: 'bold', fontSize: '13px' },
     sectionBody: { padding: '20px' },
-
     subTitle: { color: '#1F3864', margin: '0 0 12px 0', fontSize: '15px' },
 
-    topCard: { backgroundColor: '#f8f9fa', padding: '15px', borderRadius: '8px', marginBottom: '20px' },
-    topGrid: { display: 'flex', gap: '10px', flexWrap: 'wrap' },
-    topItem: { display: 'flex', alignItems: 'center', gap: '10px', backgroundColor: 'white', padding: '8px 14px', borderRadius: '6px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)' },
-    topRank: { width: '28px', height: '28px', borderRadius: '50%', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '13px', flexShrink: 0 },
-    topName: { fontWeight: 'bold', color: '#1F3864', fontSize: '13px' },
-    topMeta: { fontSize: '12px', color: '#666' },
-
-    streamCompCard: { backgroundColor: '#f8f9fa', padding: '15px', borderRadius: '8px', marginBottom: '15px' },
-    streamBarRow: { display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' },
-    streamBarLabel: { width: '60px', fontSize: '12px', fontWeight: 'bold', color: '#1F3864', flexShrink: 0 },
-    streamBarOuter: { flex: 1, height: '18px', backgroundColor: '#e9ecef', borderRadius: '9px', overflow: 'hidden' },
+    streamCompCard: { backgroundColor: '#f8f9fa', padding: '15px', borderRadius: '10px', marginBottom: '15px' },
+    streamBarRow: { display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px', flexWrap: 'wrap' },
+    streamBarLabel: { width: '90px', fontSize: '12px', fontWeight: 'bold', color: '#1F3864', flexShrink: 0 },
+    streamBarOuter: { flex: 1, minWidth: '120px', height: '18px', backgroundColor: '#e9ecef', borderRadius: '9px', overflow: 'hidden' },
     streamBarInner: { height: '100%', borderRadius: '9px', transition: 'width 0.5s ease' },
-    streamBarVal: { width: '50px', fontSize: '13px', fontWeight: 'bold', textAlign: 'right', flexShrink: 0 },
+    streamBarVal: { width: '55px', fontSize: '13px', fontWeight: 'bold', textAlign: 'right', flexShrink: 0 },
     streamBarMeta: { fontSize: '11px', color: '#666', flexShrink: 0 },
 
     table: { width: '100%', borderCollapse: 'collapse' },
@@ -881,17 +872,18 @@ const styles = {
     tdTotal: { padding: '9px 12px', borderBottom: '1px solid #eee', fontSize: '13px', textAlign: 'center', backgroundColor: '#f0f4ff' },
     trEven: { backgroundColor: '#fafafa' },
     trOdd: { backgroundColor: 'white' },
-    admNo: { fontFamily: 'monospace', fontSize: '11px', backgroundColor: '#e3f2fd', color: '#1F3864', padding: '2px 5px', borderRadius: '3px' },
-    streamBadge: { backgroundColor: '#e3f2fd', color: '#1F3864', padding: '2px 8px', borderRadius: '3px', fontSize: '12px', fontWeight: 'bold' },
+    admNo: { fontFamily: 'monospace', fontSize: '11px', backgroundColor: '#e3f2fd', color: '#1F3864', padding: '2px 5px', borderRadius: '4px' },
+    streamBadge: { backgroundColor: '#e3f2fd', color: '#1F3864', padding: '2px 8px', borderRadius: '4px', fontSize: '12px', fontWeight: 'bold', whiteSpace: 'nowrap' },
+    avgBadge: { color: 'white', padding: '3px 8px', borderRadius: '4px', fontWeight: 'bold', fontSize: '12px' },
 
-    meritCard: { backgroundColor: 'white', borderRadius: '10px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)', overflow: 'hidden', marginBottom: '20px' },
+    meritCard: { backgroundColor: 'white', borderRadius: '14px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)', overflow: 'hidden', marginBottom: '20px' },
     meritHeader: { backgroundColor: '#1F3864', padding: '15px 20px' },
     meritTitle: { color: 'white', margin: '0 0 5px 0', fontSize: '18px' },
     meritSub: { color: '#BDD7EE', margin: 0, fontSize: '13px' },
     meritFooter: { display: 'flex', gap: '30px', padding: '12px 20px', backgroundColor: '#f8f9fa', borderTop: '1px solid #eee', fontWeight: 'bold', color: '#1F3864', fontSize: '13px', flexWrap: 'wrap' },
 
-    emptyState: { backgroundColor: 'white', padding: '60px', borderRadius: '10px', textAlign: 'center', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' },
-    emptyIcon: { fontSize: '48px', marginBottom: '15px' },
+    emptyState: { backgroundColor: 'white', padding: '60px 20px', borderRadius: '14px', textAlign: 'center', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' },
+    emptyIcon: { fontSize: '48px', marginBottom: '15px', display: 'inline-block', color: '#BDD7EE' },
 };
 
 const pStyles = {

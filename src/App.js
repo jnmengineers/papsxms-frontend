@@ -16,6 +16,12 @@ import ExamSchedules from './pages/ExamSchedules';
 import Users from './pages/Users';
 import Unauthorized from './components/Unauthorized';
 import MarkEntry from './pages/MarkEntry';
+import AttendanceRegister from './pages/AttendanceRegister';
+import Finance from './pages/Finance';
+import MealsTransport from './pages/MealsTransport';
+import Timetable from './pages/Timetable';
+import Announcements from './pages/Announcements';
+import Transport from './pages/Transport';
 import ClassSubjects from './pages/ClassSubjects';
 import SectionReport from './pages/SectionReport';
 import StudentProfile from './pages/StudentProfile';
@@ -25,10 +31,13 @@ import ProgressiveReport from './pages/ProgressiveReport';
 import InactivityTimeout from './components/InactivityTimeout';
 import UpdateChecker from './components/UpdateChecker';
 import { SidebarProvider } from './context/SidebarContext';
+import { SchoolSettingsProvider } from './context/SchoolSettingsContext';
+import Settings from './pages/Settings';
 import ScrollToTop from './components/ScrollToTop';
 
 function App() {
     return (
+        <SchoolSettingsProvider>
         <SidebarProvider>
         <Router>
              <ScrollToTop />
@@ -41,19 +50,19 @@ function App() {
 
                 {/* All logged in users */}
                 <Route path="/dashboard" element={
-                    <PrivateRoute allowedRoles={['ADMIN', 'TEACHER', 'CLERK']}>
+                    <PrivateRoute allowedRoles={['ADMIN', 'TEACHER', 'CLERK', 'ACCOUNTANT']}>
                         <Dashboard />
                     </PrivateRoute>
                 } />
 
-                {/* ADMIN and TEACHER */}
+                {/* ADMIN, TEACHER and CLERK (clerk = school secretary) */}
                 <Route path="/students" element={
-                    <PrivateRoute allowedRoles={['ADMIN', 'TEACHER']}>
+                    <PrivateRoute allowedRoles={['ADMIN', 'TEACHER', 'CLERK']}>
                         <Students />
                     </PrivateRoute>
                 } />
                 <Route path="/reportcards" element={
-                    <PrivateRoute allowedRoles={['ADMIN', 'TEACHER']}>
+                    <PrivateRoute allowedRoles={['ADMIN', 'TEACHER', 'CLERK']}>
                         <ReportCards />
                     </PrivateRoute>
                 } />
@@ -62,13 +71,18 @@ function App() {
                         <MarkEntry />
                     </PrivateRoute>
                 } />
-                <Route path="/progressive-report" element={
+                <Route path="/attendance" element={
                     <PrivateRoute allowedRoles={['ADMIN', 'TEACHER']}>
+                        <AttendanceRegister />
+                    </PrivateRoute>
+                } />
+                <Route path="/progressive-report" element={
+                    <PrivateRoute allowedRoles={['ADMIN', 'TEACHER', 'CLERK']}>
                         <ProgressiveReport />
                     </PrivateRoute>
                 } />
                 <Route path="/student/:studentId" element={
-                    <PrivateRoute allowedRoles={['ADMIN', 'TEACHER']}>
+                    <PrivateRoute allowedRoles={['ADMIN', 'TEACHER', 'CLERK']}>
                         <StudentProfile />
                     </PrivateRoute>
                 } />
@@ -131,21 +145,58 @@ function App() {
                         <Users />
                     </PrivateRoute>
                 } />
+                <Route path="/settings" element={
+                    <PrivateRoute allowedRoles={['ADMIN']}>
+                        <Settings />
+                    </PrivateRoute>
+                } />
                 <Route path="/import" element={
                     <PrivateRoute allowedRoles={['ADMIN']}>
                         <Import />
                     </PrivateRoute>
                 } />
 
+                {/* Everyone: timetable and notices */}
+                <Route path="/timetable" element={
+                    <PrivateRoute allowedRoles={['ADMIN', 'TEACHER', 'CLERK', 'ACCOUNTANT']}>
+                        <Timetable />
+                    </PrivateRoute>
+                } />
+                <Route path="/announcements" element={
+                    <PrivateRoute allowedRoles={['ADMIN', 'TEACHER', 'CLERK', 'ACCOUNTANT']}>
+                        <Announcements />
+                    </PrivateRoute>
+                } />
+
+                {/* Class teachers tick meals, trips and bus users (own class, current term) */}
+                <Route path="/meals-transport" element={
+                    <PrivateRoute allowedRoles={['ADMIN', 'ACCOUNTANT', 'TEACHER']}>
+                        <MealsTransport />
+                    </PrivateRoute>
+                } />
+
+                {/* ADMIN and ACCOUNTANT (bursar) */}
+                <Route path="/finance" element={
+                    <PrivateRoute allowedRoles={['ADMIN', 'ACCOUNTANT']}>
+                        <Finance />
+                    </PrivateRoute>
+                } />
+                <Route path="/transport" element={
+                    <PrivateRoute allowedRoles={['ADMIN', 'ACCOUNTANT']}>
+                        <Transport />
+                    </PrivateRoute>
+                } />
+
                 {/* All roles */}
                 <Route path="/change-password" element={
-                    <PrivateRoute allowedRoles={['ADMIN', 'TEACHER', 'CLERK']}>
+                    <PrivateRoute allowedRoles={['ADMIN', 'TEACHER', 'CLERK', 'ACCOUNTANT']}>
                         <ChangePassword />
                     </PrivateRoute>
                 } />
             </Routes>
         </Router>
         </SidebarProvider>
+        </SchoolSettingsProvider>
     );
 }
 
