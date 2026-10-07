@@ -1,12 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
 import api from '../services/api';
-import { classDisplayName } from '../utils/classUtils';
+import { classDisplayName, classLabel } from '../utils/classUtils';
 import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
 import Footer from '../components/Footer';
 import PriceEditor from '../components/PriceEditor';
 import { letterheadHtml } from '../utils/school';
 import { useSchoolSettings } from '../context/SchoolSettingsContext';
+import { useTabParam } from '../utils/useTabParam';
 
 const Icon = ({ name, style }) => <i className={`bi bi-${name}`} aria-hidden="true" style={{ marginRight: '6px', ...style }} />;
 
@@ -37,9 +38,12 @@ const priceAmount = (p, route, dir) => {
 const priceText = (basis, quantity) => basis === 'MONTHS' ? `${quantity} month${quantity === 1 ? '' : 's'}`
     : basis === 'DAYS' ? `${quantity} day${quantity === 1 ? '' : 's'}` : basis === 'CUSTOM' ? 'agreed' : '';
 
+// Tab names for the Back button ("Back to … · …"); the current tab is kept in the address (?tab=…)
+const TAB_NAMES = { riders: 'Riders', lists: 'Bus Lists', routes: 'Destinations & Fares', fleet: 'Fleet' };
+
 function Transport() {
     useSchoolSettings();   // re-draws when School Settings have loaded
-    const [tab, setTab] = useState('riders');
+    const [tab, setTab] = useTabParam('riders', TAB_NAMES);
     const [classes, setClasses] = useState([]);
     const [years, setYears] = useState([]);
     const [routes, setRoutes] = useState([]);
@@ -278,7 +282,7 @@ const RidersTab = ({ termOptions, defaultTerm, classes, routes, vehicles, setErr
                                         <tr key={r.studentId} style={{ backgroundColor: ch ? '#fff8e1' : v.routeId ? '#f3fbf5' : i % 2 ? 'white' : '#fafafa' }}>
                                             <td style={styles.td}>
                                                 <strong style={{ color: '#1F3864' }}>{r.name}</strong>
-                                                <div style={styles.adm}>{r.admissionNumber} · {r.className}</div>
+                                                <div style={styles.adm}>{r.admissionNumber} · {classLabel(r.className)}</div>
                                                 {ch && <span style={styles.changedTag}>{!r.routeId ? 'new rider' : !v.routeId ? 'will stop' : 'changed'}</span>}
                                             </td>
                                             <td style={styles.td}>
@@ -380,7 +384,7 @@ const BusListsTab = ({ termOptions, defaultTerm, routes, vehicles, setError }) =
             ${g.byRoute.map(([route, list]) => `
                 <h4 style="margin:14px 0 4px;color:#1F3864">${esc(route)} (${list.length})</h4>
                 <table><thead><tr><th>#</th><th>Learner</th><th>Class</th><th>Trips</th><th style="width:22%">Picked by / notes</th></tr></thead><tbody>
-                ${list.map((r, i) => `<tr><td>${i + 1}</td><td>${esc(r.name)}</td><td>${esc(r.className)}</td><td>${esc(dirLabel(r.direction))}</td><td></td></tr>`).join('')}
+                ${list.map((r, i) => `<tr><td>${i + 1}</td><td>${esc(r.name)}</td><td>${esc(classLabel(r.className))}</td><td>${esc(dirLabel(r.direction))}</td><td></td></tr>`).join('')}
                 </tbody></table>`).join('')}`;
         const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${esc(title)}</title><style>
             body{font-family:'Times New Roman',serif;font-size:12px;padding:15px;color:#000}table{width:100%;border-collapse:collapse}

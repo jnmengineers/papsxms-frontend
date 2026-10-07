@@ -8,6 +8,8 @@ import { classDisplayName, streamLabel } from '../utils/classUtils';
 import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
 import Footer from '../components/Footer';
+import { useSmartBack } from '../components/BackButton';
+import { LearnerGlance, FeesTab, LearnerAttendanceTab, ParentsTab, canSeeFees, canSeeParents } from './LearnerTabs';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 const Bi = ({ name, style }) => (
@@ -93,7 +95,9 @@ function StudentProfile() {
         setLoading(false);
     };
 
-    const goBack = () => { if (window.history.length > 1) navigate(-1); else navigate('/students'); };
+    // Smart back: to the page you came from, or to Students if this page was opened directly
+    const back = useSmartBack();
+    const goBack = back.go;
 
     // Group results by EXAM (not exam name — every term has an "End Term")
     const examGroups = Object.values(results.reduce((acc, r) => {
@@ -120,7 +124,7 @@ function StudentProfile() {
     const shell = (children) => (
         <div style={styles.container}>
             <Navbar rightContent={
-                <button onClick={goBack} style={styles.navBackBtn}><Bi name="arrow-left" />Back</button>
+                <button onClick={goBack} style={styles.navBackBtn}><Bi name="arrow-left" />Back to {back.label}</button>
             } />
             <div style={styles.layoutRow}>
                 <Sidebar />
@@ -158,6 +162,9 @@ function StudentProfile() {
         { id: 'overview', icon: 'grid-1x2-fill', label: 'Overview' },
         { id: 'results', icon: 'journal-text', label: `Results (${results.length})` },
         { id: 'reportcards', icon: 'clipboard-data', label: `Report Cards (${reportCards.length})` },
+        ...(canSeeFees() ? [{ id: 'fees', icon: 'wallet2', label: 'Fees' }] : []),
+        { id: 'attendance', icon: 'calendar-check', label: 'Attendance' },
+        ...(canSeeParents() ? [{ id: 'parents', icon: 'people-fill', label: 'Parents' }] : []),
     ];
 
     return shell(
@@ -212,6 +219,7 @@ function StudentProfile() {
 
             {activeTab === 'overview' && (
                 <div>
+                    <div style={{ gridColumn: '1 / -1' }}><LearnerGlance studentId={studentId} /></div>
                     <div style={styles.card}>
                         <h3 style={styles.cardTitle}><Bi name="person-fill" />Student Details</h3>
                         <div style={styles.detailGrid}>
@@ -316,6 +324,9 @@ function StudentProfile() {
                 </div>
             )}
 
+            {activeTab === 'fees' && <FeesTab studentId={studentId} />}
+            {activeTab === 'attendance' && <LearnerAttendanceTab studentId={studentId} />}
+            {activeTab === 'parents' && <ParentsTab studentId={studentId} />}
             {activeTab === 'reportcards' && (
                 <div>
                     {reportCards.length === 0 ? (

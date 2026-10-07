@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import api from '../services/api';
-import { classDisplayName } from '../utils/classUtils';
+import { classDisplayName, classLabel } from '../utils/classUtils';
 import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
 import Footer from '../components/Footer';
@@ -8,11 +8,16 @@ import PriceEditor from '../components/PriceEditor';
 import ClassPrintsTab from './FinancePrints';
 import FinanceHome from './FinanceHome';
 import ExpensesTab from './FinanceExpenses';
+import BankReconciliationTab from './FinanceBankRec';
+import ChequesTab from './FinanceCheques';
 import MoneyReportTab from './FinanceReports';
 import MoneyGroupsTab from './FinanceSetup';
 import { letterheadHtml, paymentHtml } from '../utils/school';
 import { SECTION_NAMES_LIVE, gradeRankOf } from '../utils/schoolData';
 import { useSchoolSettings } from '../context/SchoolSettingsContext';
+import { useTabParam } from '../utils/useTabParam';
+import FeeRemindersTab from './FeeReminders';
+import { hasRole } from '../utils/roles';
 
 const Icon = ({ name, style }) => <i className={`bi bi-${name}`} aria-hidden="true" style={{ marginRight: '6px', ...style }} />;
 
@@ -108,9 +113,12 @@ const LearnerPicker = ({ students, value, onPick }) => {
     );
 };
 
+// Tab names for the Back button ("Back to … · …"); the current tab is kept in the address (?tab=…)
+const TAB_NAMES = { home: 'Home', balances: 'Balances', reminders: 'Fee Reminders', payment: 'Record Payment', statement: 'Statement', prints: 'Class Printouts', structures: 'Fee Structures', extras: 'Extra Charges', billing: 'Billing', daybook: 'Payments Received', expenses: 'Expenses', cheques: 'Cheques & M-Pesa line', bankrec: 'Bank Reconciliation', report: 'Money In & Out Report', setup: 'Money Groups' };
+
 function Finance() {
     useSchoolSettings();   // re-draws when School Settings have loaded
-    const [tab, setTab] = useState('home');
+    const [tab, setTab] = useTabParam('home', TAB_NAMES);
     const [classes, setClasses] = useState([]);
     const [students, setStudents] = useState([]);
     const [years, setYears] = useState([]);
@@ -155,9 +163,9 @@ function Finance() {
     // Tabs grouped by job: pick a group, then a page within it
     const TAB_GROUPS = [
         { key: 'home', icon: 'house-door-fill', label: 'Home', tabs: [['home', 'house-door-fill', 'Home']] },
-        { key: 'learners', icon: 'people-fill', label: 'Learners', tabs: [['balances', 'wallet2', 'Balances'], ['payment', 'cash-coin', 'Record Payment'], ['statement', 'journal-text', 'Statement'], ['prints', 'printer-fill', 'Class Printouts']] },
+        { key: 'learners', icon: 'people-fill', label: 'Learners', tabs: [['balances', 'wallet2', 'Balances'], ...(hasRole('ADMIN', 'ACCOUNTANT') ? [['reminders', 'bell-fill', 'Fee Reminders']] : []), ['payment', 'cash-coin', 'Record Payment'], ['statement', 'journal-text', 'Statement'], ['prints', 'printer-fill', 'Class Printouts']] },
         { key: 'charges', icon: 'tags-fill', label: 'Charges', tabs: [['structures', 'tags-fill', 'Fee Structures'], ['extras', 'check2-square', 'Extra Charges'], ['billing', 'receipt-cutoff', 'Billing']] },
-        { key: 'money', icon: 'arrow-left-right', label: 'Money In & Out', tabs: [['daybook', 'list-check', 'Payments Received'], ['expenses', 'bag-dash-fill', 'Expenses']] },
+        { key: 'money', icon: 'arrow-left-right', label: 'Money In & Out', tabs: [['daybook', 'list-check', 'Payments Received'], ['expenses', 'bag-dash-fill', 'Expenses'], ['cheques', 'journal-text', 'Cheques & M-Pesa line'], ['bankrec', 'bank', 'Bank Reconciliation']] },
         { key: 'reports', icon: 'bar-chart-fill', label: 'Reports', tabs: [['report', 'bar-chart-fill', 'Money In & Out Report']] },
         { key: 'setup', icon: 'gear-fill', label: 'Setup', tabs: [['setup', 'collection-fill', 'Money Groups']] },
     ];
@@ -205,9 +213,12 @@ function Finance() {
                     {tab === 'report' && <MoneyReportTab termOptions={termOptions} defaultTerm={defaultTerm} setError={setError} blocked={blocked} />}
                     {tab === 'setup' && <MoneyGroupsTab setError={setError} flashSuccess={flashSuccess} />}
 
+                    {tab === 'reminders' && <FeeRemindersTab setError={setError} flashSuccess={flashSuccess} />}
                     {tab === 'balances' && <BalancesTab classes={classes} onPay={s => openLearner(s, 'payment')} onStatement={s => openLearner(s, 'statement')} setError={setError} blocked={blocked} />}
                     {tab === 'payment' && <PaymentTab students={students} learner={learner} setLearner={setLearner} setError={setError} flashSuccess={flashSuccess} blocked={blocked} onStatement={s => openLearner(s, 'statement')} />}
                     {tab === 'statement' && <StatementTab students={students} learner={learner} setLearner={setLearner} setError={setError} flashSuccess={flashSuccess} blocked={blocked} onPay={s => openLearner(s, 'payment')} />}
+                    {tab === 'cheques' && <ChequesTab setError={setError} flashSuccess={flashSuccess} blocked={blocked} />}
+                    {tab === 'bankrec' && <BankReconciliationTab setError={setError} blocked={blocked} flashSuccess={flashSuccess} />}
                     {tab === 'daybook' && <DayBookTab setError={setError} flashSuccess={flashSuccess} blocked={blocked} />}
                     {tab === 'prints' && <ClassPrintsTab termOptions={termOptions} defaultTerm={defaultTerm} classes={classes} sections={sections} setError={setError} blocked={blocked} />}
                     {tab === 'structures' && <StructuresTab termOptions={termOptions} defaultTerm={defaultTerm} sections={sections} setError={setError} flashSuccess={flashSuccess} />}
@@ -308,6 +319,115 @@ const BalancesTab = ({ classes, onPay, onStatement, setError, blocked }) => {
     );
 };
 
+// ══ One M-Pesa / bank payment for several children (siblings) ══════════════
+// Enter the code and the total on the message once, add the children, share the money
+// (by what each owes, or by hand). Saves only when the shares add up exactly to the total.
+const SplitPayment = ({ students, setError, flashSuccess, blocked }) => {
+    const [head, setHead] = useState({ method: 'MPESA', reference: '', total: '', paidOn: todayISO(), payerName: '' });
+    const [kids, setKids] = useState([]);           // [{ student, balance, amount }]
+    const [saving, setSaving] = useState(false);
+    const [done, setDone] = useState(null);
+    const m = methodOf(head.method);
+    const total = Number(head.total || 0);
+    const shared = kids.reduce((a, k) => a + Number(k.amount || 0), 0);
+    const left = Math.round((total - shared) * 100) / 100;
+    const add = (st) => {
+        if (!st || kids.some(k => k.student.studentId === st.studentId)) return;
+        const row = { student: st, balance: null, amount: '' };
+        setKids(list => [...list, row]);
+        api.get(`/api/finance/students/${st.studentId}/statement`).then(r => setKids(list => list.map(k => (k.student.studentId === st.studentId ? { ...k, balance: Number(r.data.balance) } : k)))).catch(() => {});
+        // Siblings (children who share a parent) — offered with one tap
+        api.get(`/api/guardians/student/${st.studentId}`).then(r => setSiblings(prev => {
+            const more = (r.data.siblings || []).filter(x => !prev.some(p => p.studentId === x.studentId));
+            return [...prev, ...more];
+        })).catch(() => {});
+    };
+    const [siblings, setSiblings] = useState([]);
+    const suggest = siblings.filter(x => !kids.some(k => k.student.studentId === x.studentId));
+    // Cover each child's balance in turn; anything extra goes to the last child (as credit)
+    const byBalance = () => {
+        let rest = total;
+        setKids(list => list.map((k, i) => {
+            const want = i === list.length - 1 ? rest : Math.max(0, Math.min(rest, Number(k.balance || 0)));
+            rest = Math.round((rest - want) * 100) / 100;
+            return { ...k, amount: want ? String(Math.round(want * 100) / 100) : '' };
+        }));
+    };
+    const save = async () => {
+        if (head.reference.trim().length < 4) { setError(`Enter the ${m.ref}.`); return; }
+        if (!total) { setError('Enter the total paid (the amount on the message).'); return; }
+        if (kids.length < 2) { setError('Add at least two children.'); return; }
+        if (kids.some(k => !Number(k.amount))) { setError("Enter each child's share."); return; }
+        if (Math.abs(left) > 0.004) { setError(`The shares must add up to ${kes(total)} — ${left > 0 ? `${kes(left)} is not shared yet` : `they are ${kes(-left)} too much`}.`); return; }
+        if (!window.confirm(`Record ONE ${m.label} payment (${head.reference.trim().toUpperCase()}) of ${kes(total)} for ${kids.length} children?\n\n${kids.map(k => `• ${k.student.firstName} ${k.student.lastName}: ${kes(k.amount)}`).join('\n')}`)) return;
+        setSaving(true); setError('');
+        try {
+            const r = await api.post('/api/finance/payments/split', { method: head.method, reference: head.reference, payerName: head.payerName, paidOn: head.paidOn,
+                total: String(head.total).trim(), parts: kids.map(k => ({ studentId: k.student.studentId, amount: String(k.amount).trim() })) });
+            setDone(r.data); setKids([]); setSiblings([]); setHead(h => ({ ...h, reference: '', total: '', payerName: '' }));
+            flashSuccess(r.data.message);
+        } catch (err) { setError(serverMessage(err, 'Failed to record the payment.')); }
+        setSaving(false);
+    };
+    const printFamily = (d) => {
+        const summary = `<div style="border:2px solid #1F3864;border-radius:8px;padding:10px 14px;margin:0 0 14px">
+            <b style="color:#1F3864">ONE PAYMENT FOR ${d.receipts.length} CHILDREN</b> — ${esc(methodOf(d.receipts[0].method).label)} ${esc(d.reference)} · ${esc(fmtDate(d.receipts[0].paidOn))} · <b>${esc(kes(d.total))}</b>
+            <table style="width:100%;border-collapse:collapse;margin-top:6px">${d.receipts.map(r => `<tr><td style="padding:3px 0">${esc(r.student?.name)}</td><td>${esc(r.receiptNumber)}</td><td style="text-align:right">${esc(kes(r.amount))}</td><td style="text-align:right;color:#555">balance ${esc(kes(r.newBalance))}</td></tr>`).join('')}</table></div>`;
+        openPrint(`Receipts — ${d.reference}`, summary + d.receipts.map(r => receiptHtml(r)).join('<div style="page-break-before:always"></div>'), blocked);
+    };
+    return (
+        <div>
+            <p style={{ fontSize: '13px', color: '#555', margin: '0 0 10px' }}>When a parent pays for more than one child with <b>one</b> M-Pesa code or bank slip: enter the total on the message once, then share it. Each child gets a receipt; the bank check adds them up.</p>
+            <div style={{ display: 'flex', gap: '6px', marginBottom: '10px', flexWrap: 'wrap' }}>
+                {METHODS.map(x => <button key={x.key} type="button" onClick={() => setHead(h => ({ ...h, method: x.key }))}
+                    style={{ padding: '6px 12px', borderRadius: '16px', border: '1px solid #1F3864', cursor: 'pointer', fontWeight: 600, backgroundColor: head.method === x.key ? '#1F3864' : 'white', color: head.method === x.key ? 'white' : '#1F3864' }}>{x.label}</button>)}
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(190px, 1fr))', gap: '10px' }}>
+                <label style={styles.field}>{m.ref}<input style={{ ...styles.input, textTransform: 'uppercase', fontWeight: 700 }} maxLength={40} value={head.reference} placeholder={m.placeholder} onChange={e => setHead(h => ({ ...h, reference: e.target.value }))} /></label>
+                <label style={styles.field}>Total paid (on the message)<input style={{ ...styles.input, fontWeight: 700 }} inputMode="decimal" value={head.total} onChange={e => setHead(h => ({ ...h, total: e.target.value.replace(/[^\d.]/g, '') }))} /></label>
+                <label style={styles.field}>Date paid<input type="date" style={styles.input} value={head.paidOn} max={todayISO()} onChange={e => setHead(h => ({ ...h, paidOn: e.target.value }))} /></label>
+                <label style={styles.field}>Paid by (optional)<input style={styles.input} maxLength={100} value={head.payerName} placeholder="Parent / guardian name" onChange={e => setHead(h => ({ ...h, payerName: e.target.value }))} /></label>
+            </div>
+            <h4 style={{ color: '#1F3864', margin: '14px 0 6px' }}><Icon name="people-fill" />Children ({kids.length})</h4>
+            <LearnerPicker students={students} value={null} onPick={add} />
+            {suggest.length > 0 && (
+                <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', alignItems: 'center', margin: '8px 0', fontSize: '13px' }}>
+                    <span style={{ color: '#666' }}><Icon name="people" />Siblings:</span>
+                    {suggest.map(x => { const stu = students.find(s => s.studentId === x.studentId); return stu ? (
+                        <button key={x.studentId} type="button" onClick={() => add(stu)} style={{ ...styles.linkBtn, border: '1px dashed #2E75B6', borderRadius: '14px', padding: '3px 10px' }}>+ {x.name} <span style={{ color: '#888', fontWeight: 400 }}>{x.className}</span></button>) : null; })}
+                </div>
+            )}
+            {kids.map((k, i) => (
+                <div key={k.student.studentId} style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', padding: '8px 0', borderBottom: '1px solid #eee' }}>
+                    <span style={{ flex: 1, minWidth: '180px' }}><b>{k.student.firstName} {k.student.lastName}</b><div style={{ fontSize: '12px', color: '#666' }}>Adm {k.student.admissionNumber} · {k.student.schoolClass ? classDisplayName(k.student.schoolClass) : 'No class'}
+                        · owes {k.balance === null ? '…' : kes(Math.max(0, k.balance))}{k.balance < 0 ? ` (credit ${kes(-k.balance)})` : ''}</div></span>
+                    <input style={{ ...styles.input, width: '130px', fontWeight: 700 }} inputMode="decimal" placeholder="Share" aria-label={`Share for ${k.student.firstName}`}
+                        value={k.amount} onChange={e => { const v = e.target.value.replace(/[^\d.]/g, ''); setKids(list => list.map((x, j) => (j === i ? { ...x, amount: v } : x))); }} />
+                    <button type="button" onClick={() => setKids(list => list.filter((_, j) => j !== i))} style={{ ...styles.linkBtn, color: '#b02a37' }} aria-label="Remove"><i className="bi bi-x-lg" /></button>
+                </div>
+            ))}
+            {kids.length > 0 && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap', marginTop: '10px' }}>
+                    <button type="button" onClick={byBalance} disabled={!total} style={{ ...styles.linkBtn, opacity: total ? 1 : 0.5 }} title="Cover each child's balance in turn; anything extra goes to the last child"><Icon name="magic" />Share by what each owes</button>
+                    <span style={{ fontWeight: 700, color: Math.abs(left) < 0.005 && total ? '#1e7e34' : '#b8860b' }}>
+                        Shared {kes(shared)} of {kes(total)} — {Math.abs(left) < 0.005 && total ? '✓ all shared' : left > 0 ? `${kes(left)} left to share` : `${kes(-left)} too much`}</span>
+                    <button type="button" onClick={save} disabled={saving} style={{ ...styles.primaryBtn, marginLeft: 'auto', opacity: saving ? 0.7 : 1 }}>
+                        <Icon name={saving ? 'hourglass-split' : 'check-circle-fill'} />{saving ? 'Saving…' : `Record one payment for ${kids.length} children`}</button>
+                </div>
+            )}
+            {done && (
+                <div style={styles.receiptBox}>
+                    <div>
+                        <strong style={{ color: '#155724' }}><Icon name="receipt" />{kes(done.total)} shared by {done.receipts.length} children ({done.reference})</strong>
+                        {done.receipts.map(r => <div key={r.paymentId} style={{ fontSize: '13px', color: '#333' }}>{r.receiptNumber} — {r.student?.name} — {kes(r.amount)} · new balance {kes(r.newBalance)}</div>)}
+                    </div>
+                    <button onClick={() => printFamily(done)} style={styles.primaryBtn}><Icon name="printer-fill" />Print family receipt</button>
+                </div>
+            )}
+        </div>
+    );
+};
+
 // ══ Record payment ═════════════════════════════════════════════════════════
 const PaymentTab = ({ students, learner, setLearner, setError, flashSuccess, blocked, onStatement }) => {
     const empty = { amount: '', method: 'MPESA', reference: '', payerName: '', paidOn: todayISO() };
@@ -315,6 +435,26 @@ const PaymentTab = ({ students, learner, setLearner, setError, flashSuccess, blo
     const [balance, setBalance] = useState(null);
     const [saving, setSaving] = useState(false);
     const [receipt, setReceipt] = useState(null);
+    // One M-Pesa code can pay for several children (e.g. siblings)
+    const [mode, setMode] = useState('one');                  // 'one' | 'many'
+    const [codeInfo, setCodeInfo] = useState(null);           // what is already recorded under this code
+    const [shared, setShared] = useState(false);
+    const [sharedTotal, setSharedTotal] = useState('');
+    useEffect(() => {
+        const ref = form.reference.trim();
+        setCodeInfo(null);
+        if (ref.length < 4) return undefined;
+        const t = setTimeout(() => {
+            api.get('/api/finance/payments/code', { params: { reference: ref } }).then(r => {
+                setCodeInfo(r.data);
+                if (r.data.payments.length) {
+                    setShared(true);
+                    if (r.data.codeTotal) setSharedTotal(String(Number(r.data.codeTotal)));
+                }
+            }).catch(() => {});
+        }, 400);
+        return () => clearTimeout(t);
+    }, [form.reference]);
 
     useEffect(() => {
         setBalance(null);
@@ -334,10 +474,12 @@ const PaymentTab = ({ students, learner, setLearner, setError, flashSuccess, blo
             const r = await api.post('/api/finance/payments', {
                 studentId: learner.studentId, amount: form.amount.trim(), method: form.method,
                 reference: form.reference, payerName: form.payerName, paidOn: form.paidOn,
+                sharedTotal: shared && sharedTotal ? sharedTotal.trim() : null,
             });
             setReceipt(r.data);
             setBalance(r.data.newBalance);
             setForm({ ...empty, method: form.method });
+            setShared(false); setSharedTotal(''); setCodeInfo(null);
             flashSuccess(r.data.message || 'Payment recorded.');
         } catch (err) { setError(serverMessage(err, 'Failed to record the payment.')); }
         setSaving(false);
@@ -345,6 +487,14 @@ const PaymentTab = ({ students, learner, setLearner, setError, flashSuccess, blo
 
     return (
         <div style={styles.panel}>
+            <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '12px' }} role="tablist" aria-label="Who the payment is for">
+                {[['one', 'person-fill', 'One child'], ['many', 'people-fill', 'Several children — one M-Pesa code']].map(([k, ic, l]) => (
+                    <button key={k} type="button" role="tab" aria-selected={mode === k} onClick={() => { setMode(k); setReceipt(null); }}
+                        style={{ padding: '8px 14px', border: '1px solid #1F3864', borderRadius: '8px', cursor: 'pointer', fontWeight: 600, backgroundColor: mode === k ? '#1F3864' : 'white', color: mode === k ? 'white' : '#1F3864' }}>
+                        <Icon name={ic} />{l}</button>
+                ))}
+            </div>
+            {mode === 'many' ? <SplitPayment students={students} setError={setError} flashSuccess={flashSuccess} blocked={blocked} /> : <>
             <h3 style={styles.h3}><Icon name="person-fill" />Learner</h3>
             <LearnerPicker students={students} value={learner} onPick={s => { setLearner(s); setReceipt(null); }} />
             {learner && (
@@ -391,6 +541,25 @@ const PaymentTab = ({ students, learner, setLearner, setError, flashSuccess, blo
                             <input style={styles.input} value={form.payerName} maxLength={100} placeholder="Parent / guardian name" onChange={e => setForm({ ...form, payerName: e.target.value })} />
                         </label>
                     </div>
+                    {codeInfo && codeInfo.payments.length > 0 && (
+                        <div style={{ backgroundColor: '#fff8e1', border: '1.5px solid #f0c36d', borderRadius: '8px', padding: '10px 12px', marginTop: '10px', fontSize: '13px' }}>
+                            <b style={{ color: '#8a6d00' }}><Icon name="exclamation-circle-fill" />This code is already recorded:</b>
+                            {codeInfo.payments.map(p => <div key={p.paymentId}>· {p.receiptNumber} — {p.student?.name} — {kes(p.amount)} ({fmtDate(p.paidOn)})</div>)}
+                            {codeInfo.codeTotal && <div>Total on the message: <b>{kes(codeInfo.codeTotal)}</b> · left to share: <b>{kes(codeInfo.left)}</b></div>}
+                            <div style={{ marginTop: '4px', color: '#666' }}>If it is the <b>same</b> payment covering another child, keep the box below ticked. If not, check the code — the same code can't be recorded twice.</div>
+                        </div>
+                    )}
+                    <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-end', flexWrap: 'wrap', marginTop: '10px' }}>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', cursor: 'pointer' }}>
+                            <input type="checkbox" checked={shared} onChange={e => setShared(e.target.checked)} />
+                            Same payment shared with another child (one code for several children)
+                        </label>
+                        {shared && <label style={styles.field}>Total on the M-Pesa message / slip
+                            <input style={styles.input} inputMode="decimal" value={sharedTotal} placeholder="e.g. 5000" onChange={e => setSharedTotal(e.target.value.replace(/[^\d.]/g, ''))} required />
+                        </label>}
+                        {shared && sharedTotal && <span style={{ fontSize: '12px', color: '#555', paddingBottom: '10px' }}>Left for this child: <b>{kes(Math.max(0, Number(sharedTotal) - Number(codeInfo?.used || 0)))}</b>
+                            {!form.amount && <button type="button" onClick={() => setForm(f => ({ ...f, amount: String(Math.max(0, Number(sharedTotal) - Number(codeInfo?.used || 0))) }))} style={styles.linkBtn}>use it</button>}</span>}
+                    </div>
                     <button type="submit" disabled={saving} style={{ ...styles.primaryBtn, opacity: saving ? 0.7 : 1 }}>
                         <Icon name={saving ? 'hourglass-split' : 'check-circle-fill'} />{saving ? 'Saving…' : 'Record Payment'}
                     </button>
@@ -408,6 +577,7 @@ const PaymentTab = ({ students, learner, setLearner, setError, flashSuccess, blo
                     </button>
                 </div>
             )}
+            </>}
         </div>
     );
 };
@@ -484,6 +654,7 @@ const StatementTab = ({ students, learner, setLearner, setError, flashSuccess, b
                                                 {e.cancelled && <div style={{ fontSize: '11px', color: '#b02a37' }}>{e.cancelReason}</div>}
                                                 {e.receiptNumber && <div style={styles.adm}>{e.receiptNumber}{e.payerName ? ` · ${e.payerName}` : ''}</div>}
                                                 {e.reversed && <div style={{ fontSize: '11px', color: '#b02a37' }}>Reversed: {e.reversalReason}{e.reversedBy ? ` (by ${e.reversedBy})` : ''}</div>}
+                                                {e.bankConfirmedOn && !e.reversed && <div style={{ fontSize: '11px', color: '#1e7e34' }} title={e.bankLine || ''}>✓ Confirmed in the bank ({fmtDate(e.bankConfirmedOn)})</div>}
                                                 {e.lines && <button onClick={() => setOpen(o => ({ ...o, [i]: !o[i] }))} style={styles.linkBtn}>{open[i] ? 'Hide' : 'Show'} items</button>}
                                             </td>
                                             <td style={styles.tdNum}>{e.debit != null ? money(e.debit) : ''}</td>
@@ -573,7 +744,7 @@ const DayBookTab = ({ setError, flashSuccess, blocked }) => {
                             {data.payments.map((p, i) => (
                                 <tr key={p.paymentId} style={{ backgroundColor: p.reversed ? '#fdecea' : i % 2 ? 'white' : '#fafafa', color: p.reversed ? '#999' : undefined }}>
                                     <td style={{ ...styles.td, whiteSpace: 'nowrap' }}>{fmtDate(p.paidOn)}</td>
-                                    <td style={styles.td}><span style={{ textDecoration: p.reversed ? 'line-through' : 'none' }}>{p.receiptNumber}</span>{p.reversed && <div style={{ fontSize: '11px', color: '#b02a37' }}>Reversed: {p.reversalReason}</div>}</td>
+                                    <td style={styles.td}><span style={{ textDecoration: p.reversed ? 'line-through' : 'none' }}>{p.receiptNumber}</span>{p.bankConfirmedOn && !p.reversed && <span title={`Confirmed on the bank statement: ${p.bankLine || ''}`} style={{ marginLeft: '6px', fontSize: '11px', color: '#1e7e34', fontWeight: 700, whiteSpace: 'nowrap' }}>✓ in bank</span>}{p.reversed && <div style={{ fontSize: '11px', color: '#b02a37' }}>Reversed: {p.reversalReason}</div>}</td>
                                     <td style={styles.td}><strong style={{ color: '#1F3864' }}>{p.student?.name}</strong><div style={styles.adm}>{p.student?.admissionNumber} · {p.student?.className || '-'}</div></td>
                                     <td style={styles.td}>{methodOf(p.method).label}<div style={styles.adm}>{p.reference}</div></td>
                                     <td style={{ ...styles.tdNum, fontWeight: 700 }}>{money(p.amount)}</td>
@@ -1024,7 +1195,7 @@ const ExtrasTab = ({ termOptions, defaultTerm, classes, sections, setError, flas
                                             <input type="checkbox" checked={on} disabled={l.locked} onChange={() => toggle(l)} style={{ width: '18px', height: '18px' }} />
                                             <span style={{ flex: 1, minWidth: 0 }}>
                                                 <strong style={{ color: '#1F3864' }}>{l.name}</strong>
-                                                <span style={{ ...styles.adm, marginLeft: '8px' }}>{l.admissionNumber} · {l.className}</span>
+                                                <span style={{ ...styles.adm, marginLeft: '8px' }}>{l.admissionNumber} · {classLabel(l.className)}</span>
                                             </span>
                                             {l.locked && <span style={{ ...styles.pill, backgroundColor: '#e9ecef', color: '#555' }}>charged {l.chargedIn}</span>}
                                             {l.ticked && !l.locked && !changed && (
@@ -1051,7 +1222,7 @@ const ExtrasTab = ({ termOptions, defaultTerm, classes, sections, setError, flas
                         {pricing && (
                             <PriceEditor
                                 title={`${charge.name} — ${pricing.name}`}
-                                subtitle={`${year} Term ${term} · ${pricing.className}`}
+                                subtitle={`${year} Term ${term} · ${classLabel(pricing.className)}`}
                                 rates={{ term: pricing.standardAmount ?? charge.amount, monthly: charge.monthlyAmount, daily: charge.dailyAmount }}
                                 allowParts={charge.kind === 'PER_TERM'}
                                 current={pricing.ticked ? { basis: pricing.basis, quantity: pricing.quantity, amount: pricing.amount, note: pricing.priceNote } : null}

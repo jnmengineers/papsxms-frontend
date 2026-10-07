@@ -3,7 +3,7 @@ import { useReactToPrint } from 'react-to-print';
 import api from '../services/api';
 import { pctColor } from '../utils/grading';
 import { useSchoolSettings } from '../context/SchoolSettingsContext';
-import { classDisplayName, gradeLabel } from '../utils/classUtils';
+import { classDisplayName, gradeLabel, classLabel } from '../utils/classUtils';
 import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
 import Footer from '../components/Footer';
@@ -588,7 +588,7 @@ function SectionReport() {
                                             const maxAvg = Math.max(...sorted.map(s => num(s.classAverage)), 1);
                                             return (
                                                 <div key={i} style={styles.streamCompCard}>
-                                                    <h4 style={styles.subTitle}><Bi name="bar-chart-steps" />{cls.className} — Stream Comparison</h4>
+                                                    <h4 style={styles.subTitle}><Bi name="bar-chart-steps" />{classLabel(cls.className)} — Stream Comparison</h4>
                                                     {sorted.map((stream, k) => (
                                                         <div key={k} style={styles.streamBarRow}>
                                                             <div style={styles.streamBarLabel}>{classDisplayName(stream)}</div>

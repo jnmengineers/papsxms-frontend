@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import api from '../services/api';
 import { gradeOf as scaleGrade, pctColor } from '../utils/grading';
 import { useSchoolSettings } from '../context/SchoolSettingsContext';
-import { classDisplayName } from '../utils/classUtils';
+import { classDisplayName, classLabel } from '../utils/classUtils';
 import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
 import Footer from '../components/Footer';
@@ -627,7 +627,7 @@ function ReportCards() {
                                         .filter(st => !isTeacher || String(st.schoolClass?.classId) === String(linkedClassId))
                                         .slice().sort((a, b) => (a.firstName + a.lastName).localeCompare(b.firstName + b.lastName))
                                         .map(st => (
-                                            <option key={st.studentId} value={st.studentId}>{st.firstName} {st.lastName} - {st.className} ({st.admissionNumber})</option>
+                                            <option key={st.studentId} value={st.studentId}>{st.firstName} {st.lastName} - {classLabel(st.className, st.stream)} ({st.admissionNumber})</option>
                                         ))}
                                 </select>
                             </div>
@@ -836,7 +836,7 @@ function ReportCards() {
                                                     <td style={s.td}>{index + 1}</td>
                                                     <td style={s.td}><strong>{card.student?.firstName} {card.student?.lastName}</strong></td>
                                                     <td style={s.td}><span style={s.admNo}>{card.student?.admissionNumber || '-'}</span></td>
-                                                    <td style={s.td}>{card.student?.className}</td>
+                                                    <td style={s.td}>{classLabel(card.student?.className, card.student?.stream)}</td>
                                                     <td style={s.td}><span style={s.examBadge}>{card.exam?.examName}</span></td>
                                                     <td style={s.td}><strong>{card.totalMarks}</strong></td>
                                                     <td style={s.td}><span style={{ color: gc, fontWeight: 'bold' }}>{avg.toFixed(1)}%</span></td>

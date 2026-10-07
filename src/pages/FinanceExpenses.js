@@ -2,6 +2,9 @@ import React, { useCallback, useEffect, useState } from 'react';
 import api from '../services/api';
 import { letterheadHtml } from '../utils/school';
 import { textOn } from '../utils/schoolData';
+import { hasRole } from '../utils/roles';
+import { printChequeVouchers, printBillsList } from '../utils/chequePrint';
+import { amountInWords } from '../utils/amountWords';
 
 /**
  * Finance → Expenses: record daily spending in a money group, print a payment voucher,
@@ -48,7 +51,8 @@ const voucherHtml = (e) => `<h2>PAYMENT VOUCHER${e.voided ? ' — VOIDED' : ''}<
         <tr><td>Money group</td><td>${esc(e.groupName)}</td></tr>
         <tr><td>Amount</td><td style="font-size:18px;font-weight:800">${esc(kes(e.amount))}</td></tr>
         <tr><td>Paid by</td><td>${esc(methodOf(e.method).label)}${e.reference ? ` — ${esc(e.reference)}` : ''}</td></tr>
-        <tr><td>Recorded by</td><td>${esc(e.recordedBy || '')}</td></tr>
+        <tr><td>Prepared by</td><td>${esc(e.recordedBy || '')}</td></tr>
+        <tr><td>Approved by</td><td>${e.approvalStatus === 'PENDING' ? '<b style="color:#b8860b">AWAITING TREASURER</b>' : e.approvalStatus === 'REJECTED' ? `<b style="color:#b02a37">REJECTED</b> — ${esc(e.rejectReason || '')} (${esc(e.approvedBy || '')})` : esc(e.approvedBy || '')}</td></tr>
         ${e.voided ? `<tr><td>Voided</td><td style="color:#b02a37">${esc(e.voidReason)} (${esc(e.voidedBy || '')})</td></tr>` : ''}
     </table>
     <div class="sig"><span>Prepared by: ______________</span><span>Approved by: ______________</span><span>Received by: ______________</span></div>`;
@@ -93,6 +97,73 @@ export default function ExpensesTab({ termOptions, defaultTerm, setError, flashS
     }, [period, from, to, termKey, setError]);
     useEffect(() => { load(); }, [load]);
 
+    // ── Treasurer approval of the bursar's bills ──
+    const isTreasurer = hasRole('TREASURER');
+    const [pending, setPending] = useState(null);
+    const loadPending = useCallback(() => api.get('/api/finance/expenses/pending').then(r => setPending(r.data)).catch(() => setPending(null)), []);
+    useEffect(() => { loadPending(); }, [loadPending]);
+    const asBill = !!pending?.approvalOn && !isTreasurer;    // the bursar's bills go to the treasurer
+    const [ticked, setTicked] = useState(new Set());         // bills awaiting approval, ticked by the treasurer
+    const [payTicked, setPayTicked] = useState(new Set());   // approved bills ticked for a cheque
+    const [toPay, setToPay] = useState(null);
+    const [cheque, setCheque] = useState(null);              // { payee, chequeNumber, chequeDate, memo }
+    const loadToPay = useCallback(() => api.get('/api/finance/expenses/to-pay').then(r => setToPay(r.data)).catch(() => setToPay(null)), []);
+    useEffect(() => { loadToPay(); }, [loadToPay]);
+    const refreshAll = () => Promise.all([load(), loadPending(), loadToPay()]);
+    const toggle = (set, setter, id) => { const n = new Set(set); if (n.has(id)) n.delete(id); else n.add(id); setter(n); };
+    const approveTicked = async () => {
+        const ids = [...ticked];
+        const total = (pending?.expenses || []).filter(x => ticked.has(x.expenseId)).reduce((a, x) => a + num(x.amount), 0);
+        if (!window.confirm(`Approve ${ids.length} bill(s) for ${kes(total)}?`)) return;
+        try { const r = await api.post('/api/finance/expenses/approve', { ids }); flashSuccess(r.data.message); setTicked(new Set()); await refreshAll(); }
+        catch (err) { setError(serverMessage(err, 'Could not approve.')); }
+    };
+    const startCheque = () => {
+        const bills = (toPay?.expenses || []).filter(x => payTicked.has(x.expenseId));
+        const payees = [...new Set(bills.map(b => (b.payee || '').trim()).filter(Boolean))];
+        setCheque({ payee: payees.length === 1 ? payees[0] : '', chequeNumber: '', chequeDate: new Date().toISOString().slice(0, 10), memo: '', manyPayees: payees.length > 1, total: bills.reduce((a, b) => a + num(b.amount), 0) });
+    };
+    // ── Paying approved bills from the school's M-Pesa line ──
+    const [lineBalance, setLineBalance] = useState(null);
+    const [mpesa, setMpesa] = useState(null);   // { code, paidOn, charge, total }
+    const loadLine = useCallback(() => { const d = new Date().toISOString().slice(0, 10); return api.get('/api/finance/float', { params: { from: d, to: d } }).then(r => setLineBalance(num(r.data.balanceNow))).catch(() => setLineBalance(null)); }, []);
+    useEffect(() => { loadLine(); }, [loadLine]);
+    const startMpesa = () => {
+        const bills = (toPay?.expenses || []).filter(x => payTicked.has(x.expenseId));
+        const payees = [...new Set(bills.map(b => (b.payee || '').trim()).filter(Boolean))];
+        setMpesa({ code: '', paidOn: new Date().toISOString().slice(0, 10), charge: '', total: bills.reduce((a, b) => a + num(b.amount), 0), payees });
+    };
+    const payMpesa = async () => {
+        const code = mpesa.code.trim().toUpperCase();
+        if (!/^[A-Z0-9]{6,20}$/.test(code)) { setError('Enter the M-Pesa code from the confirmation message (e.g. SGH71K2XYZ).'); return; }
+        if (mpesa.charge && !/^\d{1,6}(\.\d{1,2})?$/.test(mpesa.charge)) { setError('Check the M-Pesa charge (numbers only).'); return; }
+        try {
+            const r = await api.post('/api/finance/expenses/pay-mpesa', { expenseIds: [...payTicked], mpesaCode: code, paidOn: mpesa.paidOn, charge: mpesa.charge || null });
+            flashSuccess(r.data.message); setMpesa(null); setPayTicked(new Set()); await Promise.all([refreshAll(), loadLine()]);
+        } catch (err) { setError(serverMessage(err, 'Could not record the M-Pesa payment.')); }
+    };
+
+    const raiseCheque = async () => {
+        if (!cheque.chequeNumber.trim()) { setError('Enter the cheque number.'); return; }
+        if (!cheque.payee.trim()) { setError('Enter the payee.'); return; }
+        try {
+            const r = await api.post('/api/finance/cheques', { chequeNumber: cheque.chequeNumber.trim(), chequeDate: cheque.chequeDate, payee: cheque.payee.trim(), memo: cheque.memo, expenseIds: [...payTicked] });
+            flashSuccess(r.data.message); setCheque(null); setPayTicked(new Set()); await refreshAll();
+            if (window.confirm(`Cheque ${r.data.chequeNumber} saved.\n\nPrint the cheque payment voucher now?`)) printChequeVouchers([r.data], blocked);
+        } catch (err) { setError(serverMessage(err, 'Could not raise the cheque.')); }
+    };
+    const decide = async (x, what) => {
+        let body = {};
+        if (what === 'reject') {
+            const reason = window.prompt(`Reject ${x.voucherNumber} (${kes(x.amount)} — ${x.description})?\n\nSay why, so the bursar can put it right:`);
+            if (reason === null) return;
+            if (reason.trim().length < 3) { setError('Say why the bill is rejected.'); return; }
+            body = { reason: reason.trim() };
+        } else if (!window.confirm(`Approve ${x.voucherNumber}: ${kes(x.amount)} for ${x.description}?`)) return;
+        try { const r = await api.post(`/api/finance/expenses/${x.expenseId}/${what}`, body); flashSuccess(r.data.message); await refreshAll(); }
+        catch (err) { setError(serverMessage(err, `Could not ${what} the bill.`)); }
+    };
+
     const activeGroups = groups.filter(g => g.active);
     const method = methodOf(form.method);
 
@@ -101,7 +172,8 @@ export default function ExpensesTab({ termOptions, defaultTerm, setError, flashS
         if (!form.groupId) { setError('Choose the money group (e.g. Meals).'); return; }
         if (form.description.trim().length < 3) { setError('Say what the money was spent on.'); return; }
         if (!isAmount(form.amount)) { setError('Enter a valid amount, e.g. 4500.'); return; }
-        if (form.method !== 'CASH' && !form.reference.trim()) { setError(`Enter the ${method.ref.toLowerCase()}.`); return; }
+        if (asBill && !form.payee.trim()) { setError('Enter the payee — who the cheque will be made out to.'); return; }
+        if (!asBill && form.method !== 'CASH' && !form.reference.trim()) { setError(`Enter the ${method.ref.toLowerCase()}.`); return; }
         if (!form.termKey) { setError('Choose the term.'); return; }
         setSaving(true); setError('');
         try {
@@ -111,6 +183,7 @@ export default function ExpensesTab({ termOptions, defaultTerm, setError, flashS
                 payee: form.payee.trim() || null, amount: String(form.amount).trim(), method: form.method, reference: form.reference.trim() || null,
             });
             flashSuccess(r.data.message);
+            loadPending();
             const saved = r.data;
             // keep date, term, group and method for the next entry (bursars often enter several in a row)
             setForm(f => ({ ...emptyForm(), spentOn: f.spentOn, termKey: f.termKey, groupId: f.groupId, method: f.method }));
@@ -129,7 +202,8 @@ export default function ExpensesTab({ termOptions, defaultTerm, setError, flashS
     };
 
     const rows = (data?.expenses || []).filter(x => !groupFilter || String(x.groupId) === String(groupFilter));
-    const shownTotal = rows.filter(x => !x.voided).reduce((s, x) => s + num(x.amount), 0);
+    const counts = (x) => !x.voided && (!x.approvalStatus || x.approvalStatus === 'APPROVED') && x.paid !== false;   // same rule as the books
+    const shownTotal = rows.filter(counts).reduce((s, x) => s + num(x.amount), 0);
     const periodLabel = period === 'term' ? (termOptions.find(t => t.value === termKey)?.label || '').replace(' (current)', '')
         : from === to ? fmtDate(from) : `${fmtDate(from)} – ${fmtDate(to)}`;
     const groupName = groupFilter ? groups.find(g => String(g.groupId) === String(groupFilter))?.name : '';
@@ -137,13 +211,13 @@ export default function ExpensesTab({ termOptions, defaultTerm, setError, flashS
     const printList = () => {
         if (!rows.length) { setError('Nothing to print.'); return; }
         const byGroup = {};
-        rows.filter(x => !x.voided).forEach(x => { byGroup[x.groupName] = (byGroup[x.groupName] || 0) + num(x.amount); });
+        rows.filter(counts).forEach(x => { byGroup[x.groupName] = (byGroup[x.groupName] || 0) + num(x.amount); });
         const body = `<h2>EXPENSES — ${esc(periodLabel)}${groupName ? ` — ${esc(groupName)}` : ''}</h2>
             <table><thead><tr><th>Voucher</th><th>Date</th><th>Group</th><th>For</th><th>Paid to</th><th>Paid by</th><th class="num">Amount</th></tr></thead><tbody>
             ${rows.map(x => `<tr class="${x.voided ? 'void' : ''}"><td>${esc(x.voucherNumber)}</td><td>${esc(fmtDate(x.spentOn))}</td><td>${esc(x.groupName)}</td>
                 <td>${esc(x.description)}${x.voided ? ` (VOIDED: ${esc(x.voidReason)})` : ''}</td><td>${esc(x.payee || '')}</td>
                 <td>${esc(methodOf(x.method).label)} ${esc(x.reference || '')}</td><td class="num">${money(x.amount)}</td></tr>`).join('')}
-            <tr class="tot"><td colspan="6">Total (voided left out)</td><td class="num">${money(shownTotal)}</td></tr></tbody></table>
+            <tr class="tot"><td colspan="6">Total paid (voided, rejected, awaiting approval or cheque left out)</td><td class="num">${money(shownTotal)}</td></tr></tbody></table>
             <h2 style="margin-top:16px">BY GROUP</h2><table><tbody>${Object.entries(byGroup).map(([k, v]) => `<tr><td>${esc(k)}</td><td class="num">${money(v)}</td></tr>`).join('')}</tbody></table>
             <div class="sig"><span>Bursar: ______________</span><span>Head teacher: ______________</span><span>Date: ______________</span></div>`;
         openWindow(`Expenses ${periodLabel}`, body, blocked);
@@ -183,17 +257,21 @@ export default function ExpensesTab({ termOptions, defaultTerm, setError, flashS
                         </select>
                     </label>
                     <label style={{ ...st.lbl, gridColumn: 'span 2' }}>What for<input style={st.input} maxLength={200} value={form.description} placeholder="e.g. Maize flour, 5 bags" onChange={e => setForm({ ...form, description: e.target.value })} /></label>
-                    <label style={st.lbl}>Paid to<input style={st.input} maxLength={100} value={form.payee} placeholder="Supplier or person" onChange={e => setForm({ ...form, payee: e.target.value })} /></label>
+                    <label style={st.lbl}>{asBill ? 'Payee (name on the cheque)' : 'Paid to'}<input style={st.input} maxLength={100} value={form.payee} placeholder="Supplier or person" onChange={e => setForm({ ...form, payee: asBill ? e.target.value.toUpperCase() : e.target.value })} /></label>
                     <label style={st.lbl}>Amount (KES)<input style={{ ...st.input, fontWeight: 700 }} inputMode="decimal" value={form.amount} onChange={e => setForm({ ...form, amount: e.target.value.replace(/[^\d.]/g, '') })} /></label>
+                    {asBill ? (
+                        <p style={{ ...st.small, gridColumn: 'span 2', alignSelf: 'end', color: '#8a6d00', margin: 0 }}><Icon name="safe2" />Goes on the treasurer's list. Once approved, the treasurer pays it by cheque — it counts in the books from the cheque date.</p>
+                    ) : (<>
                     <label style={st.lbl}>Paid by
                         <select style={st.input} value={form.method} onChange={e => setForm({ ...form, method: e.target.value })}>
                             {METHODS.map(m => <option key={m.key} value={m.key}>{m.label}</option>)}
                         </select>
                     </label>
                     <label style={st.lbl}>{method.ref}<input style={st.input} maxLength={60} value={form.reference} onChange={e => setForm({ ...form, reference: e.target.value.toUpperCase() })} /></label>
+                    </>)}
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-                    <button type="submit" disabled={saving} style={{ ...st.primary, opacity: saving ? 0.6 : 1 }}><Icon name={saving ? 'hourglass-split' : 'save-fill'} />{saving ? 'Saving…' : 'Save expense'}</button>
+                    <button type="submit" disabled={saving} style={{ ...st.primary, opacity: saving ? 0.6 : 1 }}><Icon name={saving ? 'hourglass-split' : 'save-fill'} />{saving ? 'Saving…' : asBill ? "Add to the treasurer's list" : 'Save expense'}</button>
                 </div>
             </form>
 
@@ -229,13 +307,102 @@ export default function ExpensesTab({ termOptions, defaultTerm, setError, flashS
                     </div>
                 )}
 
+                {pending && pending.expenses.length > 0 && (
+                    <div style={st.approvals}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', marginBottom: '8px' }}>
+                            <h4 style={{ margin: 0, color: '#8a6d00', flex: 1 }}><Icon name="safe2-fill" />{isTreasurer ? 'Awaiting your approval' : 'Bills awaiting the treasurer'} — {pending.expenses.length} bill(s), {kes(pending.total)}</h4>
+                            <button type="button" onClick={() => printBillsList('Bills for approval', pending.expenses, blocked)} style={st.secondary}><Icon name="printer" />Print list</button>
+                            {isTreasurer && <>
+                                <label style={{ fontSize: '12px', display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
+                                    <input type="checkbox" checked={ticked.size === pending.expenses.length} onChange={e => setTicked(e.target.checked ? new Set(pending.expenses.map(x => x.expenseId)) : new Set())} />all</label>
+                                <button type="button" disabled={!ticked.size} onClick={approveTicked} style={{ ...st.primary, backgroundColor: '#1e7e34', opacity: ticked.size ? 1 : 0.5 }}><Icon name="check2-all" />Approve ticked ({ticked.size})</button>
+                            </>}
+                        </div>
+                        {pending.expenses.map(x => (
+                            <div key={x.expenseId} style={st.approvalRow}>
+                                {isTreasurer && <input type="checkbox" checked={ticked.has(x.expenseId)} onChange={() => toggle(ticked, setTicked, x.expenseId)} aria-label={`Tick ${x.voucherNumber}`} />}
+                                <span style={{ flex: 1 }}><b>{x.voucherNumber}</b> · {fmtDate(x.spentOn)} · {x.groupName} — {x.description}{x.payee ? ` (to ${x.payee})` : ''}
+                                    <span style={st.small}> · prepared by {x.recordedBy}</span></span>
+                                <b style={{ whiteSpace: 'nowrap' }}>{kes(x.amount)}</b>
+                                <button type="button" onClick={() => openWindow(`Payment voucher ${x.voucherNumber}`, voucherHtml(x), blocked)} style={st.link} title="View voucher"><i className="bi bi-eye" aria-label="View voucher" /></button>
+                                {isTreasurer && <>
+                                    <button type="button" onClick={() => decide(x, 'approve')} style={{ ...st.link, color: '#1e7e34' }}><Icon name="check-circle-fill" />Approve</button>
+                                    <button type="button" onClick={() => decide(x, 'reject')} style={{ ...st.link, color: '#b02a37' }}><Icon name="x-circle-fill" />Reject</button>
+                                </>}
+                            </div>
+                        ))}
+                    </div>
+                )}
+
+                {toPay && toPay.expenses.length > 0 && (
+                    <div style={{ ...st.approvals, backgroundColor: '#eef5fc', borderColor: '#9cc3e6' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', marginBottom: '8px' }}>
+                            <h4 style={{ margin: 0, color: '#1F3864', flex: 1 }}><Icon name="journal-check" />Approved — to be paid: {toPay.expenses.length} bill(s), {kes(toPay.total)}
+                                {lineBalance !== null && <span style={{ ...st.small, marginLeft: '10px', color: lineBalance >= num(toPay.total) ? '#1e7e34' : '#b8860b' }}>M-Pesa line: {kes(lineBalance)}{lineBalance < num(toPay.total) ? ' — top it up to pay them all' : ''}</span>}</h4>
+                            <button type="button" onClick={() => printBillsList('Approved bills to be paid', toPay.expenses, blocked)} style={st.secondary}><Icon name="printer" />Print list</button>
+                            <button type="button" disabled={!payTicked.size} onClick={startMpesa} style={{ ...st.primary, backgroundColor: '#1e7e34', opacity: payTicked.size ? 1 : 0.5 }} title="Paid from the school's M-Pesa line"><Icon name="phone-fill" />Paid by M-Pesa ({payTicked.size})</button>
+                            {isTreasurer && <button type="button" disabled={!payTicked.size} onClick={startCheque} style={{ ...st.secondary, opacity: payTicked.size ? 1 : 0.5 }} title="Pay the supplier directly by cheque"><Icon name="pen-fill" />Cheque to supplier ({payTicked.size})</button>}
+                        </div>
+                        {toPay.expenses.map(x => (
+                            <div key={x.expenseId} style={{ ...st.approvalRow, borderTopColor: '#9cc3e6' }}>
+                                <input type="checkbox" checked={payTicked.has(x.expenseId)} onChange={() => toggle(payTicked, setPayTicked, x.expenseId)} aria-label={`Tick ${x.voucherNumber} to pay`} />
+                                <span style={{ flex: 1 }}><b>{x.payee || '—'}</b> · {x.voucherNumber} · {fmtDate(x.spentOn)} · {x.groupName} — {x.description}<span style={st.small}> · approved by {x.approvedBy}</span></span>
+                                <b style={{ whiteSpace: 'nowrap' }}>{kes(x.amount)}</b>
+                            </div>
+                        ))}
+                        <p style={{ ...st.small, margin: '6px 0 0' }}>Tick the bills one payment covers — usually all the bills for the same supplier. Most are paid from the school's M-Pesa line (the treasurer tops it up by cheque){isTreasurer ? '; a large one can be paid by cheque straight to the supplier' : ''}.</p>
+                    </div>
+                )}
+
+                {mpesa && (
+                    <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000, padding: '12px' }}
+                        onMouseDown={e => { if (e.target === e.currentTarget) setMpesa(null); }}>
+                        <div role="dialog" aria-modal="true" aria-label="Paid by M-Pesa" style={{ backgroundColor: 'white', borderRadius: '12px', width: '100%', maxWidth: '460px', padding: '18px', boxShadow: '0 10px 40px rgba(0,0,0,0.25)' }}>
+                            <h3 style={{ color: '#1e7e34', margin: '0 0 6px' }}><Icon name="phone-fill" />Paid by M-Pesa — {kes(mpesa.total)}</h3>
+                            <p style={{ ...st.small, margin: '0 0 10px' }}>{payTicked.size} approved bill(s){mpesa.payees.length ? ` to ${mpesa.payees.join(', ')}` : ''}, paid from the school's M-Pesa line.
+                                {lineBalance !== null && <> Line balance: <b>{kes(lineBalance)}</b>.</>}</p>
+                            {lineBalance !== null && mpesa.total + num(mpesa.charge) > lineBalance && <p style={{ ...st.small, color: '#b02a37', fontWeight: 700, margin: '0 0 8px' }}>The M-Pesa line doesn't have enough — the treasurer must top it up by cheque first (Cheques & M-Pesa line).</p>}
+                            {mpesa.payees.length > 1 && <p style={{ ...st.small, color: '#b8860b', margin: '0 0 8px' }}>These bills are for different payees — one M-Pesa code usually pays one supplier.</p>}
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                                <label style={{ ...st.lbl, gridColumn: 'span 2' }}>M-Pesa code (from the confirmation SMS)<input style={{ ...st.input, fontWeight: 700, textTransform: 'uppercase', fontFamily: 'Consolas, monospace' }} maxLength={20} value={mpesa.code} onChange={e => setMpesa(m => ({ ...m, code: e.target.value.toUpperCase().replace(/\s/g, '') }))} /></label>
+                                <label style={st.lbl}>Date paid<input type="date" style={st.input} value={mpesa.paidOn} max={new Date().toISOString().slice(0, 10)} onChange={e => setMpesa(m => ({ ...m, paidOn: e.target.value }))} /></label>
+                                <label style={st.lbl}>M-Pesa charge (optional)<input style={st.input} inputMode="decimal" value={mpesa.charge} placeholder="e.g. 108" onChange={e => setMpesa(m => ({ ...m, charge: e.target.value.replace(/[^\d.]/g, '') }))} /></label>
+                            </div>
+                            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '14px' }}>
+                                <button type="button" onClick={() => setMpesa(null)} style={st.secondary}>Cancel</button>
+                                <button type="button" onClick={payMpesa} style={{ ...st.primary, backgroundColor: '#1e7e34' }}><Icon name="check-circle-fill" />Record payment</button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+                {cheque && (
+                    <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000, padding: '12px' }}
+                        onMouseDown={e => { if (e.target === e.currentTarget) setCheque(null); }}>
+                        <div role="dialog" aria-modal="true" aria-label="Raise cheque" style={{ backgroundColor: 'white', borderRadius: '12px', width: '100%', maxWidth: '500px', padding: '18px', boxShadow: '0 10px 40px rgba(0,0,0,0.25)' }}>
+                            <h3 style={{ color: '#1F3864', margin: '0 0 6px' }}><Icon name="pen-fill" />Raise cheque — {kes(cheque.total)}</h3>
+                            <p style={{ ...st.small, margin: '0 0 10px' }}>For {payTicked.size} approved bill(s). {amountInWords(cheque.total)}.</p>
+                            {cheque.manyPayees && <p style={{ ...st.small, color: '#b8860b', margin: '0 0 8px' }}>The ticked bills are for different payees — check the name the cheque is made out to.</p>}
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                                <label style={st.lbl}>Cheque number<input style={{ ...st.input, fontWeight: 700 }} maxLength={30} value={cheque.chequeNumber} onChange={e => setCheque(c => ({ ...c, chequeNumber: e.target.value.replace(/\s/g, '') }))} autoFocus /></label>
+                                <label style={st.lbl}>Date on the cheque<input type="date" style={st.input} value={cheque.chequeDate} onChange={e => setCheque(c => ({ ...c, chequeDate: e.target.value }))} /></label>
+                                <label style={{ ...st.lbl, gridColumn: 'span 2' }}>Pay (payee)<input style={st.input} maxLength={100} value={cheque.payee} onChange={e => setCheque(c => ({ ...c, payee: e.target.value.toUpperCase() }))} /></label>
+                                <label style={{ ...st.lbl, gridColumn: 'span 2' }}>Memo (optional)<input style={st.input} maxLength={200} value={cheque.memo} onChange={e => setCheque(c => ({ ...c, memo: e.target.value }))} /></label>
+                            </div>
+                            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '14px' }}>
+                                <button type="button" onClick={() => setCheque(null)} style={st.secondary}>Cancel</button>
+                                <button type="button" onClick={raiseCheque} style={st.primary}><Icon name="save-fill" />Save cheque</button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
                 {loading ? <p style={st.center}><Icon name="hourglass-split" />Loading…</p> : (
                     <div style={{ overflowX: 'auto' }}>
                         <table style={st.table}>
                             <thead><tr><th style={st.th}>Voucher</th><th style={st.th}>Date</th><th style={st.th}>Group</th><th style={st.th}>For</th><th style={st.th}>Paid by</th><th style={{ ...st.th, textAlign: 'right' }}>Amount</th><th style={st.th}></th></tr></thead>
                             <tbody>
                                 {rows.map((x, i) => (
-                                    <tr key={x.expenseId} style={{ backgroundColor: i % 2 ? 'white' : '#fafafa', opacity: x.voided ? 0.55 : 1 }}>
+                                    <tr key={x.expenseId} style={{ backgroundColor: i % 2 ? 'white' : '#fafafa', opacity: x.voided || x.approvalStatus === 'REJECTED' ? 0.55 : 1 }}>
                                         <td style={st.td}><strong>{x.voucherNumber}</strong></td>
                                         <td style={st.td}>{fmtDate(x.spentOn)}</td>
                                         <td style={st.td}><span style={{ ...st.chip, backgroundColor: x.groupColor, color: textOn(x.groupColor) }}>{x.groupName}</span></td>
@@ -243,6 +410,11 @@ export default function ExpensesTab({ termOptions, defaultTerm, setError, flashS
                                             <span style={{ textDecoration: x.voided ? 'line-through' : 'none' }}>{x.description}</span>
                                             {x.payee && <div style={st.small}>to {x.payee}</div>}
                                             {x.voided && <div style={{ ...st.small, color: '#b02a37' }}>Voided: {x.voidReason} ({x.voidedBy})</div>}
+                                            {!x.voided && x.approvalStatus === 'PENDING' && <div style={{ ...st.small, color: '#b8860b', fontWeight: 700 }}><i className="bi bi-hourglass-split" aria-hidden="true" /> Awaiting treasurer — not counted yet</div>}
+                                            {!x.voided && x.approvalStatus === 'REJECTED' && <div style={{ ...st.small, color: '#b02a37', fontWeight: 700 }}>Rejected by {x.approvedBy}: {x.rejectReason}</div>}
+                                            {!x.voided && x.approvalStatus === 'APPROVED' && x.paid === false && <div style={{ ...st.small, color: '#2E75B6', fontWeight: 700 }}><i className="bi bi-hourglass-split" aria-hidden="true" /> Approved by {x.approvedBy} — awaiting cheque, not counted yet</div>}
+                                            {!x.voided && x.approvalStatus === 'APPROVED' && x.paid !== false && x.chequeId && <div style={{ ...st.small, color: '#1e7e34' }}>Paid by cheque No. {x.reference} ({fmtDate(x.paidOn)}) · approved by {x.approvedBy}</div>}
+                                            {!x.voided && x.approvalStatus === 'APPROVED' && x.paid !== false && !x.chequeId && x.approvedBy && x.approvedBy !== x.recordedBy && <div style={{ ...st.small, color: '#1e7e34' }}>Approved by {x.approvedBy}</div>}
                                         </td>
                                         <td style={st.td}>{methodOf(x.method).label}<div style={st.small}>{x.reference}</div></td>
                                         <td style={{ ...st.td, textAlign: 'right', fontWeight: 700, whiteSpace: 'nowrap' }}>{money(x.amount)}</td>
@@ -263,6 +435,8 @@ export default function ExpensesTab({ termOptions, defaultTerm, setError, flashS
 }
 
 const st = {
+    approvals: { backgroundColor: '#fff8e1', border: '1.5px solid #f0c36d', borderRadius: '10px', padding: '12px', marginBottom: '12px' },
+    approvalRow: { display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', padding: '6px 0', borderTop: '1px dashed #f0c36d', fontSize: '13px' },
     panel: { backgroundColor: 'white', borderRadius: '10px', padding: '14px', boxShadow: '0 1px 4px rgba(0,0,0,0.08)', marginBottom: '12px' },
     h3: { color: '#1F3864', margin: '0 0 10px', fontSize: '16px' },
     grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '10px', marginBottom: '10px' },

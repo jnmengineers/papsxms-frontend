@@ -3,12 +3,13 @@ import api from '../services/api';
 import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
 import Footer from '../components/Footer';
-import { classDisplayName } from '../utils/classUtils';
+import { classDisplayName, classCode, classLabel, compareClasses } from '../utils/classUtils';
 import { schoolName } from '../utils/school';
 import { openPrint, SHEET_CSS, LOWER_CSS, BLOCK_CSS, classSheetHtml, teacherSheetHtml, blockSheetHtml } from '../utils/timetablePrint';
 import { useSchoolSettings } from '../context/SchoolSettingsContext';
 import { SECTIONS_LIVE, SECTION_OF_GRADE_LIVE, GRADE_ORDER_LIVE, GRADE_LABELS_LIVE, gradeRankOf } from '../utils/schoolData';
 import { autoFill, clashesFor, ruleIssuesFor } from '../utils/timetableFill';
+import { useTabParam } from '../utils/useTabParam';
 
 /**
  * Teaching timetable
@@ -25,6 +26,7 @@ const addMinutes = (t, m) => { const [h, mi] = hhmm(t || '08:00').split(':').map
 const minutesBetween = (a, b) => { const [h1, m1] = hhmm(a).split(':').map(Number); const [h2, m2] = hhmm(b).split(':').map(Number); return (h2 * 60 + m2) - (h1 * 60 + m1); };
 const PALETTE = ['#e3f2fd', '#fce4ec', '#e8f5e9', '#fff3e0', '#ede7f6', '#e0f7fa', '#f9fbe7', '#fbe9e7', '#e8eaf6', '#f3e5f5', '#e0f2f1', '#fffde7'];
 const colourOf = (subjectId) => PALETTE[Math.abs(Number(subjectId) || 0) % PALETTE.length];
+const compareClassesSafe = (a, b) => { try { return compareClasses(a, b); } catch (e) { return 0; } };
 const teacherLabel = (t) => [t?.firstName, t?.lastName].filter(Boolean).join(' ');
 // Bell times of every section (for laying out a teacher's sheet on the right periods)
 const loadSlotsBySection = () => api.get('/api/timetable/slots').then(r => Object.fromEntries((r.data.sections || []).map(x => [x.code, x.slots])));
@@ -37,11 +39,14 @@ const printTeacher = async (tv, blocked, setError) => {
 };
 
 // ═════════════════════════════════════════════════════════════════════════════
+// Tab names for the Back button ("Back to … · …"); the current tab is kept in the address (?tab=…)
+const TAB_NAMES = { mine: 'My Timetable', class: 'Classes', teacher: 'Teachers', setup: 'Setup' };
+
 function Timetable() {
     useSchoolSettings();
     const role = localStorage.getItem('role');
     const isAdmin = role === 'ADMIN';
-    const [tab, setTab] = useState(role === 'TEACHER' ? 'mine' : 'class');
+    const [tab, setTab] = useTabParam(role === 'TEACHER' ? 'mine' : 'class', TAB_NAMES);
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
     const flash = (m) => { setSuccess(m); setTimeout(() => setSuccess(''), 4000); };
@@ -140,6 +145,21 @@ function TeacherTab({ setError, blocked }) {
             setTeachers(list); if (list.length) setTeacherId(String(list[0].teacherId));
         }).catch(err => setError(serverMessage(err, 'Could not load teachers.')));
     }, [setError]);
+    // Every teacher with lessons on the timetable, one page each (in the same layout)
+    const printAllTeachers = async () => {
+        try {
+            const [views, slotsBySection] = await Promise.all([
+                Promise.all(teachers.map(t => api.get(`/api/timetable/teacher/${t.teacherId}`).then(r => r.data))),
+                loadSlotsBySection()]);
+            const withLessons = views.filter(v => v.lessons.length)
+                .map(v => ({ ...v, lessons: v.lessons.map(l => ({ ...l, classLabel: classDisplayName({ className: l.className, stream: l.stream }) })) }));
+            if (!withLessons.length) { setError('No teacher has lessons on the timetable yet. Allocate teachers to subjects (Teachers page), then press "Update teachers" on the Classes tab.'); return; }
+            const pages = withLessons.map(v => teacherSheetHtml(v, slotsBySection, schoolName())).join('');
+            openPrint(`All teachers' timetables (${withLessons.length})`, pages, SHEET_CSS, blocked);
+            const none = views.length - withLessons.length;
+            if (none) setError(`${none} teacher(s) have no lessons on the timetable, so they were left out.`);
+        } catch (err) { setError(serverMessage(err, 'Could not prepare the teachers\' timetables.')); }
+    };
     useEffect(() => {
         if (!teacherId) return;
         setTv(null);
@@ -152,6 +172,7 @@ function TeacherTab({ setError, blocked }) {
                     {teachers.map(t => <option key={t.teacherId} value={String(t.teacherId)}>{teacherLabel(t)}</option>)}
                 </select>
                 {tv && <span style={st.muted}>{tv.lessons.length} lesson(s) a week</span>}
+                <button onClick={printAllTeachers} disabled={!teachers.length} style={st.secondary} title="Every teacher with lessons, one page each"><Icon name="printer-fill" />Print all teachers</button>
                 {tv && <button onClick={() => printTeacher(tv, blocked, setError)} style={{ ...st.secondary, marginLeft: 'auto' }}><Icon name="printer" />Print</button>}
             </div>
             {tv ? <TeacherWeek tv={tv} /> : <p style={st.center}><Icon name="hourglass-split" />Loading…</p>}
@@ -225,6 +246,63 @@ function ClassTab({ isAdmin, setError, flash, blocked }) {
             ? `Placed what fits. Could not place: ${r.unplaced.map(u => `${u.subjectName} (${u.missing})`).join(', ')} — not enough free periods, or the teacher is busy elsewhere.`
             : 'All lessons placed. Check it, then press Save.');
     };
+    // ── Auto-fill ALL classes (or one section) ─────────────────────────────
+    // Fills class by class; each class's placed lessons are added to the teachers' busy times
+    // before the next class, so no teacher is ever booked twice. Nothing is saved until "Save all".
+    const [bulk, setBulk] = useState(null);   // { section, keep, running, results, saving }
+    const openBulk = () => {
+        if (dirty) { setError('Save or undo the changes to this class first.'); return; }
+        setBulk({ section: 'ALL', keep: true, running: false, results: null, saving: false });
+    };
+    const runBulk = async () => {
+        const targets = classes.filter(c => bulk.section === 'ALL' || c.section === bulk.section);
+        if (!targets.length) { setError('No classes in that section.'); return; }
+        setBulk(b => ({ ...b, running: true, results: null }));
+        try {
+            const [views, allBusy] = await Promise.all([
+                Promise.all(targets.map(c => api.get(`/api/timetable/class/${c.classId}`).then(r => ({ c, v: r.data })))),
+                api.get('/api/timetable/busy').then(r => r.data || [])]);
+            const ids = new Set(targets.map(c => String(c.classId)));
+            const busyNow = allBusy.filter(b => !ids.has(String(b.classId)));   // lessons of classes NOT being filled
+            // Hardest first: subject-taught classes (shared teachers), then the most lessons
+            const lessonsOf = (v) => v.subjects.reduce((n, x) => n + (x.lessons || 0), 0);
+            views.sort((a, b) => (b.v.subjectTeaching - a.v.subjectTeaching) || lessonsOf(b.v) - lessonsOf(a.v));
+            const results = [];
+            for (const { c, v } of views) {
+                const periods = v.slots.filter(x => x.lesson).length * v.days.length;
+                const wanted = lessonsOf(v);
+                if (!v.slots.length) { results.push({ c, v, skip: 'no bell times for this section' }); continue; }
+                if (!wanted) { results.push({ c, v, skip: 'no lessons per week set for this grade' }); continue; }
+                const r = autoFill({ days: v.days.map(d => d.day), slots: v.slots, subjects: v.subjects, entries: bulk.keep ? v.entries : [], busy: busyNow, keepExisting: bulk.keep });
+                r.entries.forEach(e => {
+                    const sl = v.slots.find(x => String(x.slotId) === String(e.slotId));
+                    if (e.teacherId && sl) busyNow.push({ teacherId: e.teacherId, day: e.day, start: sl.start, end: sl.end });
+                });
+                results.push({ c, v, entries: r.entries, unplaced: r.unplaced, wanted, periods, noTeacher: v.subjects.filter(x => x.lessons && !x.teacherId).map(x => x.subjectName) });
+            }
+            results.sort((a, b) => compareClassesSafe(a.c, b.c));
+            setBulk(b => ({ ...b, running: false, results }));
+        } catch (err) { setError(serverMessage(err, 'Could not auto-fill the classes.')); setBulk(b => ({ ...b, running: false })); }
+    };
+    const saveBulk = async () => {
+        const toSave = (bulk.results || []).filter(x => !x.skip);
+        setBulk(b => ({ ...b, saving: true }));
+        const failed = [];
+        for (const x of toSave) {
+            try { await api.put(`/api/timetable/class/${x.c.classId}`, x.entries.map(e => ({ day: e.day, slotId: e.slotId, subjectId: e.subjectId, teacherId: e.teacherId ?? null }))); }
+            catch (err) { failed.push(`${classDisplayName(x.c)}: ${serverMessage(err, 'not saved')}`); }
+        }
+        setBulk(null);
+        if (failed.length) setError(`Some classes were not saved:\n• ${failed.join('\n• ')}`);
+        else flash(`${toSave.length} class timetable(s) saved.`);
+        await load(classId);
+    };
+
+    // Every lesson gets the teacher currently allocated to its subject (all classes)
+    const syncTeachers = async () => {
+        try { const r = await api.post('/api/timetable/sync-teachers'); flash(r.data.message); if (r.data.clashes?.length) setError(`Double bookings:\n• ${r.data.clashes.join('\n• ')}`); await load(classId); }
+        catch (err) { setError(serverMessage(err, 'Could not update the teachers.')); }
+    };
     const save = async () => {
         setSaving(true); setError('');
         try {
@@ -259,7 +337,7 @@ function ClassTab({ isAdmin, setError, flash, blocked }) {
             if (!withSlots) { setError('Set the bell times for this section first (Setup).'); return; }
             const html = blockSheetHtml({
                 sectionName: withSlots.v.sectionName, slots: withSlots.v.slots, days: withSlots.v.days, showTeachers: blockTeachers,
-                classes: views.map(x => ({ label: x.c.className, entries: String(x.c.classId) === String(classId) ? entries : x.v.entries })),
+                classes: views.map(x => ({ label: classCode(x.c), entries: String(x.c.classId) === String(classId) ? entries : x.v.entries })),
             });
             openPrint(`Block timetable — ${withSlots.v.sectionName}`, html, BLOCK_CSS, blocked);
         } catch (err) { setError(serverMessage(err, 'Could not prepare the block timetable.')); }
@@ -298,6 +376,8 @@ function ClassTab({ isAdmin, setError, flash, blocked }) {
                 {isAdmin && view && view.slots.length > 0 && (
                     <div style={{ ...st.bar, marginTop: '4px' }}>
                         <button onClick={() => fill(true)} style={st.secondary} title="Fill the empty periods, keeping what is already placed"><Icon name="magic" />Auto-fill empty periods</button>
+                        <button onClick={openBulk} style={{ ...st.secondary, borderStyle: 'dashed' }} title="Fill every class (or one section) at once, without double-booking any teacher"><Icon name="grid-3x3-gap" />Auto-fill all classes</button>
+                        <button onClick={syncTeachers} disabled={dirty} style={st.secondary} title={dirty ? 'Save or undo your changes first' : "Put each subject's allocated teacher on every lesson (all classes)"}><Icon name="person-check" />Update teachers</button>
                         <button onClick={() => fill(false)} style={st.secondary} title="Replace everything with a fresh arrangement"><Icon name="arrow-repeat" />Start again</button>
                         {entries.length > 0 && <button onClick={() => { if (window.confirm('Clear every lesson from this class? (Nothing is saved until you press Save.)')) setEntries([]); }} style={{ ...st.secondary, color: '#b02a37', borderColor: '#b02a37' }}><Icon name="eraser" />Clear</button>}
                         <span style={{ marginLeft: 'auto', display: 'flex', gap: '8px' }}>
@@ -307,6 +387,52 @@ function ClassTab({ isAdmin, setError, flash, blocked }) {
                     </div>
                 )}
                 {notice && <p style={st.info}><Icon name="info-circle-fill" />{notice}</p>}
+                {bulk && (
+                    <div style={st.bulk}>
+                        <div style={st.bar}>
+                            <strong style={{ color: '#1F3864' }}><Icon name="grid-3x3-gap-fill" />Auto-fill all classes</strong>
+                            <select style={st.select} value={bulk.section} onChange={e => setBulk(b => ({ ...b, section: e.target.value, results: null }))} aria-label="Which classes">
+                                <option value="ALL">Every class</option>
+                                {SECTIONS_LIVE.filter(sec => classes.some(c => c.section === sec.code)).map(sec => <option key={sec.code} value={sec.code}>{sec.name} only</option>)}
+                            </select>
+                            <select style={st.select} value={bulk.keep ? 'keep' : 'fresh'} onChange={e => setBulk(b => ({ ...b, keep: e.target.value === 'keep', results: null }))} aria-label="Keep or replace">
+                                <option value="keep">Keep lessons already placed, fill the gaps</option>
+                                <option value="fresh">Start again (replace every lesson)</option>
+                            </select>
+                            <button onClick={runBulk} disabled={bulk.running || bulk.saving} style={st.primary}><Icon name={bulk.running ? 'hourglass-split' : 'magic'} />{bulk.running ? 'Working…' : 'Fill'}</button>
+                            <button onClick={() => setBulk(null)} disabled={bulk.saving} style={{ ...st.link, marginLeft: 'auto' }}>Close</button>
+                        </div>
+                        {bulk.results && (
+                            <>
+                                <div style={{ overflowX: 'auto', marginTop: '10px' }}>
+                                    <table style={{ ...st.grid, minWidth: '560px', tableLayout: 'auto' }}>
+                                        <thead><tr><th style={{ ...st.gth, textAlign: 'left' }}>Class</th><th style={st.gth}>Lessons placed</th><th style={st.gth}>Free periods</th><th style={{ ...st.gth, textAlign: 'left' }}>Notes</th></tr></thead>
+                                        <tbody>
+                                            {bulk.results.map(x => (
+                                                <tr key={x.c.classId}>
+                                                    <td style={st.td}><strong>{classDisplayName(x.c)}</strong></td>
+                                                    {x.skip ? <td colSpan={3} style={{ ...st.td, color: '#b02a37' }}>Skipped — {x.skip}</td> : <>
+                                                        <td style={{ ...st.td, textAlign: 'center', color: x.entries.length >= x.wanted ? '#1e7e34' : '#fd7e14', fontWeight: 700 }}>{x.entries.length} / {x.wanted}</td>
+                                                        <td style={{ ...st.td, textAlign: 'center' }}>{Math.max(0, x.periods - x.entries.length)}</td>
+                                                        <td style={{ ...st.td, fontSize: '12px' }}>
+                                                            {x.unplaced.length > 0 && <div style={{ color: '#b02a37' }}>Couldn't place: {x.unplaced.map(u => `${u.subjectName} (${u.missing})`).join(', ')}</div>}
+                                                            {x.noTeacher.length > 0 && <div style={{ color: '#856404' }}>No teacher allocated: {x.noTeacher.join(', ')}</div>}
+                                                            {x.wanted < x.periods && !x.unplaced.length && <div style={{ color: '#666' }}>{x.periods - x.wanted} free period(s): lessons per week add up to {x.wanted} of {x.periods}</div>}
+                                                        </td>
+                                                    </>}
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <p style={st.small}>"Couldn't place" = no free period where the teacher isn't teaching another class, or the subject's rules (e.g. Maths before lunch, no doubles) leave no room. Free periods are expected when the lessons per week add up to less than the periods in the week.</p>
+                                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+                                    <button onClick={saveBulk} disabled={bulk.saving || !bulk.results.some(x => !x.skip)} style={st.primary}><Icon name={bulk.saving ? 'hourglass-split' : 'save-fill'} />{bulk.saving ? 'Saving…' : `Save all (${bulk.results.filter(x => !x.skip).length} classes)`}</button>
+                                </div>
+                            </>
+                        )}
+                    </div>
+                )}
             </div>
 
             {!view ? <p style={st.center}><Icon name="hourglass-split" />Loading…</p> : !view.slots.length ? (
@@ -328,7 +454,7 @@ function ClassTab({ isAdmin, setError, flash, blocked }) {
                                             const open = isAdmin && editing === key;
                                             return (
                                                 <td key={d.day} onClick={() => isAdmin && !open && setEditing(key)}
-                                                    title={clash ? `Clash: ${e?.teacherName} teaches ${clash.className} ${clash.subjectName} ${hhmm(clash.start)}–${hhmm(clash.end)}` : rule || ''}
+                                                    title={clash ? `Clash: ${e?.teacherName} teaches ${classLabel(clash.className)} ${clash.subjectName} ${hhmm(clash.start)}–${hhmm(clash.end)}` : rule || ''}
                                                     style={{ ...st.cell, backgroundColor: clash ? '#fdecee' : rule ? '#fff3cd' : e ? colourOf(e.subjectId) : 'white', outline: clash ? '2px solid #dc3545' : rule ? '2px solid #fd7e14' : open ? '2px solid #1F3864' : 'none', cursor: isAdmin ? 'pointer' : 'default' }}>
                                                     {open ? (
                                                         <select autoFocus style={st.cellSelect} value={e?.subjectId ?? ''} onChange={ev => setCell(d.day, s.slotId, ev.target.value)} onBlur={() => setEditing(null)} aria-label={`${d.name} ${s.label}`}>
@@ -395,8 +521,8 @@ function SetupTab({ setError, flash }) {
     const loadSlots = useCallback(async () => {
         try {
             const r = await api.get('/api/timetable/slots');
-            setData(r.data);
-            setSection(s => s || r.data.sections[0]?.code || '');
+            setData({ sections: [], ...(r.data || {}) });
+            setSection(s => s || (r.data?.sections || [])[0]?.code || '');
         } catch (err) { setError(serverMessage(err, 'Could not load bell times.')); }
     }, [setError]);
     useEffect(() => { loadSlots(); }, [loadSlots]);
@@ -405,6 +531,23 @@ function SetupTab({ setError, flash }) {
         setRows(sec ? sec.slots.map(s => ({ label: s.label, start: hhmm(s.start), end: hhmm(s.end), lesson: s.lesson })) : []);
     }, [data, section]);
     useEffect(() => { api.get('/api/subjects').then(r => setSubjects(r.data || [])).catch(err => setError(serverMessage(err, 'Could not load subjects.'))); }, [setError]);
+    // Subjects the grade's classes actually take (Class Subjects) — includes subjects shared by
+    // several sections (English, Maths, Kiswahili, CRE…) that aren't registered to this section
+    const [allClasses, setAllClasses] = useState([]);
+    const [takenByGrade, setTakenByGrade] = useState([]);
+    useEffect(() => { api.get('/api/classes').then(r => setAllClasses(r.data || [])).catch(() => {}); }, []);
+    useEffect(() => {
+        if (!grade) return undefined;
+        let alive = true;
+        const mine = allClasses.filter(c => String(c.gradeLevel || '').toUpperCase() === grade);
+        Promise.allSettled(mine.map(c => api.get(`/api/class-subjects/by-class/${c.classId}`))).then(outs => {
+            if (!alive) return;
+            const m = new Map();
+            outs.forEach(o => { if (o.status === 'fulfilled') (o.value.data || []).forEach(cs => { if (cs.subject) m.set(String(cs.subject.subjectId), cs.subject); }); });
+            setTakenByGrade([...m.values()]);
+        });
+        return () => { alive = false; };
+    }, [grade, allClasses]);
     useEffect(() => { if (!grade && GRADE_ORDER_LIVE.length) setGrade(GRADE_ORDER_LIVE[0]); }, [grade]);
     useEffect(() => {
         if (!grade) return;
@@ -437,8 +580,13 @@ function SetupTab({ setError, flash }) {
     };
 
     const gradeSection = SECTION_OF_GRADE_LIVE[grade];
-    const gradeSubjects = subjects.filter(s => SECTION_OF_GRADE_LIVE[String(s.gradeLevel || '').toUpperCase()] === gradeSection)
-        .sort((a, b) => String(a.subjectName).localeCompare(String(b.subjectName)));
+    const gradeSubjects = (() => {
+        const m = new Map();
+        takenByGrade.forEach(s => m.set(String(s.subjectId), s));                         // what the grade's classes take
+        subjects.filter(s => SECTION_OF_GRADE_LIVE[String(s.gradeLevel || '').toUpperCase()] === gradeSection)
+            .forEach(s => { if (!m.has(String(s.subjectId))) m.set(String(s.subjectId), s); });  // plus the section's own subjects
+        return [...m.values()].sort((a, b) => String(a.subjectName).localeCompare(String(b.subjectName)));
+    })();
     const rowOf = (m, id) => ({ lessons: '', latestEnd: '', doubles: false, ...(m[String(id)] || {}) });
     const setRule = (id, patch) => setCounts(c => ({ ...c, [String(id)]: { ...rowOf(c, id), ...patch } }));
     const countsDirty = gradeSubjects.some(s => JSON.stringify(rowOf(counts, s.subjectId)) !== JSON.stringify(rowOf(savedCounts, s.subjectId)));
@@ -603,6 +751,7 @@ const st = {
     chip: { backgroundColor: '#e8f5e9', color: '#1e7e34', borderRadius: '14px', padding: '4px 10px', fontSize: '13px' },
     pills: { display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '10px' },
     pill: { padding: '6px 12px', border: '1px solid', borderRadius: '16px', cursor: 'pointer', fontSize: '13px', fontWeight: 600 },
+    bulk: { border: '2px dashed #1F3864', borderRadius: '10px', padding: '12px', marginTop: '10px', backgroundColor: '#fafcff' },
     blockBox: { display: 'flex', alignItems: 'center', gap: '6px', border: '1px dashed #1F3864', borderRadius: '8px', padding: '3px 6px' },
     weekGrid: { display: 'grid', gridTemplateColumns: 'repeat(5, minmax(130px, 1fr))', gap: '8px', minWidth: '680px' },
     dayCol: { backgroundColor: '#fafbfd', borderRadius: '8px', padding: '8px', minHeight: '120px' },

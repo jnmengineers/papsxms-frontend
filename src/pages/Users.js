@@ -6,6 +6,13 @@ import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import { SECTIONS_LIVE } from '../utils/schoolData';
 import { useSchoolSettings } from '../context/SchoolSettingsContext';
+import { ROLE_LABELS } from '../utils/roles';
+
+// What each role may do (shown when ticking roles)
+const ROLE_HELP = {
+    SUPER_ADMIN: 'everything + gives roles', ADMIN: 'runs the system', TREASURER: 'approves the bursar\'s bills',
+    ACCOUNTANT: 'prepares fees & bills', CHAIRPERSON: 'views everything', HEAD_TEACHER: 'approves staff leave', TEACHER: 'own classes & marks', CLERK: 'records & results',
+};
 
 const Icon = ({ name, style }) => <i className={`bi bi-${name}`} aria-hidden="true" style={{ marginRight: '6px', ...style }} />;
 
@@ -198,12 +205,31 @@ function Users() {
     const sortedClasses = (list) => [...list].sort((a, b) => classDisplayName(a).localeCompare(classDisplayName(b), undefined, { numeric: true }));
     const otherClasses = classes.filter(c => !sections.some(s => s.value === c.section));
 
-    const getRoleColor = (role) => ({ ADMIN: '#1F3864', TEACHER: '#2E75B6', CLERK: '#28a745', ACCOUNTANT: '#0f766e' }[role] || '#666');
-    const getRoleIcon = (role) => ({ ADMIN: 'shield-lock-fill', TEACHER: 'person-workspace', CLERK: 'person-badge-fill', ACCOUNTANT: 'cash-stack' }[role] || 'person-fill');
+    const getRoleColor = (role) => ({ SUPER_ADMIN: '#7b1fa2', ADMIN: '#1F3864', TEACHER: '#2E75B6', CLERK: '#28a745', ACCOUNTANT: '#0f766e', TREASURER: '#b8860b', CHAIRPERSON: '#8b0000', HEAD_TEACHER: '#c2185b' }[role] || '#666');
+    const getRoleIcon = (role) => ({ SUPER_ADMIN: 'stars', ADMIN: 'shield-lock-fill', TEACHER: 'person-workspace', CLERK: 'person-badge-fill', ACCOUNTANT: 'cash-stack', TREASURER: 'safe2-fill', CHAIRPERSON: 'award-fill', HEAD_TEACHER: 'mortarboard-fill' }[role] || 'person-fill');
+    const extrasOf = (u) => String(u.extraRoles || '').split(',').map(x => x.trim()).filter(Boolean);
+
+    // ── Roles ticked by the super admin (several per person) ──
+    const [roleInfo, setRoleInfo] = useState({ roles: [], canManage: false });
+    const [rolesFor, setRolesFor] = useState(null);   // { user, main, ticked: [] }
+    useEffect(() => { api.get('/api/users/roles').then(r => setRoleInfo(r.data)).catch(() => {}); }, []);
+    const openRoles = (u) => setRolesFor({ user: u, main: u.role, ticked: [u.role, ...extrasOf(u)] });
+    const toggleRole = (r) => setRolesFor(x => {
+        const ticked = x.ticked.includes(r) ? x.ticked.filter(t => t !== r) : [...x.ticked, r];
+        return { ...x, ticked, main: ticked.includes(x.main) ? x.main : ticked[0] || '' };
+    });
+    const saveRoles = async () => {
+        if (!rolesFor.ticked.length) { setError('Tick at least one role.'); return; }
+        try {
+            const r = await api.put(`/api/users/${rolesFor.user.userId}/roles`, { role: rolesFor.main, extraRoles: rolesFor.ticked.filter(t => t !== rolesFor.main) });
+            flashSuccess(r.data.message); setRolesFor(null); await fetchAll();
+            api.get('/api/users/roles').then(x => setRoleInfo(x.data)).catch(() => {});
+        } catch (err) { setError(err?.response?.data?.message || err?.response?.data || 'Could not save the roles.'); }
+    };
 
     const q = norm(search);
     const filtered = users
-        .filter(u => !filterRole || u.role === filterRole)
+        .filter(u => !filterRole || u.role === filterRole || extrasOf(u).includes(filterRole))
         .filter(u => !q || norm(u.username).includes(q) || norm(getTeacherName(u)).includes(q) ||
             norm(linkedClassOf(u) ? classDisplayName(linkedClassOf(u)) : '').includes(q))
         .sort((a, b) => (a.role || '').localeCompare(b.role || '') || norm(a.username).localeCompare(norm(b.username)));
@@ -291,6 +317,9 @@ function Users() {
                                     <option value="CLERK">Clerk (secretary)</option>
                                     <option value="ACCOUNTANT">Bursar (finance)</option>
                                     <option value="ADMIN">Admin</option>
+                                    {roleInfo.canManage && <option value="TREASURER">Treasurer (approves the bursar's bills)</option>}
+                                    {roleInfo.canManage && <option value="CHAIRPERSON">Chairperson (views everything)</option>}
+                                    {roleInfo.canManage && <option value="SUPER_ADMIN">Super admin (gives roles)</option>}
                                 </select>
                             </div>
                             <div style={styles.formGroup}>
@@ -316,12 +345,15 @@ function Users() {
                             { label: 'Teachers', value: 'TEACHER' },
                             { label: 'Admins', value: 'ADMIN' },
                             { label: 'Clerks', value: 'CLERK' },
-                            { label: 'Bursars', value: 'ACCOUNTANT' }
+                            { label: 'Bursars', value: 'ACCOUNTANT' },
+                            { label: 'Treasurer', value: 'TREASURER' },
+                            { label: 'Chairperson', value: 'CHAIRPERSON' },
+                            { label: 'Super admins', value: 'SUPER_ADMIN' }
                         ].map(tab => (
                             <button key={tab.value} onClick={() => setFilterRole(tab.value)}
                                 style={{ ...styles.roleTab, backgroundColor: filterRole === tab.value ? '#1F3864' : 'white', color: filterRole === tab.value ? 'white' : '#1F3864' }}>
                                 {tab.label}
-                                <span style={styles.tabCount}>{tab.value === '' ? users.length : users.filter(u => u.role === tab.value).length}</span>
+                                <span style={styles.tabCount}>{tab.value === '' ? users.length : users.filter(u => u.role === tab.value || extrasOf(u).includes(tab.value)).length}</span>
                             </button>
                         ))}
                     </div>
@@ -392,8 +424,18 @@ function Users() {
                                             </td>
                                             <td style={styles.td}>
                                                 <span style={{ ...styles.roleBadge, backgroundColor: getRoleColor(user.role) }}>
-                                                    <Icon name={getRoleIcon(user.role)} style={{ marginRight: '4px' }} />{user.role}
+                                                    <Icon name={getRoleIcon(user.role)} style={{ marginRight: '4px' }} />{ROLE_LABELS[user.role] || user.role}
                                                 </span>
+                                                {extrasOf(user).map(r => (
+                                                    <span key={r} style={{ ...styles.roleBadge, backgroundColor: 'white', color: getRoleColor(r), border: `1.5px solid ${getRoleColor(r)}`, marginLeft: '4px' }} title="Extra role">
+                                                        + {ROLE_LABELS[r] || r}
+                                                    </span>
+                                                ))}
+                                                {roleInfo.canManage && (
+                                                    <button type="button" onClick={() => openRoles(user)} style={{ background: 'none', border: 'none', color: '#2E75B6', cursor: 'pointer', fontWeight: 600, fontSize: '12px', display: 'block', padding: '4px 0 0' }}>
+                                                        <Icon name="ui-checks" style={{ marginRight: '4px' }} />Roles
+                                                    </button>
+                                                )}
                                             </td>
                                             <td style={styles.td}>
                                                 {linkedClass ? (
@@ -470,6 +512,33 @@ function Users() {
                 )}
             </div>
         </div>
+        {rolesFor && (
+            <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000, padding: '12px' }}
+                onMouseDown={e => { if (e.target === e.currentTarget) setRolesFor(null); }}>
+                <div role="dialog" aria-modal="true" aria-label="Roles" style={{ backgroundColor: 'white', borderRadius: '12px', width: '100%', maxWidth: '480px', padding: '18px', boxShadow: '0 10px 40px rgba(0,0,0,0.25)' }}>
+                    <h3 style={{ color: '#1F3864', margin: '0 0 4px' }}><Icon name="ui-checks" />Roles — {rolesFor.user.username}</h3>
+                    <p style={{ fontSize: '12px', color: '#666', margin: '0 0 12px' }}>Tick every role this person should have. The <b>main</b> role decides what they see first. Changes apply from their next login.</p>
+                    {roleInfo.roles.map(r => (
+                        <div key={r} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '7px 8px', borderRadius: '8px', backgroundColor: rolesFor.ticked.includes(r) ? '#f2f6fc' : 'transparent' }}>
+                            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1, cursor: 'pointer', fontSize: '14px' }}>
+                                <input type="checkbox" checked={rolesFor.ticked.includes(r)} onChange={() => toggleRole(r)} aria-label={ROLE_LABELS[r] || r} />
+                                <span style={{ ...styles.roleBadge, backgroundColor: getRoleColor(r) }}><Icon name={getRoleIcon(r)} style={{ marginRight: '4px' }} />{ROLE_LABELS[r] || r}</span>
+                                <span style={{ fontSize: '11px', color: '#888' }}>{ROLE_HELP[r]}</span>
+                            </label>
+                            {rolesFor.ticked.includes(r) && (
+                                <label style={{ fontSize: '12px', display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                                    <input type="radio" name="mainRole" checked={rolesFor.main === r} onChange={() => setRolesFor(x => ({ ...x, main: r }))} />main
+                                </label>
+                            )}
+                        </div>
+                    ))}
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '14px' }}>
+                        <button type="button" onClick={() => setRolesFor(null)} style={{ padding: '8px 14px', border: '1px solid #1F3864', background: 'white', color: '#1F3864', borderRadius: '6px', cursor: 'pointer', fontWeight: 600 }}>Cancel</button>
+                        <button type="button" onClick={saveRoles} style={{ padding: '8px 14px', border: 'none', background: '#1F3864', color: 'white', borderRadius: '6px', cursor: 'pointer', fontWeight: 600 }}><Icon name="save-fill" />Save roles</button>
+                    </div>
+                </div>
+            </div>
+        )}
         <Footer />
     </div>
     );

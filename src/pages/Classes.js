@@ -7,6 +7,7 @@ import Footer from '../components/Footer';
 import TempPasswordNotice from '../components/TempPasswordNotice';
 import { SECTIONS_LIVE, GRADE_ORDER_LIVE, STREAMS_LIVE, GRADE_LABELS_LIVE, STREAM_NAMES_LIVE, STREAM_COLORS_LIVE, gradeFromClassName, textOn } from '../utils/schoolData';
 import { useSchoolSettings } from '../context/SchoolSettingsContext';
+import { classCode } from '../utils/classUtils';
 
 const Icon = ({ name, style }) => <i className={`bi bi-${name}`} aria-hidden="true" style={{ marginRight: '6px', ...style }} />;
 
@@ -22,7 +23,8 @@ const streamLabel = (s) => STREAM_NAMES_LIVE[String(s || '').toUpperCase()] || s
 const streamColor = (s) => STREAM_COLORS_LIVE[String(s || '').toUpperCase()] || '#1F3864';
 const sectionOf = (key) => SECTIONS.find(s => s.value === key);
 const sectionColor = (key) => sectionOf(key)?.color || '#6c757d';
-const autoNameFor = (grade, stream) => grade ? `${grade}${stream ? stream.charAt(0).toUpperCase() : ''}` : '';
+// The one class-naming rule (utils/classUtils): grade code + stream letter, e.g. G1 + Blue → G1B
+const autoNameFor = (grade, stream) => (grade ? classCode({ gradeLevel: grade, stream }) : '');
 const classTitle = (cls) => `${gradeLabel(cls.gradeLevel)}${cls.stream ? ` ${streamLabel(cls.stream)}` : ''}`;
 const isMale = (g) => String(g || '').toLowerCase().startsWith('m');
 const isFemale = (g) => String(g || '').toLowerCase().startsWith('f');
@@ -83,16 +85,10 @@ const ClassFormFields = ({ formData, setFormData, onSubmit, onCancel, submitLabe
                     </select>
                 </div>
                 <div style={styles.formGroup}>
-                    <label style={styles.label}>Class Name {formData.autoName && <span style={styles.autoTag}>Auto</span>}</label>
-                    <input style={{ ...styles.input, backgroundColor: formData.autoName ? '#e3f2fd' : 'white', fontWeight: 'bold' }}
-                        value={formData.className} maxLength={20}
-                        onChange={e => setFormData(prev => ({ ...prev, className: e.target.value.toUpperCase(), autoName: false }))}
-                        placeholder="Fills in automatically" required />
-                    {!formData.autoName && suggested && formData.className !== suggested && (
-                        <button type="button" style={styles.linkBtn} onClick={() => setFormData(prev => ({ ...prev, className: suggested, autoName: true }))}>
-                            Use suggested name ({suggested})
-                        </button>
-                    )}
+                    <label style={styles.label}>Class Name <span style={styles.autoTag}>From grade + stream</span></label>
+                    <input style={{ ...styles.input, backgroundColor: '#e3f2fd', fontWeight: 'bold' }}
+                        value={suggested || formData.className} readOnly aria-readonly="true" tabIndex={-1}
+                        placeholder="Choose the grade and stream" required />
                 </div>
                 <div style={styles.formGroup}>
                     <label style={styles.label}>Mean Target (%)</label>
@@ -140,6 +136,7 @@ function Classes() {
     const [saving, setSaving] = useState(false);
     const [busyClassId, setBusyClassId] = useState(null);
     const [error, setError] = useState('');
+    const isAdmin = localStorage.getItem('role') === 'ADMIN';
     const [successMsg, setSuccessMsg] = useState('');
     const [showAddForm, setShowAddForm] = useState(false);
     const [editingClass, setEditingClass] = useState(null);
@@ -198,6 +195,27 @@ function Classes() {
         catch (err) { setError('Failed to load classes. Check your connection and refresh.'); return null; }
         finally { setLoading(false); }
     };
+    // Classes whose stored name doesn't follow the naming rule (e.g. "G1 B" instead of G1B)
+    const [fixing, setFixing] = useState(false);
+    const misnamed = classes.filter(c => {
+        const g = gradeOfClass(c);
+        const want = g ? autoNameFor(g, c.stream) : '';
+        return want && String(c.className || '').trim() !== want;
+    });
+    const fixNames = async () => {
+        if (!window.confirm(`Rename ${misnamed.map(c => `${c.className} → ${autoNameFor(gradeOfClass(c), c.stream)}`).join(', ')}?`)) return;
+        setFixing(true); setError('');
+        try {
+            for (const c of misnamed) {
+                const g = gradeOfClass(c);
+                await api.put(`/api/classes/${c.classId}`, { className: autoNameFor(g, c.stream), stream: c.stream || null, gradeLevel: g, section: c.section, meanTarget: c.meanTarget });
+            }
+            flashSuccess('Class names fixed.');
+        } catch (err) { setError(serverMessage(err, 'Could not fix the class names.')); }
+        await fetchClasses();
+        setFixing(false);
+    };
+
     const fetchTeachers = async () => {
         try {
             const r = await api.get('/api/teachers');
@@ -244,7 +262,7 @@ function Classes() {
     const validate = (exceptId) => {
         const target = parseFloat(formData.meanTarget);
         if (isNaN(target) || target <= 0 || target > 100) return 'Mean target must be a number between 1 and 100.';
-        const name = formData.className.trim();
+        const name = (autoNameFor(formData.gradeLevel, formData.stream) || formData.className).trim();
         if (!name) return 'Class name is required.';
         const others = classes.filter(c => String(c.classId) !== String(exceptId ?? ''));
         const sameName = others.find(c => String(c.className).trim().toUpperCase() === name.toUpperCase());
@@ -255,7 +273,7 @@ function Classes() {
     };
 
     const payload = () => ({
-        className: formData.className.trim(), stream: formData.stream || null,
+        className: (autoNameFor(formData.gradeLevel, formData.stream) || formData.className).trim(), stream: formData.stream || null,
         gradeLevel: formData.gradeLevel, section: formData.section, meanTarget: parseFloat(formData.meanTarget)
     });
 
@@ -267,7 +285,7 @@ function Classes() {
         setSaving(true); setError('');
         try {
             await api.post('/api/classes', payload());
-            flashSuccess(`${formData.className} added!`);
+            flashSuccess(`${autoNameFor(formData.gradeLevel, formData.stream) || formData.className} added!`);
             setShowAddForm(false); resetForm(); fetchClasses();
         } catch (err) { setError(`Failed to save class: ${serverMessage(err, err.message)}`); }
         setSaving(false);
@@ -284,7 +302,7 @@ function Classes() {
             const editedId = String(editingClass.classId);
             const newGrade = formData.gradeLevel;
             const movedGrade = gradeParam && newGrade && newGrade !== gradeParam;
-            flashSuccess(`${formData.className} updated!${movedGrade && !classParam ? ` It now appears under ${gradeLabel(newGrade)}.` : ''}`);
+            flashSuccess(`${autoNameFor(formData.gradeLevel, formData.stream) || formData.className} updated!${movedGrade && !classParam ? ` It now appears under ${gradeLabel(newGrade)}.` : ''}`);
             handleCancelEdit();
             const fresh = await fetchClasses();
             if (fresh && classParam === editedId) {
@@ -501,6 +519,17 @@ function Classes() {
                     </div>
                 )}
                 {successMsg && <p style={styles.success}><Icon name="check-circle-fill" />{successMsg}</p>}
+                {isAdmin && misnamed.length > 0 && (
+                    <div style={styles.nameFix}>
+                        <Icon name="exclamation-circle-fill" />
+                        <span style={{ flex: 1 }}>
+                            {misnamed.length} class{misnamed.length === 1 ? '' : 'es'} {misnamed.length === 1 ? 'has' : 'have'} a name that doesn't follow the school's rule (grade + stream letter):{' '}
+                            {misnamed.map(c => <strong key={c.classId} style={{ marginRight: '8px' }}>{c.className} → {autoNameFor(gradeOfClass(c), c.stream)}</strong>)}
+                            <span style={{ display: 'block', fontSize: '12px', marginTop: '2px' }}>Fixing renames the class everywhere (learners move with it). Excel files for imports must then use the new name.</span>
+                        </span>
+                        <button type="button" onClick={fixNames} disabled={fixing} style={{ ...styles.linkBtn, fontWeight: 700 }}>{fixing ? 'Fixing…' : `Fix name${misnamed.length === 1 ? '' : 's'}`}</button>
+                    </div>
+                )}
 
                 {showAddForm && (
                     <div style={styles.addFormCard}>
@@ -647,6 +676,7 @@ function Classes() {
 }
 
 const styles = {
+    nameFix: { display: 'flex', alignItems: 'flex-start', gap: '8px', backgroundColor: '#fff3cd', color: '#856404', padding: '10px 12px', borderRadius: '8px', marginBottom: '12px', fontSize: '13px', flexWrap: 'wrap' },
     container: { minHeight: '100vh', backgroundColor: '#f0f2f5' },
     layoutRow: { display: 'flex' },
     content: { padding: '30px', flex: 1, minWidth: 0 },

@@ -1,6 +1,6 @@
 import React from 'react';
 
-function Spinner({ message = 'Loading...', size = 'medium' }) {
+function Spinner({ message = 'Loading...', size = 'small' }) {
     const sizes = {
         small: { spinner: 24, font: 12 },
         medium: { spinner: 40, font: 14 },

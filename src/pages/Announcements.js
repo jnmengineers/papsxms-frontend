@@ -3,6 +3,7 @@ import api from '../services/api';
 import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
 import Footer from '../components/Footer';
+import { useTabParam } from '../utils/useTabParam';
 
 /**
  * Notices — staff read the notices meant for them; the admin posts, edits, takes down
@@ -17,9 +18,12 @@ const audienceText = (a = []) => (a.includes('ALL') ? 'All staff' : a.map(x => A
 const EMPTY = { title: '', body: '', audience: ['ALL'], pinned: false, urgent: false, startsOn: '', endsOn: '' };
 const changed = () => window.dispatchEvent(new Event('notices-changed'));
 
+// Tab names for the Back button ("Back to … · …"); the current tab is kept in the address (?tab=…)
+const TAB_NAMES = { read: 'My notices', manage: 'Post & manage' };
+
 function Announcements() {
     const isAdmin = localStorage.getItem('role') === 'ADMIN';
-    const [tab, setTab] = useState('read');
+    const [tab, setTab] = useTabParam('read', TAB_NAMES);
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
     const flash = (m) => { setSuccess(m); setTimeout(() => setSuccess(''), 4000); };

@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import api from '../services/api';
-import { compareClasses } from '../utils/classUtils';
+import { compareClasses, classCode } from '../utils/classUtils';
 import { letterheadHtml } from '../utils/school';
 
 /**
@@ -45,6 +45,10 @@ export default function SchoolDayRecord({ setError, blocked }) {
     }, [date, setError]);
     useEffect(() => { load(); }, [load]);
     useEffect(() => { try { localStorage.setItem(DUTY_KEY, duty); } catch (e) { /* not essential */ } }, [duty]);
+    // Teacher on duty from the duty roster for that week (can still be typed over)
+    useEffect(() => {
+        api.get('/api/duty/on', { params: { date } }).then(r => { if (r.data?.teacherOnDuty) setDuty(r.data.teacherOnDuty); }).catch(() => {});
+    }, [date]);
 
     const classes = [...(data?.classes || [])].sort(compareClasses);
     const rows = classes.map(c => ({ c, ...rowOf(c, fill) }));
@@ -55,8 +59,8 @@ export default function SchoolDayRecord({ setError, blocked }) {
 
     const print = () => {
         const tr = (label, r, bold) => `<tr${bold ? ' class="tot"' : ''}><td class="cls">${esc(label)}</td>${['pb', 'pg', 'ab', 'ag', 'tb', 'tg', 'grand'].map(k => `<td>${esc(cellText(r[k]))}</td>`).join('')}</tr>`;
-        const body = rows.map(r => tr(r.c.className, r, false)).join('') + tr('TOTAL', totals, true);
-        const notes = fill && (notTaken.length || noGender) ? `<p class="note">${notTaken.length ? `Register not taken (present/absent left blank): ${notTaken.map(c => esc(c.className)).join(', ')}.` : ''}
+        const body = rows.map(r => tr(classCode(r.c), r, false)).join('') + tr('TOTAL', totals, true);
+        const notes = fill && (notTaken.length || noGender) ? `<p class="note">${notTaken.length ? `Register not taken (present/absent left blank): ${notTaken.map(c => esc(classCode(c))).join(', ')}.` : ''}
             ${noGender ? ` Grand total includes ${noGender} learner(s) with no gender recorded.` : ''}</p>` : '';
         const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>School attendance record ${esc(date)}</title><style>
             *{box-sizing:border-box} body{font-family:Arial,Helvetica,sans-serif;color:#000;margin:0 auto;padding:10px;max-width:780px}
@@ -107,8 +111,8 @@ export default function SchoolDayRecord({ setError, blocked }) {
 
             {fill && data && (notTaken.length > 0 || unmarked.length > 0 || noGender > 0) && (
                 <div style={st.warn}>
-                    {notTaken.length > 0 && <div><Icon name="exclamation-circle-fill" />Register not taken yet: <b>{notTaken.map(c => c.className).join(', ')}</b> — their present/absent will be blank on the sheet.</div>}
-                    {unmarked.length > 0 && <div><Icon name="exclamation-circle-fill" />Some learners not marked: {unmarked.map(c => `${c.className} (${c.notMarked})`).join(', ')}.</div>}
+                    {notTaken.length > 0 && <div><Icon name="exclamation-circle-fill" />Register not taken yet: <b>{notTaken.map(c => classCode(c)).join(', ')}</b> — their present/absent will be blank on the sheet.</div>}
+                    {unmarked.length > 0 && <div><Icon name="exclamation-circle-fill" />Some learners not marked: {unmarked.map(c => `${classCode(c)} (${c.notMarked})`).join(', ')}.</div>}
                     {noGender > 0 && <div><Icon name="exclamation-circle-fill" />{noGender} learner(s) have no gender recorded, so they can't be counted as boys or girls (Students page).</div>}
                 </div>
             )}
@@ -123,7 +127,7 @@ export default function SchoolDayRecord({ setError, blocked }) {
                         <tbody>
                             {rows.map((r, i) => (
                                 <tr key={r.c.classId} style={{ backgroundColor: fill && !r.c.taken ? '#fff8e1' : i % 2 ? 'white' : '#fafafa' }}>
-                                    <td style={{ ...st.td, fontWeight: 700 }}>{r.c.className}{fill && !r.c.taken && <span style={st.tag}>not taken</span>}</td>
+                                    <td style={{ ...st.td, fontWeight: 700 }}>{classCode(r.c)}{fill && !r.c.taken && <span style={st.tag}>not taken</span>}</td>
                                     {['pb', 'pg', 'ab', 'ag', 'tb', 'tg', 'grand'].map(k => <td key={k} style={{ ...st.tdc, fontWeight: k === 'grand' ? 700 : 400 }}>{num(r[k])}</td>)}
                                 </tr>
                             ))}

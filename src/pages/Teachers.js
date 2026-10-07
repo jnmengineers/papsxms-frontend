@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import api from '../services/api';
-import { classDisplayName } from '../utils/classUtils';
+import { classDisplayName, compareClasses } from '../utils/classUtils';
 import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
 import Footer from '../components/Footer';
@@ -72,6 +72,110 @@ const TeacherFormFields = ({ formData, setFormData, onSubmit, onCancel, submitLa
 const SECTION_INFO = SECTIONS_LIVE;   // each has key, title, color, grades, and mode ('class' or 'subject')
 const secGradeOf = (c) => c?.gradeLevel || gradeFromClassName(c?.className);
 const secKeyOf = (c) => SECTION_INFO.find(s => s.grades.includes(secGradeOf(c)))?.key || c?.section || '';
+
+/**
+ * By Class: one class at a time — its class teacher and a teacher for every subject.
+ * Works in every section. In class-taught sections (e.g. Lower Primary) a subject left on
+ * "Class teacher" is taught by the class teacher; choose someone else for subjects like
+ * Computer or CRE. Saving here updates the timetable automatically.
+ */
+const ByClassView = ({ classes, teachers, assignments, assignmentsState, busyKey, onSetClassTeacher, onSetSubjectTeacher, setError }) => {
+    const sorted = [...classes].sort(compareClasses);
+    const [classId, setClassId] = useState('');
+    const [subjects, setSubjects] = useState(null);
+    useEffect(() => { if (!classId && sorted.length) setClassId(String(sorted[0].classId)); }, [classId, sorted]);
+    useEffect(() => {
+        if (!classId) return;
+        let alive = true;
+        setSubjects(null);
+        api.get(`/api/class-subjects/by-class/${classId}`)
+            .then(r => { if (alive) setSubjects((r.data || []).map(cs => cs.subject).filter(Boolean).sort((a, b) => String(a.subjectName).localeCompare(String(b.subjectName)))); })
+            .catch(err => { if (alive) { setSubjects([]); setError(serverMessage(err, "Couldn't load this class's subjects.")); } });
+        return () => { alive = false; };
+    }, [classId, setError]);
+
+    const cls = classes.find(c => String(c.classId) === String(classId));
+    if (!sorted.length) return <div style={secStyles.panel}><p style={{ margin: 0, color: '#888' }}>No classes yet.</p></div>;
+    const section = cls ? SECTION_INFO.find(s => s.key === secKeyOf(cls)) : null;
+    const classTaught = !section || section.mode === 'class';
+    const ct = cls?.classTeacher;
+    const ctName = ct ? `${ct.firstName} ${ct.lastName}` : '';
+    const teacherOf = (subjectId) => assignments.find(a => String(a.schoolClass?.classId) === String(classId) && String(a.subject?.subjectId) === String(subjectId))?.teacher;
+    const byTeacher = [...teachers].sort((a, b) => `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`));
+    const withOwn = (subjects || []).filter(s => teacherOf(s.subjectId)).length;
+    const groups = SECTION_INFO.map(sec => ({ sec, list: sorted.filter(c => secKeyOf(c) === sec.key) })).filter(g => g.list.length);
+    const loose = sorted.filter(c => !SECTION_INFO.some(sec => sec.key === secKeyOf(c)));
+
+    return (
+        <div>
+            <div style={{ ...secStyles.panel, display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
+                <label style={{ fontWeight: 700, color: '#1F3864', fontSize: '13px' }} htmlFor="byclass-select">Class</label>
+                <select id="byclass-select" style={{ ...secStyles.select, minWidth: '220px' }} value={classId} onChange={e => setClassId(e.target.value)}>
+                    {groups.map(g => <optgroup key={g.sec.key} label={g.sec.title}>{g.list.map(c => <option key={c.classId} value={String(c.classId)}>{classDisplayName(c)}</option>)}</optgroup>)}
+                    {loose.length > 0 && <optgroup label="Other">{loose.map(c => <option key={c.classId} value={String(c.classId)}>{classDisplayName(c)}</option>)}</optgroup>}
+                </select>
+                {section && <span style={{ ...secStyles.cover, backgroundColor: section.color, color: 'white' }}>{section.title} · {classTaught ? 'class teacher teaches all subjects unless you choose otherwise' : 'a teacher for each subject'}</span>}
+            </div>
+
+            {cls && (
+                <div style={secStyles.panel}>
+                    <table style={secStyles.table}>
+                        <tbody>
+                            <tr style={{ backgroundColor: '#eef3fb' }}>
+                                <td style={{ ...secStyles.td, width: '40%' }}><strong><Icon name="house-door-fill" />Class teacher</strong></td>
+                                <td style={secStyles.td}>
+                                    <select style={{ ...secStyles.select, borderColor: ct ? '#ddd' : '#dc3545' }} value={ct ? String(ct.teacherId) : ''}
+                                        disabled={busyKey === `class_${cls.classId}`} onChange={e => onSetClassTeacher(cls, e.target.value)} aria-label={`Class teacher for ${classDisplayName(cls)}`}>
+                                        <option value="">{ct ? '— Remove class teacher —' : 'No class teacher — choose…'}</option>
+                                        {byTeacher.map(t => <option key={t.teacherId} value={String(t.teacherId)}>{t.firstName} {t.lastName}</option>)}
+                                    </select>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    {assignmentsState !== 'ok' ? (
+                        <p style={{ color: '#856404', marginTop: '10px' }}><Icon name="exclamation-triangle-fill" />Subject teachers couldn't be loaded — see the By Section tab.</p>
+                    ) : subjects === null ? <p style={{ color: '#888' }}><Icon name="hourglass-split" />Loading subjects…</p> : subjects.length === 0 ? (
+                        <p style={{ color: '#888', marginTop: '10px' }}>{classDisplayName(cls)} has no subjects yet — add them on the Class Subjects page.</p>
+                    ) : (
+                        <>
+                            <p style={{ fontSize: '13px', color: '#555', margin: '12px 0 6px' }}>
+                                {classTaught
+                                    ? <>{withOwn} of {subjects.length} subjects have their own teacher; the rest are taught by the class teacher{ctName ? ` (${ctName})` : ''}.</>
+                                    : <>{withOwn} of {subjects.length} subjects have a teacher.</>}
+                            </p>
+                            <table style={secStyles.table}>
+                                <thead><tr><th style={secStyles.th}>Subject</th><th style={secStyles.th}>Teacher</th></tr></thead>
+                                <tbody>
+                                    {subjects.map((sub, i) => {
+                                        const t = teacherOf(sub.subjectId);
+                                        const k = `subj_${cls.classId}_${sub.subjectId}`;
+                                        const missing = !t && !classTaught;
+                                        return (
+                                            <tr key={sub.subjectId} style={{ backgroundColor: i % 2 ? 'white' : '#fafafa' }}>
+                                                <td style={secStyles.td}>{sub.subjectName}</td>
+                                                <td style={secStyles.td}>
+                                                    <select style={{ ...secStyles.select, borderColor: missing ? '#dc3545' : '#ddd' }} value={t ? String(t.teacherId) : ''}
+                                                        disabled={busyKey === k} onChange={e => onSetSubjectTeacher(cls, sub, e.target.value, [cls])}
+                                                        aria-label={`Teacher for ${sub.subjectName} in ${classDisplayName(cls)}`}>
+                                                        <option value="">{classTaught ? `— Class teacher${ctName ? ` (${ctName})` : ''} —` : 'No teacher — choose…'}</option>
+                                                        {byTeacher.map(x => <option key={x.teacherId} value={String(x.teacherId)}>{x.firstName} {x.lastName}</option>)}
+                                                    </select>
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
+                                </tbody>
+                            </table>
+                            <p style={{ fontSize: '12px', color: '#888', margin: '8px 0 0' }}><Icon name="calendar-week" />The timetable follows these teachers automatically.</p>
+                        </>
+                    )}
+                </div>
+            )}
+        </div>
+    );
+};
 
 const SectionsView = ({ classes, teachers, assignments, assignmentsState, classSubjects, busyKey,
                         onSetClassTeacher, onSetSubjectTeacher, onRetry }) => {
@@ -589,6 +693,7 @@ function Teachers() {
                 <div style={styles.tabs}>
                     {[
                         { id: 'sections', icon: 'diagram-3-fill', label: 'By Section' },
+                        { id: 'byclass', icon: 'easel2-fill', label: 'By Class' },
                         { id: 'teachers', icon: 'people-fill', label: `All Teachers (${teachers.length})` },
                         { id: 'assignments', icon: 'building', label: `Class Assignments${totalUnassigned ? ` (${totalUnassigned} need a teacher)` : ''}` }
                     ].map(tab => (
@@ -608,6 +713,11 @@ function Teachers() {
                         assignmentsState={assignmentsState} classSubjects={classSubjects} busyKey={busyKey}
                         onSetClassTeacher={setClassTeacherFromSection} onSetSubjectTeacher={setSubjectTeacher}
                         onRetry={() => { setAssignmentsState('loading'); fetchAssignments(); }} />
+                )}
+
+                {activeTab === 'byclass' && (
+                    <ByClassView classes={classes} teachers={teachers} assignments={assignments} assignmentsState={assignmentsState}
+                        busyKey={busyKey} onSetClassTeacher={setClassTeacherFromSection} onSetSubjectTeacher={setSubjectTeacher} setError={setError} />
                 )}
 
                 {activeTab === 'teachers' && (

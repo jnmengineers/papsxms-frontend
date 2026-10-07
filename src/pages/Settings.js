@@ -5,6 +5,7 @@ import { useSchoolSettings } from '../context/SchoolSettingsContext';
 import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
 import Footer from '../components/Footer';
+import { useTabParam } from '../utils/useTabParam';
 
 const Icon = ({ name, style }) => <i className={`bi bi-${name}`} aria-hidden="true" style={{ marginRight: '6px', ...style }} />;
 const serverMessage = (err, fallback) => {
@@ -15,10 +16,13 @@ const serverMessage = (err, fallback) => {
 const MAX_LOGO_BYTES = 500 * 1024;
 const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 
+// Tab names for the Back button ("Back to … · …"); the current tab is kept in the address (?tab=…)
+const TAB_NAMES = { profile: 'School Profile', sections: 'Sections', grades: 'Grades & Promotion', streams: 'Streams', exams: 'Exam Types' };
+
 function Settings() {
     const settings = useSchoolSettings();
     const navigate = useNavigate();
-    const [tab, setTab] = useState('profile');
+    const [tab, setTab] = useTabParam('profile', TAB_NAMES);
     const [error, setError] = useState('');
     const [successMsg, setSuccessMsg] = useState('');
     const timer = useRef(null);
@@ -135,6 +139,20 @@ const ProfileTab = ({ settings, setError, flash }) => {
                     </div>
                 </div>
             ))}
+            <h3 style={{ ...styles.h3, marginTop: '18px' }}><Icon name="collection" />Class names</h3>
+            <div style={styles.formGrid}>
+                <label style={styles.field}>Class names shown as
+                    <select style={styles.input} value={form.classNameStyle || 'FULL'} onChange={e => setForm(f => ({ ...f, classNameStyle: e.target.value }))}>
+                        <option value="FULL">Full name — Grade 1 Blue</option>
+                        <option value="CODE">Code — G1B</option>
+                        <option value="BOTH">Both — Grade 1 Blue (G1B)</option>
+                    </select>
+                </label>
+                <p style={{ fontSize: '12px', color: '#666', margin: 0, alignSelf: 'end' }}>
+                    Used on every page and document. Names come from each class's grade and stream (Grades &amp; Streams tabs).
+                    Block timetables and the daily attendance sheet always use the short code.
+                </p>
+            </div>
             <div style={styles.saveBar}>
                 <span style={{ fontSize: '13px', color: '#666' }}>{dirty ? 'Unsaved changes' : 'All saved'}</span>
                 <button type="submit" disabled={!dirty || saving} style={{ ...styles.primary, opacity: !dirty || saving ? 0.55 : 1 }}>

@@ -7,6 +7,7 @@ import Footer from '../components/Footer';
 import { letterheadHtml } from '../utils/school';
 import { useSchoolSettings } from '../context/SchoolSettingsContext';
 import SchoolDayRecord from './AttendanceSchoolDay';
+import { useTabParam } from '../utils/useTabParam';
 
 const Icon = ({ name, style }) => <i className={`bi bi-${name}`} aria-hidden="true" style={{ marginRight: '6px', ...style }} />;
 
@@ -34,13 +35,16 @@ const serverMessage = (err, fallback) => {
 };
 const isActiveTerm = (y) => !!(y?.isActive ?? y?.active);
 
+// Tab names for the Back button ("Back to … · …"); the current tab is kept in the address (?tab=…)
+const TAB_NAMES = { register: 'Take Register', summary: 'Summary', school: 'School Daily Record' };
+
 function AttendanceRegister() {
     useSchoolSettings();   // re-draws when School Settings have loaded
     const role = localStorage.getItem('role');
     const linkedClassId = localStorage.getItem('linkedClassId');
     const isAdmin = role === 'ADMIN';
 
-    const [tab, setTab] = useState('register');
+    const [tab, setTab] = useTabParam('register', TAB_NAMES);
     const [classes, setClasses] = useState([]);
     const [classId, setClassId] = useState('');
     const [date, setDate] = useState(todayISO());

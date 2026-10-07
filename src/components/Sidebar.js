@@ -2,22 +2,27 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useSidebar } from '../context/SidebarContext';
 import useWindowWidth from '../hooks/useWindowWidth';
+import { hasAnyRole } from '../utils/roles';
 
 // Same icons as the Dashboard quick-access cards, so each page looks the same everywhere
-const GROUPS = [
+// Also used by the Back button for page names (utils/navTrail)
+export const GROUPS = [
     {
         label: 'Overview',
         items: [
-            { icon: 'house-door-fill', label: 'Dashboard', path: '/dashboard', roles: ['ADMIN', 'TEACHER', 'CLERK', 'ACCOUNTANT'] },
-            { icon: 'calendar-week-fill', label: 'Timetable', path: '/timetable', roles: ['ADMIN', 'TEACHER', 'CLERK', 'ACCOUNTANT'] },
-            { icon: 'megaphone-fill', label: 'Notices', path: '/announcements', roles: ['ADMIN', 'TEACHER', 'CLERK', 'ACCOUNTANT'] },
+            { icon: 'house-door-fill', label: 'Dashboard', path: '/dashboard', roles: ['ADMIN', 'TEACHER', 'CLERK', 'ACCOUNTANT', 'CHAIRPERSON'] },
+            { icon: 'calendar-week-fill', label: 'Timetable', path: '/timetable', roles: ['ADMIN', 'TEACHER', 'CLERK', 'ACCOUNTANT', 'CHAIRPERSON'] },
+            { icon: 'megaphone-fill', label: 'Notices', path: '/announcements', roles: ['ADMIN', 'TEACHER', 'CLERK', 'ACCOUNTANT', 'CHAIRPERSON'] },
+            { icon: 'calendar2-heart-fill', label: 'My Leave & Duty', path: '/my-leave', roles: ['ADMIN', 'TEACHER', 'CLERK', 'ACCOUNTANT'] },
         ]
     },
     {
         label: 'People',
         items: [
-            { icon: 'mortarboard-fill', label: 'Students', path: '/students', roles: ['ADMIN', 'TEACHER', 'CLERK'], alsoActive: ['/student/'] },
+            { icon: 'mortarboard-fill', label: 'Students', path: '/students', roles: ['ADMIN', 'TEACHER', 'CLERK', 'CHAIRPERSON'], alsoActive: ['/student/'] },
+            { icon: 'people-fill', label: 'Parents', path: '/parents', roles: ['ADMIN', 'CLERK', 'ACCOUNTANT'] },
             { icon: 'person-workspace', label: 'Teachers', path: '/teachers', roles: ['ADMIN'] },
+            { icon: 'person-badge-fill', label: 'Staff', path: '/staff', roles: ['ADMIN', 'CHAIRPERSON', 'HEAD_TEACHER'] },
             { icon: 'people-fill', label: 'Users', path: '/users', roles: ['ADMIN'] },
         ]
     },
@@ -35,26 +40,27 @@ const GROUPS = [
     {
         label: 'Exams & Results',
         items: [
-            { icon: 'file-earmark-text-fill', label: 'Exams', path: '/exams', roles: ['ADMIN'] },
+            { icon: 'file-earmark-text-fill', label: 'Exams', path: '/exams', roles: ['ADMIN', 'CHAIRPERSON'] },
             { icon: 'pencil-square', label: 'Mark Entry', path: '/mark-entry', roles: ['ADMIN', 'TEACHER', 'CLERK'] },
-            { icon: 'calendar2-check-fill', label: 'Attendance', path: '/attendance', roles: ['ADMIN', 'TEACHER'] },
-            { icon: 'bar-chart-fill', label: 'Results', path: '/results', roles: ['ADMIN', 'TEACHER', 'CLERK'] },
-            { icon: 'clipboard-data-fill', label: 'Report Cards', path: '/reportcards', roles: ['ADMIN', 'TEACHER', 'CLERK'] },
-            { icon: 'graph-up-arrow', label: 'Progressive Report', path: '/progressive-report', roles: ['ADMIN', 'TEACHER', 'CLERK'] },
-            { icon: 'pie-chart-fill', label: 'Section Report', path: '/section-report', roles: ['ADMIN'] },
+            { icon: 'calendar2-check-fill', label: 'Attendance', path: '/attendance', roles: ['ADMIN', 'TEACHER', 'CHAIRPERSON'] },
+            { icon: 'bar-chart-fill', label: 'Results', path: '/results', roles: ['ADMIN', 'TEACHER', 'CLERK', 'CHAIRPERSON'] },
+            { icon: 'clipboard-data-fill', label: 'Report Cards', path: '/reportcards', roles: ['ADMIN', 'TEACHER', 'CLERK', 'CHAIRPERSON'] },
+            { icon: 'graph-up-arrow', label: 'Progressive Report', path: '/progressive-report', roles: ['ADMIN', 'TEACHER', 'CLERK', 'CHAIRPERSON'] },
+            { icon: 'pie-chart-fill', label: 'Section Report', path: '/section-report', roles: ['ADMIN', 'CHAIRPERSON'] },
         ]
     },
     {
         label: 'Class Services',
         items: [
-            { icon: 'basket2-fill', label: 'Meals & Transport', path: '/meals-transport', roles: ['ADMIN', 'ACCOUNTANT', 'TEACHER'] },
+            { icon: 'basket2-fill', label: 'Meals & Transport', path: '/meals-transport', roles: ['ADMIN', 'ACCOUNTANT', 'TEACHER', 'CHAIRPERSON'] },
         ]
     },
     {
         label: 'Finance',
         items: [
-            { icon: 'cash-stack', label: 'Finance', path: '/finance', roles: ['ADMIN', 'ACCOUNTANT'] },
-            { icon: 'bus-front-fill', label: 'Transport', path: '/transport', roles: ['ADMIN', 'ACCOUNTANT'] },
+            { icon: 'cash-stack', label: 'Finance', path: '/finance', roles: ['ADMIN', 'ACCOUNTANT', 'CHAIRPERSON'] },
+            { icon: 'person-vcard-fill', label: 'Payroll', path: '/payroll', roles: ['ADMIN', 'ACCOUNTANT', 'CHAIRPERSON'] },
+            { icon: 'bus-front-fill', label: 'Transport', path: '/transport', roles: ['ADMIN', 'ACCOUNTANT', 'CHAIRPERSON'] },
         ]
     },
     {
@@ -67,7 +73,7 @@ const GROUPS = [
     {
         label: 'Account',
         items: [
-            { icon: 'key-fill', label: 'Change Password', path: '/change-password', roles: ['ADMIN', 'TEACHER', 'CLERK', 'ACCOUNTANT'] },
+            { icon: 'key-fill', label: 'Change Password', path: '/change-password', roles: ['ADMIN', 'TEACHER', 'CLERK', 'ACCOUNTANT', 'CHAIRPERSON'] },
         ]
     },
 ];
@@ -85,7 +91,6 @@ const WIDE = 230, RAIL = 64;
 function Sidebar() {
     const navigate = useNavigate();
     const location = useLocation();
-    const role = localStorage.getItem('role');
     const { isOpen, setIsOpen } = useSidebar();
     const isMobile = useWindowWidth() <= 768;
 
@@ -99,7 +104,7 @@ function Sidebar() {
     const isRail = collapsed && !isMobile;
 
     const visibleGroups = GROUPS
-        .map(group => ({ ...group, items: group.items.filter(item => item.roles.includes(role)) }))
+        .map(group => ({ ...group, items: group.items.filter(item => hasAnyRole(item.roles)) }))
         .filter(group => group.items.length > 0);
 
     const activeGroupLabel = visibleGroups.find(group =>

@@ -3,6 +3,7 @@ import axios from 'axios';
 import logo1 from '../assets/logo1.png';
 import LoadingScreen from './LoadingScreen';
 import { school, rememberPublicInfo } from '../utils/school';
+import { pageRoleFor } from '../utils/roles';
 
 function Login() {
     const [username, setUsername] = useState('');
@@ -46,7 +47,11 @@ function Login() {
             localStorage.setItem('token', data.token);
             localStorage.setItem('username', data.username);
             localStorage.setItem('displayName', data.displayName || data.username);
-            localStorage.setItem('role', data.role);
+            // Every role this person has (super admin can tick several); pages use the strongest one
+            const roles = Array.isArray(data.roles) && data.roles.length ? data.roles : [data.role];
+            localStorage.setItem('roles', JSON.stringify(roles));
+            localStorage.setItem('mainRole', data.role);
+            localStorage.setItem('role', pageRoleFor(roles));
             localStorage.setItem('linkedClassId', data.linkedClassId || '');
             localStorage.setItem('linkedClassName', data.linkedClassName || '');
             localStorage.setItem('linkedStream', data.linkedStream || '');

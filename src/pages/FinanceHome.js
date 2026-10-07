@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import api from '../services/api';
+import { classLabel } from '../utils/classUtils';
 
 /**
  * Finance → Home: today at a glance and one-tap buttons for everyday jobs.
@@ -78,7 +79,7 @@ export default function FinanceHome({ onGo }) {
                 <h3 style={st.h3}><Icon name="clock-history" />Today's payments</h3>
                 {!today ? <p style={st.small}>Loading…</p> : !recent.length ? <p style={st.small}>No payments recorded today yet.</p> : recent.map(p => (
                     <div key={p.paymentId} style={st.line}>
-                        <span><strong>{p.student?.name}</strong> <span style={st.small}>{p.student?.className} · {p.receiptNumber}</span></span>
+                        <span><strong>{p.student?.name}</strong> <span style={st.small}>{classLabel(p.student?.className)} · {p.receiptNumber}</span></span>
                         <span style={{ fontWeight: 700, whiteSpace: 'nowrap' }}>{money(p.amount)} <span style={st.small}>{METHOD[p.method] || p.method}</span></span>
                     </div>
                 ))}

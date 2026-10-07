@@ -18,6 +18,10 @@ import Unauthorized from './components/Unauthorized';
 import MarkEntry from './pages/MarkEntry';
 import AttendanceRegister from './pages/AttendanceRegister';
 import Finance from './pages/Finance';
+import Payroll from './pages/Payroll';
+import Staff from './pages/Staff';
+import MyLeave from './pages/MyLeave';
+import Parents from './pages/Parents';
 import MealsTransport from './pages/MealsTransport';
 import Timetable from './pages/Timetable';
 import Announcements from './pages/Announcements';
@@ -50,19 +54,19 @@ function App() {
 
                 {/* All logged in users */}
                 <Route path="/dashboard" element={
-                    <PrivateRoute allowedRoles={['ADMIN', 'TEACHER', 'CLERK', 'ACCOUNTANT']}>
+                    <PrivateRoute allowedRoles={['ADMIN', 'TEACHER', 'CLERK', 'ACCOUNTANT', 'CHAIRPERSON']}>
                         <Dashboard />
                     </PrivateRoute>
                 } />
 
                 {/* ADMIN, TEACHER and CLERK (clerk = school secretary) */}
                 <Route path="/students" element={
-                    <PrivateRoute allowedRoles={['ADMIN', 'TEACHER', 'CLERK']}>
+                    <PrivateRoute allowedRoles={['ADMIN', 'TEACHER', 'CLERK', 'CHAIRPERSON']}>
                         <Students />
                     </PrivateRoute>
                 } />
                 <Route path="/reportcards" element={
-                    <PrivateRoute allowedRoles={['ADMIN', 'TEACHER', 'CLERK']}>
+                    <PrivateRoute allowedRoles={['ADMIN', 'TEACHER', 'CLERK', 'CHAIRPERSON']}>
                         <ReportCards />
                     </PrivateRoute>
                 } />
@@ -72,12 +76,12 @@ function App() {
                     </PrivateRoute>
                 } />
                 <Route path="/attendance" element={
-                    <PrivateRoute allowedRoles={['ADMIN', 'TEACHER']}>
+                    <PrivateRoute allowedRoles={['ADMIN', 'TEACHER', 'CHAIRPERSON']}>
                         <AttendanceRegister />
                     </PrivateRoute>
                 } />
                 <Route path="/progressive-report" element={
-                    <PrivateRoute allowedRoles={['ADMIN', 'TEACHER', 'CLERK']}>
+                    <PrivateRoute allowedRoles={['ADMIN', 'TEACHER', 'CLERK', 'CHAIRPERSON']}>
                         <ProgressiveReport />
                     </PrivateRoute>
                 } />
@@ -89,7 +93,7 @@ function App() {
 
                 {/* ADMIN, TEACHER and CLERK */}
                 <Route path="/results" element={
-                    <PrivateRoute allowedRoles={['ADMIN', 'TEACHER', 'CLERK']}>
+                    <PrivateRoute allowedRoles={['ADMIN', 'TEACHER', 'CLERK', 'CHAIRPERSON']}>
                         <Results />
                     </PrivateRoute>
                 } />
@@ -111,7 +115,7 @@ function App() {
                     </PrivateRoute>
                 } />
                 <Route path="/exams" element={
-                    <PrivateRoute allowedRoles={['ADMIN']}>
+                    <PrivateRoute allowedRoles={['ADMIN', 'CHAIRPERSON']}>
                         <Exams />
                     </PrivateRoute>
                 } />
@@ -136,7 +140,7 @@ function App() {
                     </PrivateRoute>
                 } />
                 <Route path="/section-report" element={
-                    <PrivateRoute allowedRoles={['ADMIN']}>
+                    <PrivateRoute allowedRoles={['ADMIN', 'CHAIRPERSON']}>
                         <SectionReport />
                     </PrivateRoute>
                 } />
@@ -158,38 +162,58 @@ function App() {
 
                 {/* Everyone: timetable and notices */}
                 <Route path="/timetable" element={
-                    <PrivateRoute allowedRoles={['ADMIN', 'TEACHER', 'CLERK', 'ACCOUNTANT']}>
+                    <PrivateRoute allowedRoles={['ADMIN', 'TEACHER', 'CLERK', 'ACCOUNTANT', 'CHAIRPERSON']}>
                         <Timetable />
                     </PrivateRoute>
                 } />
                 <Route path="/announcements" element={
-                    <PrivateRoute allowedRoles={['ADMIN', 'TEACHER', 'CLERK', 'ACCOUNTANT']}>
+                    <PrivateRoute allowedRoles={['ADMIN', 'TEACHER', 'CLERK', 'ACCOUNTANT', 'CHAIRPERSON']}>
                         <Announcements />
                     </PrivateRoute>
                 } />
 
                 {/* Class teachers tick meals, trips and bus users (own class, current term) */}
                 <Route path="/meals-transport" element={
-                    <PrivateRoute allowedRoles={['ADMIN', 'ACCOUNTANT', 'TEACHER']}>
+                    <PrivateRoute allowedRoles={['ADMIN', 'ACCOUNTANT', 'TEACHER', 'CHAIRPERSON']}>
                         <MealsTransport />
                     </PrivateRoute>
                 } />
 
                 {/* ADMIN and ACCOUNTANT (bursar) */}
                 <Route path="/finance" element={
-                    <PrivateRoute allowedRoles={['ADMIN', 'ACCOUNTANT']}>
+                    <PrivateRoute allowedRoles={['ADMIN', 'ACCOUNTANT', 'CHAIRPERSON']}>
                         <Finance />
                     </PrivateRoute>
                 } />
+                <Route path="/payroll" element={
+                    <PrivateRoute allowedRoles={['ADMIN', 'ACCOUNTANT', 'CHAIRPERSON']}>
+                        <Payroll />
+                    </PrivateRoute>
+                } />
+                <Route path="/staff" element={
+                    <PrivateRoute allowedRoles={['ADMIN', 'CHAIRPERSON', 'HEAD_TEACHER']}>
+                        <Staff />
+                    </PrivateRoute>
+                } />
+                <Route path="/my-leave" element={
+                    <PrivateRoute allowedRoles={['ADMIN', 'TEACHER', 'CLERK', 'ACCOUNTANT']}>
+                        <MyLeave />
+                    </PrivateRoute>
+                } />
+                <Route path="/parents" element={
+                    <PrivateRoute allowedRoles={['ADMIN', 'CLERK', 'ACCOUNTANT']}>
+                        <Parents />
+                    </PrivateRoute>
+                } />
                 <Route path="/transport" element={
-                    <PrivateRoute allowedRoles={['ADMIN', 'ACCOUNTANT']}>
+                    <PrivateRoute allowedRoles={['ADMIN', 'ACCOUNTANT', 'CHAIRPERSON']}>
                         <Transport />
                     </PrivateRoute>
                 } />
 
                 {/* All roles */}
                 <Route path="/change-password" element={
-                    <PrivateRoute allowedRoles={['ADMIN', 'TEACHER', 'CLERK', 'ACCOUNTANT']}>
+                    <PrivateRoute allowedRoles={['ADMIN', 'TEACHER', 'CLERK', 'ACCOUNTANT', 'CHAIRPERSON']}>
                         <ChangePassword />
                     </PrivateRoute>
                 } />

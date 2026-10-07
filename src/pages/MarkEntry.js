@@ -4,7 +4,7 @@ import { useReactToPrint } from 'react-to-print';
 import api from '../services/api';
 import { gradeInfo } from '../utils/grading';
 import { useSchoolSettings } from '../context/SchoolSettingsContext';
-import { classDisplayName } from '../utils/classUtils';
+import { classDisplayName, classLabel } from '../utils/classUtils';
 import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
 import Footer from '../components/Footer';
@@ -155,7 +155,7 @@ const CoverPanel = ({ role, myClasses, classes, onChanged, setError, setSuccessM
         setSaving(false);
     };
     const cancel = async (c) => {
-        const who = c.heldByMe ? `Hand back ${c.className} ${c.subjectName} to ${c.grantedByName}?` : `Cancel ${c.coverName}'s cover for ${c.className} (${c.subjectName})?`;
+        const who = c.heldByMe ? `Hand back ${classLabel(c.className)} ${c.subjectName} to ${c.grantedByName}?` : `Cancel ${c.coverName}'s cover for ${classLabel(c.className)} (${c.subjectName})?`;
         if (!window.confirm(who)) return;
         try { const r = await api.post(`/api/mark-cover/${c.coverId}/cancel`); setSuccessMsg(r.data.message); await loadCovers(); onChanged?.(); }
         catch (err) { setError(coverErr(err, 'Could not cancel the cover.')); }
@@ -216,7 +216,7 @@ const CoverPanel = ({ role, myClasses, classes, onChanged, setError, setSuccessM
                             {covers.map(c => (
                                 <div key={c.coverId} style={coverStyles.row}>
                                     <span style={{ flex: 1, minWidth: 0 }}>
-                                        <strong>{c.heldByMe ? 'You' : c.coverName}</strong> — {c.className} · {c.subjectName}
+                                        <strong>{c.heldByMe ? 'You' : c.coverName}</strong> — {classLabel(c.className)} · {c.subjectName}
                                         <span style={coverStyles.meta}> until {niceDay(c.validUntil)}{c.heldByMe ? ` · for ${c.grantedByName}` : c.givenByMe ? ' · arranged by you' : ` · by ${c.grantedByName}`}{c.note ? ` · ${c.note}` : ''}</span>
                                     </span>
                                     {c.canCancel && <button type="button" onClick={() => cancel(c)} style={coverStyles.cancel}>{c.heldByMe ? 'Hand back' : 'Cancel'}</button>}

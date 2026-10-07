@@ -127,6 +127,7 @@ export const LOWER_CSS = `
     .lp tbody tr{height:110px}
     .lp .up{writing-mode:vertical-rl;transform:rotate(180deg);font-weight:800;letter-spacing:.2px;margin:0 auto;max-height:104px;line-height:1.1}
     .lp .sm{font-size:8.5px;color:#444}
+    .lp .lt{font-size:8px;color:#1F3864;font-weight:700;margin-top:3px;line-height:1.1;white-space:normal}
     .lp .letters{color:#c00000;font-weight:900;font-size:30px;line-height:1.05;font-family:Arial,sans-serif}
     .lp .word{writing-mode:vertical-rl;transform:rotate(180deg);color:#1e7e34;font-weight:800;font-size:13px;margin:0 auto}
 `;
@@ -166,7 +167,9 @@ export const lowerSheetHtml = (view, entries, name, termText) => {
         const text = String(e?.subjectName || '').toUpperCase();
         const longest = Math.max(0, ...text.split(/\s+/).map(w => w.length));
         const size = longest > 12 ? 9.5 : longest > 9 ? 10.5 : 12;
-        return `<td>${e ? `<span class="up" style="font-size:${size}px">${esc(text)}</span>` : ''}</td>`;
+        // Teacher only when it isn't the class teacher (whose name is printed once, below the table)
+        const tch = e && e.teacherName && e.teacherName !== view.classTeacherName ? e.teacherName : '';
+        return `<td>${e ? `<span class="up" style="font-size:${size}px${tch ? ';max-height:82px' : ''}">${esc(text)}</span>${tch ? `<div class="lt">${esc(tch)}</div>` : ''}` : ''}</td>`;
     }).join('')}</tr>`).join('');
     return `<div class="page">
         ${letterheadHtml({ logoSize: 50 })}

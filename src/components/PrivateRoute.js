@@ -1,10 +1,10 @@
 import React from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
+import { hasAnyRole } from '../utils/roles';
 
 function PrivateRoute({ children, allowedRoles }) {
     const location = useLocation();
     const token = localStorage.getItem('token');
-    const role = localStorage.getItem('role');
     const mustChangePassword = localStorage.getItem('mustChangePassword') === 'true';
 
     // Not logged in
@@ -19,7 +19,7 @@ function PrivateRoute({ children, allowedRoles }) {
     }
 
     // Role not allowed
-    if (allowedRoles && !allowedRoles.includes(role)) {
+    if (allowedRoles && !hasAnyRole(allowedRoles)) {   // any of the person's roles will do
         return <Navigate to="/unauthorized" replace />;
     }
 
