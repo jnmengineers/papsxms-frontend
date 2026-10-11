@@ -44,7 +44,7 @@ const runLimited = async (items, limit, job, onProgress) => {
 };
 
 // Outside parent — prevents keyboard dismiss on mobile
-const YearForm = ({ formData, setFormData, onSubmit, onCancel, submitLabel, submitIcon, saving }) => (
+const YearForm = ({ formData, setFormData, onSubmit, onCancel, submitLabel, submitIcon, saving, error }) => (
     <form onSubmit={onSubmit} style={styles.inlineForm}>
         <div style={styles.formGrid}>
             <div style={styles.formGroup}>
@@ -82,6 +82,8 @@ const YearForm = ({ formData, setFormData, onSubmit, onCancel, submitLabel, subm
                 </select>
             </div>
         </div>
+        {/* Why it didn't save — shown here, next to the button (the page-top message may be scrolled out of view) */}
+        {error && <div style={{ ...styles.error, marginBottom: '12px' }} role="alert"><Icon name="exclamation-triangle-fill" />{error}</div>}
         <div style={styles.btnGroup}>
             <button type="submit" style={{ ...styles.submitBtn, opacity: saving ? 0.7 : 1 }} disabled={saving}>
                 <Icon name={saving ? 'hourglass-split' : submitIcon} />{saving ? 'Saving...' : submitLabel}
@@ -375,7 +377,7 @@ function AcademicYears() {
                         <h3 style={styles.formTitle}><Icon name="plus-circle" />Add Academic Term</h3>
                         <YearForm formData={formData} setFormData={setFormData}
                             onSubmit={handleSubmitAdd} onCancel={() => { setShowAddForm(false); resetForm(); }}
-                            submitLabel="Save" submitIcon="save-fill" saving={saving} />
+                            submitLabel="Save" submitIcon="save-fill" saving={saving} error={error} />
                     </div>
                 )}
 
@@ -559,7 +561,7 @@ function AcademicYears() {
                                                         </div>
                                                         <YearForm formData={formData} setFormData={setFormData}
                                                             onSubmit={handleSubmitEdit} onCancel={handleCancelEdit}
-                                                            submitLabel="Update" submitIcon="check-circle-fill" saving={saving} />
+                                                            submitLabel="Update" submitIcon="check-circle-fill" saving={saving} error={error} />
                                                     </div>
                                                 )}
                                             </div>
