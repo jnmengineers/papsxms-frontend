@@ -108,7 +108,7 @@ function Login() {
                     {pub.motto && <p style={styles.motto}>{pub.motto}</p>}
                     <div style={styles.leftFooter}>
                         <i className="bi bi-mortarboard-fill" aria-hidden="true" style={{ marginRight: '8px' }} />
-                        Exam Management System
+                        PAPS School Management System
                     </div>
                 </div>
 
