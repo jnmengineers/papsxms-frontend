@@ -19,6 +19,8 @@ const mark = (v) => (v === null ? '–' : Number.isInteger(v) ? String(v) : fmt2
 /** Grading-key boundaries exactly as set (75, 74.5…) */
 const bound = (v) => String(Number(v));
 const fmtDate = (d) => (d ? new Date(String(d).slice(0, 10) + 'T00:00:00').toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '');
+// CBC core competencies — the teacher ticks a level for each (fills the card's free space usefully)
+const COMPETENCIES = ['Communication & Collaboration', 'Critical Thinking & Problem Solving', 'Creativity & Imagination', 'Citizenship', 'Digital Literacy', 'Learning to Learn', 'Self-efficacy'];
 const EXAMS = [['opening', 'OPN', 'Opener'], ['midTerm', 'MID', 'Mid-term'], ['endTerm', 'END', 'End-term']];
 
 /** Text colour that stays readable on white paper: pale colours (e.g. yellow) are darkened. */
@@ -93,19 +95,31 @@ export function buildA5Card(card, singleResults, progressiveData) {
     // Each exam: two columns — Marks and Level
     const head = multi
         ? `<tr><th class="sub" rowspan="2">Learning area</th>${cols.map(([, , l]) => `<th colspan="2" class="ex">${esc(l)}</th>`).join('')}`
-          + `<th rowspan="2">AVG</th><th rowspan="2">LEVEL</th><th class="barh" rowspan="2">Perf.</th></tr>`
+          + `<th rowspan="2">AVG</th><th rowspan="2">LEVEL</th></tr>`
           + `<tr class="sub2">${cols.map(() => '<th>Mks</th><th>Lvl</th>').join('')}</tr>`
-        : `<tr><th class="sub">Learning area</th><th>MARKS</th><th>LEVEL</th><th class="barh">Performance</th></tr>`;
+        : `<tr><th class="sub">Learning area</th><th>MARKS</th><th>LEVEL</th></tr>`;
     const body = rows.map((r, i) => {
-        const g = gradeInfo(r.avg);
-        const w = r.avg === null ? 0 : Math.max(2, Math.min(100, r.avg));
         return `<tr class="${i % 2 ? '' : 'alt'}"><td class="sub">${esc(r.name)}</td>`
             + (multi
                 ? r.marks.map(m => `<td class="n">${m === null ? '<span class="dim">–</span>' : mark(m)}</td><td class="c">${level(m)}</td>`).join('')
-                  + `<td class="n b">${fmt2(r.avg)}</td><td class="c">${level(r.avg)}</td>`
+                  + `<td class="n b">${fmt2(r.avg)}${trend(r.marks)}</td><td class="c">${level(r.avg)}</td>`
                 : `<td class="n">${r.marks[0] === null ? '<span class="dim">–</span>' : mark(r.marks[0])}</td><td class="c">${level(r.avg)}</td>`)
-            + `<td class="bar"><span class="track"><span class="fill" style="width:${w}%;background:${g.color}"></span></span>${multi ? trend(r.marks) : ''}</td></tr>`;
+            + `</tr>`;
     }).join('');
+    // Per-exam statistics: total and mean (with level) for each exam column
+    const colStats = cols.map((_, ci) => {
+        const ms = rows.map(r => r.marks[ci]).filter(m => m !== null);
+        return { total: ms.reduce((a, b) => a + b, 0), n: ms.length, mean: ms.length ? ms.reduce((a, b) => a + b, 0) / ms.length : null };
+    });
+    const foot = rows.length ? (multi
+        ? `<tr class="tot"><td class="sub">Total</td>${colStats.map(c => `<td class="n" colspan="2">${c.n ? mark(c.total) + ' / ' + c.n * 100 : '–'}</td>`).join('')}<td class="n b" colspan="2">${scored.length ? fmt2(total) + ' / ' + scored.length * 100 : '–'}</td></tr>`
+          + `<tr class="tot"><td class="sub">Mean</td>${colStats.map(c => `<td class="n">${fmt2(c.mean)}</td><td class="c">${level(c.mean)}</td>`).join('')}<td class="n b">${fmt2(mean)}</td><td class="c">${level(mean)}</td></tr>`
+        : `<tr class="tot"><td class="sub">Total</td><td class="n b">${colStats[0].n ? mark(colStats[0].total) + ' / ' + colStats[0].n * 100 : '–'}</td><td class="c">${level(mean)}</td></tr>`) : '';
+    const progress = multi && colStats[0].mean !== null && colStats[colStats.length - 1].mean !== null
+        ? colStats[colStats.length - 1].mean - colStats[0].mean : null;
+    const counts = {};
+    scored.forEach(r => { const l = gradeInfo(r.avg).label; counts[l] = (counts[l] || 0) + 1; });
+    const levelCounts = gradingBands().filter(b => counts[b.label]).map(b => `<span class="cnt"><b style="color:${ink(b.color)}">${esc(b.label)}</b> ${counts[b.label]}</span>`).join('');
     const key = gradingBands().map(b => `<span class="key"><b style="color:${ink(b.color)}">${esc(b.label)}</b> ${bound(b.min)}–${bound(b.max)}${b.remarks ? ` <i>${esc(b.remarks)}</i>` : ''}</span>`).join('');
     const remark = overall.remarks || '';
 
@@ -118,14 +132,18 @@ export function buildA5Card(card, singleResults, progressiveData) {
   <div class="band"><span>LEARNER PROGRESS REPORT</span><span>${title}</span></div>
   <div class="who">
     <div class="nm">${esc(name || '—')}</div>
-    <div class="facts"><span><b>Adm</b> ${esc(st.admissionNumber || '—')}</span><span><b>Class</b> ${esc(cls || '—')}</span>${card.termRank ? `<span><b>Position</b> ${esc(card.termRank)}</span>` : ''}<span><b>Exam</b> ${esc(exam.examName || '')}</span></div>
+    <div class="facts"><span><b>Adm</b> ${esc(st.admissionNumber || '—')}</span><span><b>Class</b> ${esc(cls || '—')}</span><span><b>Exam</b> ${esc(exam.examName || '')}</span></div>
   </div>
-  <table class="marks"><thead>${head}</thead><tbody>${body || `<tr><td colspan="${multi ? cols.length * 2 + 4 : 4}" class="c dim">No results recorded</td></tr>`}</tbody></table>
+  <div class="tablewrap"><table class="marks"><thead>${head}</thead><tfoot>${foot}</tfoot><tbody>${body || `<tr><td colspan="${multi ? cols.length * 2 + 3 : 3}" class="c dim">No results recorded</td></tr>`}</tbody></table></div>
+  <div class="comp">
+    <div class="ct">Core competencies <span class="hint">(tick ✓)</span></div>
+    <div class="compgrid">${COMPETENCIES.map(c => `<div class="ci"><span>${c}</span><span class="boxes">${gradingBands().slice(0, 4).map(b => `<span class="bx">${esc(b.label)}</span>`).join('') || '<span class="bx">EE</span><span class="bx">ME</span><span class="bx">AE</span><span class="bx">BE</span>'}</span></div>`).join('')}</div>
+  </div>
   <div class="summary">
     <div class="big" style="border-color:${overall.color}"><div class="k">Overall level</div><div class="v" style="color:${ink(overall.color)}">${esc(overall.label)}</div>${remark ? `<div class="r">${esc(remark)}</div>` : ''}</div>
     <div class="stat"><div class="k">Mean score</div><div class="v">${mean === null ? '–' : fmt2(mean) + '%'}</div><div class="r">${scored.length} learning area${scored.length === 1 ? '' : 's'}</div></div>
-    <div class="stat"><div class="k">Total</div><div class="v">${scored.length ? fmt2(total) : '–'}</div><div class="r">out of ${scored.length * 100}</div></div>
-    <div class="notes">${best ? `<div><span class="up">▲</span> <b>Strongest:</b> ${esc(best.name)} (${fmt2(best.avg)})</div>` : ''}${weak && weak !== best ? `<div><span class="down">▼</span> <b>Needs support:</b> ${esc(weak.name)} (${fmt2(weak.avg)})</div>` : ''}</div>
+    <div class="stat"><div class="k">${multi ? 'Progress' : 'Total'}</div><div class="v">${multi ? (progress === null ? '–' : (progress > 0 ? '+' : '') + fmt2(progress)) : (scored.length ? fmt2(total) : '–')}</div><div class="r">${multi ? `${esc(cols[0][2])} → ${esc(cols[cols.length - 1][2])}` : `out of ${scored.length * 100}`}</div></div>
+    <div class="notes">${levelCounts ? `<div class="cnts"><b>Areas by level:</b> ${levelCounts}</div>` : ''}${best ? `<div><span class="up">▲</span> <b>Strongest:</b> ${esc(best.name)} (${fmt2(best.avg)})</div>` : ''}${weak && weak !== best ? `<div><span class="down">▼</span> <b>Needs support:</b> ${esc(weak.name)} (${fmt2(weak.avg)})</div>` : ''}</div>
   </div>
   <div class="comments">
     <div><div class="ct">Class teacher</div><div class="cb">${card.teacherComment ? esc(card.teacherComment) : '&nbsp;'}</div><div class="sig">Sign ____________</div></div>
@@ -174,13 +192,24 @@ header img { width: 13mm; height: 13mm; object-fit: contain; }
 .nm { font-weight: 800; font-size: 11.5pt; color: #1F3864; text-transform: uppercase; }
 .facts { display: flex; flex-wrap: wrap; gap: 1mm 4mm; margin-top: .8mm; font-size: 7.8pt; color: #333; }
 .facts b { color: #5b6475; font-weight: 600; margin-right: .8mm; }
-table.marks { width: 100%; border-collapse: collapse; margin-top: 2.5mm; }
+.tablewrap { margin-top: 2.5mm; }
+table.marks { width: 100%; border-collapse: collapse; }
+.marks td { height: 5.1mm; }
+.comp { flex: 1; min-height: 22mm; margin-top: 2.5mm; border: .3mm solid #d6dce6; border-radius: 1.5mm; padding: 1.5mm 2mm; display: flex; flex-direction: column; }
+.hint { font-weight: 400; color: #8a94a6; font-size: 6.5pt; }
+.compgrid { flex: 1; display: grid; grid-template-columns: 1fr 1fr; grid-auto-rows: 1fr; column-gap: 3mm; margin-top: 1mm; }
+.ci { display: flex; align-items: center; justify-content: space-between; gap: 1mm; font-size: 7pt; border-bottom: .2mm dotted #d6dce6; min-height: 3.6mm; }
+.boxes { display: flex; gap: .8mm; flex-shrink: 0; }
+.bx { width: 4.6mm; height: 3.2mm; border: .25mm solid #9aa6b8; border-radius: .6mm; font-size: 4.6pt; color: #8a94a6; display: flex; align-items: flex-end; justify-content: center; line-height: 1; }
+.marks tfoot td { background: #eef3fa; border-top: .3mm solid #2E75B6; font-weight: 700; color: #1F3864; }
+.cnts { display: flex; flex-wrap: wrap; gap: 1mm 2.5mm; }
+.cnt { white-space: nowrap; }
 .marks th { background: #2E75B6; color: #fff; font-size: 7pt; font-weight: 700; padding: 1.3mm 1mm; text-align: center; letter-spacing: .3px; }
 .marks th.sub { text-align: left; padding-left: 2mm; border-top-left-radius: 1.2mm; }
 .marks th.barh { border-top-right-radius: 1.2mm; width: 16mm; }
 .marks th.ex { border-left: .3mm solid #fff; }
 .marks tr.sub2 th { font-size: 6pt; padding: .6mm .5mm; background: #4a8bc9; }
-.marks td { padding: 1.05mm .6mm; border-bottom: .2mm solid #e3e7ee; font-size: 8.1pt; }
+.marks td { padding: 1mm .6mm; border-bottom: .2mm solid #e3e7ee; font-size: 8.4pt; }
 .marks tr.alt td { background: #f8fafc; }
 .marks td.sub { padding-left: 2mm; font-weight: 600; }
 .n { text-align: center; font-variant-numeric: tabular-nums; }
@@ -201,7 +230,7 @@ table.marks { width: 100%; border-collapse: collapse; margin-top: 2.5mm; }
 .v { font-size: 14pt; font-weight: 800; color: #1F3864; line-height: 1.15; }
 .r { font-size: 6.6pt; color: #5b6475; }
 .notes { font-size: 7.4pt; display: flex; flex-direction: column; justify-content: center; gap: 1mm; }
-.comments { display: grid; grid-template-columns: 1fr 1fr; gap: 2mm; margin-top: 3mm; flex: 1; min-height: 22mm; }
+.comments { display: grid; grid-template-columns: 1fr 1fr; gap: 2mm; margin-top: 2mm; height: 19mm; flex: none; }
 .comments > div { border: .3mm solid #d6dce6; border-radius: 1.5mm; padding: 1.5mm 2mm; display: flex; flex-direction: column; }
 .ct { font-weight: 700; color: #1F3864; font-size: 7.6pt; }
 .cb { flex: 1; font-size: 7.8pt; margin-top: .8mm; background: repeating-linear-gradient(transparent 0 3.6mm, #e3e7ee 3.6mm 3.8mm); line-height: 3.8mm; }
