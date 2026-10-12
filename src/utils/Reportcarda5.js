@@ -19,8 +19,6 @@ const mark = (v) => (v === null ? '–' : Number.isInteger(v) ? String(v) : fmt2
 /** Grading-key boundaries exactly as set (75, 74.5…) */
 const bound = (v) => String(Number(v));
 const fmtDate = (d) => (d ? new Date(String(d).slice(0, 10) + 'T00:00:00').toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '');
-// CBC core competencies — the teacher ticks a level for each (fills the card's free space usefully)
-const COMPETENCIES = ['Communication & Collaboration', 'Critical Thinking & Problem Solving', 'Creativity & Imagination', 'Citizenship', 'Digital Literacy', 'Learning to Learn', 'Self-efficacy'];
 const EXAMS = [['opening', 'OPN', 'Opener'], ['midTerm', 'MID', 'Mid-term'], ['endTerm', 'END', 'End-term']];
 
 /** Text colour that stays readable on white paper: pale colours (e.g. yellow) are darkened. */
@@ -135,10 +133,6 @@ export function buildA5Card(card, singleResults, progressiveData) {
     <div class="facts"><span><b>Adm</b> ${esc(st.admissionNumber || '—')}</span><span><b>Class</b> ${esc(cls || '—')}</span><span><b>Exam</b> ${esc(exam.examName || '')}</span></div>
   </div>
   <div class="tablewrap"><table class="marks"><thead>${head}</thead><tfoot>${foot}</tfoot><tbody>${body || `<tr><td colspan="${multi ? cols.length * 2 + 3 : 3}" class="c dim">No results recorded</td></tr>`}</tbody></table></div>
-  <div class="comp">
-    <div class="ct">Core competencies <span class="hint">(tick ✓)</span></div>
-    <div class="compgrid">${COMPETENCIES.map(c => `<div class="ci"><span>${c}</span><span class="boxes">${gradingBands().slice(0, 4).map(b => `<span class="bx">${esc(b.label)}</span>`).join('') || '<span class="bx">EE</span><span class="bx">ME</span><span class="bx">AE</span><span class="bx">BE</span>'}</span></div>`).join('')}</div>
-  </div>
   <div class="summary">
     <div class="big" style="border-color:${overall.color}"><div class="k">Overall level</div><div class="v" style="color:${ink(overall.color)}">${esc(overall.label)}</div>${remark ? `<div class="r">${esc(remark)}</div>` : ''}</div>
     <div class="stat"><div class="k">Mean score</div><div class="v">${mean === null ? '–' : fmt2(mean) + '%'}</div><div class="r">${scored.length} learning area${scored.length === 1 ? '' : 's'}</div></div>
@@ -178,7 +172,7 @@ body { font-family: "Segoe UI", Arial, Helvetica, sans-serif; color: #1d2433; ba
 .sheet { width: 297mm; height: 210mm; margin: 8mm auto; background: #fff; display: flex; position: relative; box-shadow: 0 2px 12px rgba(0,0,0,.15); page-break-after: always; break-after: page; overflow: hidden; }
 .sheet:last-child { page-break-after: auto; break-after: auto; }
 .cut { position: absolute; left: 148.5mm; top: 4mm; bottom: 4mm; border-left: 1px dashed #b9c2d0; }
-.card { width: 148.5mm; height: 210mm; padding: 7mm 7mm 6mm; display: flex; flex-direction: column; font-size: 8.4pt; }
+.card { width: 148.5mm; height: 210mm; padding: 7mm 7mm 6mm; display: flex; flex-direction: column; justify-content: space-between; font-size: 8.4pt; }
 .card.empty { visibility: hidden; }
 header { display: flex; align-items: center; gap: 3mm; }
 header img { width: 13mm; height: 13mm; object-fit: contain; }
@@ -194,13 +188,7 @@ header img { width: 13mm; height: 13mm; object-fit: contain; }
 .facts b { color: #5b6475; font-weight: 600; margin-right: .8mm; }
 .tablewrap { margin-top: 2.5mm; }
 table.marks { width: 100%; border-collapse: collapse; }
-.marks td { height: 5.1mm; }
-.comp { flex: 1; min-height: 22mm; margin-top: 2.5mm; border: .3mm solid #d6dce6; border-radius: 1.5mm; padding: 1.5mm 2mm; display: flex; flex-direction: column; }
-.hint { font-weight: 400; color: #8a94a6; font-size: 6.5pt; }
-.compgrid { flex: 1; display: grid; grid-template-columns: 1fr 1fr; grid-auto-rows: 1fr; column-gap: 3mm; margin-top: 1mm; }
-.ci { display: flex; align-items: center; justify-content: space-between; gap: 1mm; font-size: 7pt; border-bottom: .2mm dotted #d6dce6; min-height: 3.6mm; }
-.boxes { display: flex; gap: .8mm; flex-shrink: 0; }
-.bx { width: 4.6mm; height: 3.2mm; border: .25mm solid #9aa6b8; border-radius: .6mm; font-size: 4.6pt; color: #8a94a6; display: flex; align-items: flex-end; justify-content: center; line-height: 1; }
+.marks td { height: 5.8mm; }
 .marks tfoot td { background: #eef3fa; border-top: .3mm solid #2E75B6; font-weight: 700; color: #1F3864; }
 .cnts { display: flex; flex-wrap: wrap; gap: 1mm 2.5mm; }
 .cnt { white-space: nowrap; }
