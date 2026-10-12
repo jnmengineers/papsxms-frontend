@@ -8,7 +8,7 @@ import Sidebar from '../components/Sidebar';
 import Footer from '../components/Footer';
 import { schoolName, schoolShortName, schoolMotto, schoolContact, logoLeftUrl, logoRightUrl } from '../utils/school';
 import { EXAM_TYPES_LIVE, SECTIONS_LIVE, SECTION_COLORS_LIVE, STREAM_COLORS_LIVE, textOn } from '../utils/schoolData';
-import { buildA5Card, buildA5Document } from '..utils/Reportcarda5';
+import { buildA5Card, buildA5Document } from '../utils/Reportcarda5';
 import { autoRemarks } from '../utils/Autoremarks';
 
 // ── Bootstrap Icon helper ─────────────────────────────────────────────────────
