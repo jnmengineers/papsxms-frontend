@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import * as XLSX from 'xlsx';
 import api from '../services/api';
-import { classDisplayName } from '../utils/classUtils';
+import { classDisplayName, classFullName, classCode } from '../utils/classUtils';
 import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
 import Footer from '../components/Footer';
@@ -80,7 +80,8 @@ const normalizePhone = (v) => {
 const matchClass = (classes, written) => {
     const w = norm(written);
     if (!w) return { problem: 'class name is empty' };
-    const hits = classes.filter(c => norm(c.className) === w || norm(classDisplayName(c)) === w);
+    // Accept the stored name, the display name, the full name ("Grade 3 Blue") or the code ("G3B")
+    const hits = classes.filter(c => [c.className, classDisplayName(c), classFullName(c), classCode(c)].some(n => norm(n) === w));
     if (hits.length === 1) return { cls: hits[0] };
     if (hits.length > 1) return { problem: `"${written}" matches ${hits.length} classes (${hits.map(classDisplayName).join(', ')}) — write the exact stream` };
     return { problem: `class "${written}" not found` };
@@ -240,10 +241,30 @@ function Import() {
 
         const issues = [];
         const subjectCols = [];
+        const colNotes = [];
+        // Column heading → subject: exact name/code; else a unique subject whose name/code starts with it
+        // ("INTE" → Integrated…); else a unique one containing its letters in order ("MTH" → Mathematics)
+        const key = (v) => norm(v).replace(/[^a-z0-9]/g, '');
+        const inOrder = (abbr, name) => { let i = 0; for (const ch of name) if (ch === abbr[i]) i++; return i === abbr.length; };
+        const findSubject = (h) => {
+            const exact = classSubjects.find(s => norm(s.subjectName) === norm(h) || norm(s.subjectCode) === norm(h));
+            if (exact) return { subject: exact };
+            const k = key(h);
+            if (!k) return {};
+            const starts = classSubjects.filter(s => key(s.subjectName).startsWith(k) || (s.subjectCode && key(s.subjectCode).startsWith(k)));
+            if (starts.length === 1) return { subject: starts[0], guessed: true };
+            const letters = classSubjects.filter(s => key(s.subjectName)[0] === k[0] && inOrder(k, key(s.subjectName)));
+            if (letters.length === 1) return { subject: letters[0], guessed: true };
+            const many = starts.length > 1 ? starts : letters;
+            return { many };
+        };
+        const used = new Set();
         for (let i = 3; i < headers.length; i++) {
             if (!headers[i]) continue;
-            const subject = classSubjects.find(s => norm(s.subjectName) === norm(headers[i]) || norm(s.subjectCode) === norm(headers[i]));
-            if (subject) subjectCols.push({ col: i, subject });
+            const { subject, guessed, many } = findSubject(headers[i]);
+            if (subject && used.has(subject.subjectId)) issues.push(`Column "${headers[i]}" matches ${subject.subjectName}, which another column already uses — its marks will NOT be imported.`);
+            else if (subject) { used.add(subject.subjectId); subjectCols.push({ col: i, subject }); if (guessed) colNotes.push(`"${headers[i]}" → ${subject.subjectName}`); }
+            else if (many?.length) issues.push(`Column "${headers[i]}" could be ${many.map(s => s.subjectName).join(' or ')} — rename the heading to the exact subject name.`);
             else issues.push(`Column "${headers[i]}" is not a subject of ${classDisplayName(cls)} — its marks will NOT be imported.`);
         }
 
@@ -265,7 +286,7 @@ function Import() {
                 entries.push({ studentId: student.studentId, subjectId: subject.subjectId, marksObtained: n, maxMarks: 100, resultId: existing[`${student.studentId}_${subject.subjectId}`] || null });
             });
         });
-        return { ...base, blocked: false, entries, issues, studentsMatched, newCount: entries.filter(e => !e.resultId).length, updateCount: entries.filter(e => e.resultId).length };
+        return { ...base, blocked: false, entries, issues, colNotes, studentsMatched, newCount: entries.filter(e => !e.resultId).length, updateCount: entries.filter(e => e.resultId).length };
     };
 
     const handleMarksFile = async (e) => {
@@ -557,6 +578,12 @@ function Import() {
                                     {mp.meta.classProblem && <p style={styles.blockMsg}><Icon name="x-circle-fill" />{mp.meta.classProblem}</p>}
                                     {mp.blockReason && <p style={styles.blockMsg}><Icon name="x-circle-fill" />{mp.blockReason}</p>}
 
+                                    {mp.colNotes?.length > 0 && (
+                                        <div style={{ ...styles.issueBox, backgroundColor: '#eef6ff', borderColor: '#9ec5fe' }}>
+                                            <strong style={{ color: '#1F3864' }}><Icon name="link-45deg" />Column headings matched to subjects — check they are right</strong>
+                                            <ul style={{ ...styles.issueList, color: '#1F3864' }}>{mp.colNotes.map((n, i) => <li key={i}>{n}</li>)}</ul>
+                                        </div>
+                                    )}
                                     <IssueList issues={mp.issues} title="These will NOT be imported" />
 
                                     {mp.preview.length > 0 && (
