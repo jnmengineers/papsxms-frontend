@@ -18,7 +18,10 @@ const streamInitial = (stream) => String(streamName(stream) || '').trim().charAt
 
 /** The stream a name like "G1B" points to (by the letter after the grade), or '' if not clear. */
 const streamFromName = (name, grade) => {
-    const rest = up(name).slice(String(grade || '').length).replace(/[^A-Z]/g, '');
+    // Cut off the grade as written — its full name ("GRADE 7") or its code ("G7") — then read the stream
+    const U = up(name), label = up(GRADE_LABELS_LIVE[grade] || '');
+    const cut = label && U.startsWith(label) ? label.length : String(grade || '').length;
+    const rest = U.slice(cut).replace(/[^A-Z]/g, '');
     if (!rest) return '';
     const codes = Object.keys(STREAM_NAMES_LIVE);
     const exact = codes.find(c => up(STREAM_NAMES_LIVE[c]) === rest || c === rest);
@@ -78,6 +81,8 @@ export const classPrintLabel = (cls) => classFullName(cls);
 
 /** Stream label only: "Blue", "Yellow", null */
 export const streamLabel = (stream) => (stream ? streamName(stream) : null);
+/** A class's stream code — also when it is only written in the name ("G2B", "Grade 2 Blue" → "BLUE"). */
+export const classStream = (cls) => parts(cls).stream;
 
 /** Grade level label: "G1" → "Grade 1" (names from Settings) */
 export const gradeLabel = (gradeLevel) => GRADE_LABELS_LIVE[gradeLevel] || gradeLevel || '';

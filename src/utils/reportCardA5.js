@@ -90,15 +90,20 @@ export function buildA5Card(card, singleResults, progressiveData) {
     const title = `TERM ${esc(exam.term || '')} · ${esc(exam.academicYear || '')}`;
     const multi = cols.length > 1;
 
-    const head = `<tr><th class="sub">Learning area</th>${cols.map(([, s, l]) => `<th title="${esc(l)}">${s}</th>`).join('')}`
-        + `${multi ? '<th>AVG</th>' : ''}<th>LEVEL</th><th class="barh">Performance</th></tr>`;
+    // Each exam: two columns — Marks and Level
+    const head = multi
+        ? `<tr><th class="sub" rowspan="2">Learning area</th>${cols.map(([, , l]) => `<th colspan="2" class="ex">${esc(l)}</th>`).join('')}`
+          + `<th rowspan="2">AVG</th><th rowspan="2">LEVEL</th><th class="barh" rowspan="2">Perf.</th></tr>`
+          + `<tr class="sub2">${cols.map(() => '<th>Mks</th><th>Lvl</th>').join('')}</tr>`
+        : `<tr><th class="sub">Learning area</th><th>MARKS</th><th>LEVEL</th><th class="barh">Performance</th></tr>`;
     const body = rows.map((r, i) => {
         const g = gradeInfo(r.avg);
         const w = r.avg === null ? 0 : Math.max(2, Math.min(100, r.avg));
         return `<tr class="${i % 2 ? '' : 'alt'}"><td class="sub">${esc(r.name)}</td>`
-            + r.marks.map(m => `<td class="n">${m === null ? '<span class="dim">–</span>' : mark(m)}</td>`).join('')
-            + (multi ? `<td class="n b">${fmt2(r.avg)}</td>` : '')
-            + `<td class="c">${level(r.avg)}</td>`
+            + (multi
+                ? r.marks.map(m => `<td class="n">${m === null ? '<span class="dim">–</span>' : mark(m)}</td><td class="c">${level(m)}</td>`).join('')
+                  + `<td class="n b">${fmt2(r.avg)}</td><td class="c">${level(r.avg)}</td>`
+                : `<td class="n">${r.marks[0] === null ? '<span class="dim">–</span>' : mark(r.marks[0])}</td><td class="c">${level(r.avg)}</td>`)
             + `<td class="bar"><span class="track"><span class="fill" style="width:${w}%;background:${g.color}"></span></span>${multi ? trend(r.marks) : ''}</td></tr>`;
     }).join('');
     const key = gradingBands().map(b => `<span class="key"><b style="color:${ink(b.color)}">${esc(b.label)}</b> ${bound(b.min)}–${bound(b.max)}${b.remarks ? ` <i>${esc(b.remarks)}</i>` : ''}</span>`).join('');
@@ -115,7 +120,7 @@ export function buildA5Card(card, singleResults, progressiveData) {
     <div class="nm">${esc(name || '—')}</div>
     <div class="facts"><span><b>Adm</b> ${esc(st.admissionNumber || '—')}</span><span><b>Class</b> ${esc(cls || '—')}</span>${card.termRank ? `<span><b>Position</b> ${esc(card.termRank)}</span>` : ''}<span><b>Exam</b> ${esc(exam.examName || '')}</span></div>
   </div>
-  <table class="marks"><thead>${head}</thead><tbody>${body || `<tr><td colspan="${cols.length + 4}" class="c dim">No results recorded</td></tr>`}</tbody></table>
+  <table class="marks"><thead>${head}</thead><tbody>${body || `<tr><td colspan="${multi ? cols.length * 2 + 4 : 4}" class="c dim">No results recorded</td></tr>`}</tbody></table>
   <div class="summary">
     <div class="big" style="border-color:${overall.color}"><div class="k">Overall level</div><div class="v" style="color:${ink(overall.color)}">${esc(overall.label)}</div>${remark ? `<div class="r">${esc(remark)}</div>` : ''}</div>
     <div class="stat"><div class="k">Mean score</div><div class="v">${mean === null ? '–' : fmt2(mean) + '%'}</div><div class="r">${scored.length} learning area${scored.length === 1 ? '' : 's'}</div></div>
@@ -172,16 +177,18 @@ header img { width: 13mm; height: 13mm; object-fit: contain; }
 table.marks { width: 100%; border-collapse: collapse; margin-top: 2.5mm; }
 .marks th { background: #2E75B6; color: #fff; font-size: 7pt; font-weight: 700; padding: 1.3mm 1mm; text-align: center; letter-spacing: .3px; }
 .marks th.sub { text-align: left; padding-left: 2mm; border-top-left-radius: 1.2mm; }
-.marks th.barh { border-top-right-radius: 1.2mm; width: 25mm; }
-.marks td { padding: 1.05mm 1mm; border-bottom: .2mm solid #e3e7ee; font-size: 8.1pt; }
+.marks th.barh { border-top-right-radius: 1.2mm; width: 16mm; }
+.marks th.ex { border-left: .3mm solid #fff; }
+.marks tr.sub2 th { font-size: 6pt; padding: .6mm .5mm; background: #4a8bc9; }
+.marks td { padding: 1.05mm .6mm; border-bottom: .2mm solid #e3e7ee; font-size: 8.1pt; }
 .marks tr.alt td { background: #f8fafc; }
 .marks td.sub { padding-left: 2mm; font-weight: 600; }
 .n { text-align: center; font-variant-numeric: tabular-nums; }
 .b { font-weight: 800; color: #1F3864; }
 .c { text-align: center; }
-.lv { display: inline-block; min-width: 7.5mm; padding: .2mm 1mm; border: .3mm solid; border-radius: 3mm; font-weight: 800; font-size: 7.2pt; text-align: center; }
+.lv { display: inline-block; min-width: 6.5mm; padding: .1mm .7mm; border: .3mm solid; border-radius: 3mm; font-weight: 800; font-size: 7.2pt; text-align: center; }
 .bar { white-space: nowrap; }
-.track { display: inline-block; vertical-align: middle; width: 19mm; height: 2.3mm; background: #e8ecf2; border-radius: 1.2mm; overflow: hidden; }
+.track { display: inline-block; vertical-align: middle; width: 11mm; height: 2.3mm; background: #e8ecf2; border-radius: 1.2mm; overflow: hidden; }
 .fill { display: block; height: 100%; border-radius: 1.2mm; }
 .tr { display: inline-block; width: 4mm; text-align: center; font-size: 6.5pt; vertical-align: middle; }
 .up { color: #1e7e34; } .down { color: #c0392b; } .flat { color: #8a94a6; }

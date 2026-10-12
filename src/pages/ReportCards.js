@@ -2,13 +2,14 @@ import React, { useState, useEffect, useRef } from 'react';
 import api from '../services/api';
 import { gradeOf as scaleGrade, pctColor } from '../utils/grading';
 import { useSchoolSettings } from '../context/SchoolSettingsContext';
-import { classDisplayName, classLabel, compareClasses } from '../utils/classUtils';
+import { classDisplayName, classLabel, compareClasses, classStream, streamLabel } from '../utils/classUtils';
 import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
 import Footer from '../components/Footer';
 import { schoolName, schoolShortName, schoolMotto, schoolContact, logoLeftUrl, logoRightUrl } from '../utils/school';
-import { EXAM_TYPES_LIVE, SECTIONS_LIVE, SECTION_COLORS_LIVE } from '../utils/schoolData';
-import { buildA5Card, buildA5Document } from '../utils/reportCardA5';
+import { EXAM_TYPES_LIVE, SECTIONS_LIVE, SECTION_COLORS_LIVE, STREAM_COLORS_LIVE, textOn } from '../utils/schoolData';
+import { buildA5Card, buildA5Document } from '../utils/Reportcarda5';
+import { autoRemarks } from '../utils/Autoremarks';
 
 // ── Bootstrap Icon helper ─────────────────────────────────────────────────────
 const Bi = ({ name, style }) => (
@@ -77,15 +78,19 @@ const buildReportPage = (card, singleResults, progressiveData) => {
         const subjectColPct = 34;
         const examColPct = examCols.length > 0 ? ((100 - subjectColPct) / examCols.length).toFixed(1) : 0;
 
-        theadCols = '<th style="width:' + subjectColPct + '%;color:white;padding:7px 8px;text-align:left;font-size:12px;">SUBJECT</th>'
+        // Each exam: two columns — Marks and Level (second header row)
+        theadCols = '<th rowspan="2" style="width:' + subjectColPct + '%;color:white;padding:7px 8px;text-align:left;font-size:12px;">SUBJECT</th>'
             + examCols.map(type =>
-                '<th style="width:' + examColPct + '%;color:white;padding:6px 8px;text-align:center;background:' + (EXAM_TYPE_COLORS[type] || '#1F3864') + ';font-size:11px;">' + esc(EXAM_TYPE_LABELS[type] || type) + '</th>'
-            ).join('');
+                '<th colspan="2" style="width:' + examColPct + '%;color:white;padding:6px 8px;text-align:center;background:' + (EXAM_TYPE_COLORS[type] || '#1F3864') + ';font-size:11px;">' + esc(EXAM_TYPE_LABELS[type] || type) + '</th>'
+            ).join('')
+            + '</tr><tr style="background:#2E75B6;">'
+            + examCols.map(() => '<th style="color:white;padding:3px;font-size:10px;text-align:center;">Marks</th><th style="color:white;padding:3px;font-size:10px;text-align:center;">Level</th>').join('');
 
         subjectRows = rawSubjects.map((sub, i) => {
             const cells = examCols.map(type => {
                 const val = type === 'OPENING' ? sub.opening : type === 'MID_TERM' ? sub.midTerm : sub.endTerm;
-                return '<td style="padding:6px 8px;border:1px solid #ddd;text-align:center;">' + pBadge(val) + '</td>';
+                return '<td style="padding:6px 4px;border:1px solid #ddd;text-align:center;font-weight:bold;">' + (val != null ? (Number.isInteger(Number(val)) ? val : Number(val).toFixed(2)) : '-') + '</td>'
+                    + '<td style="padding:6px 4px;border:1px solid #ddd;text-align:center;">' + pBadge(val) + '</td>';
             }).join('');
             return '<tr style="background:' + (i % 2 === 0 ? '#f8f9fa' : 'white') + '">'
                 + '<td style="padding:6px 8px;border:1px solid #ddd;font-weight:bold;font-size:12px;">' + (i + 1) + '. ' + esc(sub.subjectName) + '</td>'
@@ -95,16 +100,18 @@ const buildReportPage = (card, singleResults, progressiveData) => {
         avgRowHtml = '<tr style="background:#e8ecf3;border-top:2px solid #1F3864;">'
             + '<td style="padding:6px 8px;font-weight:bold;color:#1F3864;font-size:12px;">Total</td>'
             + examCols.map(type =>
-                '<td style="padding:6px 8px;text-align:center;color:#1F3864;font-weight:bold;">' + (colSums[type] || 0) + '/' + ((colCounts[type] || 0) * 100) + '</td>'
+                '<td colspan="2" style="padding:6px 8px;text-align:center;color:#1F3864;font-weight:bold;">' + (colSums[type] || 0) + '/' + ((colCounts[type] || 0) * 100) + '</td>'
             ).join('')
             + '</tr>';
     } else {
-        theadCols = '<th style="width:60%;color:white;padding:7px 8px;text-align:left;font-size:12px;">SUBJECT</th>'
-            + '<th style="width:40%;color:#FFD700;padding:7px 8px;text-align:center;font-size:12px;">GRADE</th>';
+        theadCols = '<th style="width:56%;color:white;padding:7px 8px;text-align:left;font-size:12px;">SUBJECT</th>'
+            + '<th style="width:22%;color:white;padding:7px 8px;text-align:center;font-size:12px;">MARKS</th>'
+            + '<th style="width:22%;color:#FFD700;padding:7px 8px;text-align:center;font-size:12px;">LEVEL</th>';
         subjectRows = singleResults.map((r, i) => {
             if (r.marksObtained != null && !isNaN(r.marksObtained)) { termAvgSum += r.marksObtained; termAvgCount++; }
             return '<tr style="background:' + (i % 2 === 0 ? '#f8f9fa' : 'white') + '">'
                 + '<td style="padding:6px 8px;border:1px solid #ddd;font-size:12px;">' + (i + 1) + '. ' + esc(r.subject ? r.subject.subjectName : '') + '</td>'
+                + '<td style="padding:6px 8px;border:1px solid #ddd;text-align:center;font-weight:bold;">' + (r.marksObtained != null ? (Number.isInteger(Number(r.marksObtained)) ? r.marksObtained : Number(r.marksObtained).toFixed(2)) : '-') + '</td>'
                 + '<td style="padding:6px 8px;border:1px solid #ddd;text-align:center;">' + pBadge(r.marksObtained) + '</td>'
                 + '</tr>';
         }).join('');
@@ -509,6 +516,33 @@ function ReportCards() {
         }
     };
 
+    // Fill empty remarks from the learner's performance level. Teachers fill the class teacher's
+    // remark; the admin (principal) also fills the principal's. Existing remarks are kept.
+    const [remarking, setRemarking] = useState(false);
+    const handleAutoRemarks = async () => {
+        const jobs = filtered.map(card => {
+            const r = autoRemarks(card);
+            if (!r) return null;
+            const teacherComment = card.teacherComment || r.teacher;
+            const principalComment = card.principalComment || (isTeacher ? card.principalComment : r.principal);
+            if (teacherComment === card.teacherComment && principalComment === card.principalComment) return null;
+            return { card, teacherComment, principalComment };
+        }).filter(Boolean);
+        if (!jobs.length) { flashSuccess('All cards already have remarks.'); return; }
+        if (!window.confirm(`Fill remarks on ${jobs.length} card(s) that have none, based on each learner's performance level?\n\nExisting remarks are kept, and you can edit any of them before printing.`)) return;
+        setRemarking(true); setError('');
+        const out = await runLimited(jobs, 5, j => api.put('/api/reportCards/' + j.card.reportId, {
+            totalMarks: j.card.totalMarks, averageMarks: j.card.averageMarks,
+            termRank: j.card.termRank != null && j.card.termRank !== '' ? parseInt(j.card.termRank) : null,
+            Remarks: j.card.Remarks, teacherComment: j.teacherComment, principalComment: j.principalComment
+        }));
+        const failed = out.filter(o => !o.ok).length;
+        setRemarking(false);
+        fetchReportCards();
+        if (failed) setError(`${jobs.length - failed} filled, ${failed} could not be saved. Try again.`);
+        else flashSuccess(`Remarks filled on ${jobs.length} card(s). Edit any of them before printing.`, 6000);
+    };
+
     const handleDelete = async (id) => {
         try {
             await api.delete('/api/reportCards/' + id);
@@ -562,6 +596,35 @@ function ReportCards() {
     const selectedClassLabel = selectedTile ? classDisplayName(selectedTile) : selectedClassFilter.replace('|', ' ');
 
     const closeClassView = () => { setSelectedClassFilter(''); setSearch(''); setFilterExam(''); };
+
+    // ── Exam tiles: the open class's cards grouped by exam, so exams are never mixed ──
+    const cardInSelectedClass = (c) => {
+        if (!selectedClassFilter) return false;
+        const [fc, fs] = selectedClassFilter.split('|');
+        return (c.student?.className === fc || c.student?.schoolClass?.className === fc) &&
+            (!fs || (c.student?.stream || c.student?.schoolClass?.stream) === fs);
+    };
+    const examTiles = (() => {
+        const map = {};
+        reportCards.filter(cardBelongsToTeacher).filter(cardInSelectedClass).forEach(c => {
+            const id = c.exam?.examId;
+            if (id == null) return;
+            if (!map[id]) map[id] = { exam: c.exam, count: 0, avgSum: 0, avgCount: 0 };
+            map[id].count++;
+            if (c.averageMarks != null && !isNaN(c.averageMarks)) { map[id].avgSum += Number(c.averageMarks); map[id].avgCount++; }
+        });
+        // newest first: year, then term, then the exam's order in the term
+        const typeOrder = (t) => EXAM_TYPES_LIVE[t]?.order ?? 99;
+        return Object.values(map).sort((a, b) =>
+            String(b.exam.academicYear || '').localeCompare(String(a.exam.academicYear || '')) ||
+            (Number(b.exam.term) || 0) - (Number(a.exam.term) || 0) ||
+            typeOrder(b.exam.examType) - typeOrder(a.exam.examType) ||
+            (b.exam.examId || 0) - (a.exam.examId || 0));
+    })();
+    // Opening a class shows its latest exam (choose another tile, or "All exams")
+    useEffect(() => {
+        if (selectedClassFilter && examTiles.length) setFilterExam(String(examTiles[0].exam.examId));
+    }, [selectedClassFilter]);
 
     return (
         <div style={s.container}>
@@ -726,13 +789,23 @@ function ReportCards() {
                                 const avg = cls.avgCount > 0 ? (cls.avgSum / cls.avgCount).toFixed(2) : null;
                                 const key = cls.stream ? cls.className + '|' + cls.stream : cls.className;
                                 const isSelected = selectedClassFilter === key;
+                                // Streams told apart at a glance: badge and side strip in the stream's colour (Settings → Streams)
+                                const streamCode = classStream(cls);
+                                const streamColor = streamCode ? STREAM_COLORS_LIVE[streamCode] : null;
                                 return (
                                     <div key={i}
                                         onClick={() => { if (isSelected) closeClassView(); else setSelectedClassFilter(key); }}
                                         onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-3px)'; e.currentTarget.style.boxShadow = '0 6px 16px rgba(0,0,0,0.1)'; }}
                                         onMouseLeave={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.06)'; }}
-                                        style={{ ...s.classTile, borderTop: '4px solid ' + color, outline: isSelected ? '3px solid ' + color : 'none' }}>
+                                        style={{ ...s.classTile, borderTop: '4px solid ' + color, borderLeft: streamColor ? '6px solid ' + streamColor : undefined, outline: isSelected ? '3px solid ' + color : 'none' }}>
                                         <div style={{ ...s.classTileName, color }}>{classDisplayName(cls)}</div>
+                                        {streamCode && (
+                                            <div style={{ textAlign: 'center', marginTop: '-4px' }}>
+                                                <span style={{ ...s.streamBadge, backgroundColor: streamColor || '#6c757d', color: textOn(streamColor || '#6c757d') }}>
+                                                    <Bi name="circle-fill" style={{ fontSize: '7px', marginRight: '5px' }} />{streamLabel(streamCode)}
+                                                </span>
+                                            </div>
+                                        )}
                                         <div style={s.classTileStats}>
                                             <div style={s.classTileStat}>
                                                 <span style={s.classTileNum}>{cls.count}</span>
@@ -799,12 +872,46 @@ function ReportCards() {
                                     ? <><Bi name="hourglass-split" />Loading {printProgress.done}/{printProgress.total}...</>
                                     : <><Bi name="printer-fill" />{'Print All (' + filtered.length + ')'}</>}
                             </button>
+                            <button onClick={handleAutoRemarks} disabled={remarking || printingAll || !filtered.length}
+                                title={isTeacher ? 'Fill empty class teacher remarks by performance level' : 'Fill empty class teacher and principal remarks by performance level'}
+                                style={{ backgroundColor: '#6f42c1', color: 'white', border: 'none', padding: '10px 16px', borderRadius: '8px', cursor: remarking ? 'wait' : 'pointer', fontWeight: 700, fontSize: '13px', whiteSpace: 'nowrap' }}>
+                                <Bi name={remarking ? 'hourglass-split' : 'chat-quote-fill'} />{remarking ? 'Filling…' : 'Auto remarks'}
+                            </button>
                             <button onClick={() => setDeleteAllConfirm(true)}
                                 disabled={!filtered.length || printingAll}
                                 style={{ backgroundColor: '#dc3545', color: 'white', border: 'none', padding: '10px 16px', borderRadius: '8px', cursor: 'pointer', fontWeight: 700, fontSize: '13px', whiteSpace: 'nowrap' }}>
                                 <Bi name="trash-fill" />Delete All ({filtered.length})
                             </button>
                         </div>
+                        {examTiles.length > 0 && (
+                            <div style={s.examTilesRow} role="tablist" aria-label="Exams">
+                                {examTiles.map(t => {
+                                    const id = String(t.exam.examId);
+                                    const on = String(filterExam) === id;
+                                    const col = EXAM_TYPE_COLORS[t.exam.examType] || '#1F3864';
+                                    const avg = t.avgCount ? (t.avgSum / t.avgCount) : null;
+                                    return (
+                                        <button key={id} role="tab" aria-selected={on} onClick={() => setFilterExam(id)}
+                                            style={{ ...s.examTile, borderTop: '4px solid ' + col, outline: on ? '3px solid ' + col : 'none', backgroundColor: on ? '#f4f8ff' : 'white' }}>
+                                            <span style={{ ...s.examTileName, color: col }}>{t.exam.examName}</span>
+                                            <span style={s.examTileTerm}>Term {t.exam.term} · {t.exam.academicYear}</span>
+                                            <span style={s.examTileStats}>
+                                                <b>{t.count}</b> card{t.count === 1 ? '' : 's'}
+                                                {avg !== null && <> · <b style={{ color: pctColor(avg) }}>{avg.toFixed(2)}%</b></>}
+                                            </span>
+                                        </button>
+                                    );
+                                })}
+                                {examTiles.length > 1 && (
+                                    <button role="tab" aria-selected={!filterExam} onClick={() => setFilterExam('')}
+                                        style={{ ...s.examTile, borderTop: '4px solid #6c757d', outline: !filterExam ? '3px solid #6c757d' : 'none', backgroundColor: !filterExam ? '#f4f6f8' : 'white' }}>
+                                        <span style={{ ...s.examTileName, color: '#555' }}>All exams</span>
+                                        <span style={s.examTileTerm}>{examTiles.length} exams mixed</span>
+                                        <span style={s.examTileStats}><b>{examTiles.reduce((a, t) => a + t.count, 0)}</b> cards</span>
+                                    </button>
+                                )}
+                            </div>
+                        )}
                         {printingAll && (
                             <div style={{ marginBottom: '15px' }}>
                                 <div style={s.progressTrack}>
@@ -970,6 +1077,12 @@ const s = {
     classTilesGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(150px,1fr))', gap: '12px' },
     classTile: { backgroundColor: 'white', borderRadius: '14px', overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.06)', cursor: 'pointer', transition: 'transform 0.15s ease, box-shadow 0.15s ease', userSelect: 'none' },
     classTileName: { fontSize: '20px', fontWeight: 800, textAlign: 'center', padding: '16px 10px 8px' },
+    examTilesRow: { display: 'flex', gap: '10px', flexWrap: 'wrap', marginBottom: '16px' },
+    examTile: { display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '2px', minWidth: '160px', padding: '10px 14px', borderRadius: '12px', border: 'none', boxShadow: '0 2px 8px rgba(0,0,0,0.06)', cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit' },
+    examTileName: { fontWeight: 800, fontSize: '14px' },
+    examTileTerm: { fontSize: '11px', color: '#888' },
+    examTileStats: { fontSize: '12px', color: '#444', marginTop: '2px' },
+    streamBadge: { display: 'inline-flex', alignItems: 'center', padding: '2px 10px', borderRadius: '12px', fontSize: '11px', fontWeight: 700 },
     classTileStats: { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '8px 10px' },
     classTileStat: { display: 'flex', flexDirection: 'column', alignItems: 'center' },
     classTileNum: { fontSize: '18px', fontWeight: 800, color: '#1F3864' },

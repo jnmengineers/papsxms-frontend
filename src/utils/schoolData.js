@@ -95,13 +95,22 @@ export function applySchoolData({ sections = [], grades = [], streams = [], exam
     });
 }
 
-/** The grade a class name starts with, e.g. "G4Y" → "G4", "PP1 Blue" → "PP1". Longest grade code wins. */
+/**
+ * The grade a class name starts with — by its code or its full name:
+ * "G4Y" → "G4", "PP1 Blue" → "PP1", "Grade 7 Blue" → "G7", "Pre-Primary 1" → "PP1".
+ * Longest match wins, and "Grade 1" never matches "Grade 10" (no digit may follow).
+ */
 export function gradeFromClassName(className) {
     const name = String(className || '').trim().toUpperCase();
     if (!name) return '';
-    const hit = [...GRADE_ORDER_LIVE].sort((a, b) => b.length - a.length)
-        .find(code => name.startsWith(code.toUpperCase()) && !/[0-9]/.test(name.charAt(code.length)));
-    return hit || '';
+    const candidates = [];
+    GRADE_ORDER_LIVE.forEach(code => {
+        candidates.push([code, code.toUpperCase()]);
+        if (GRADE_LABELS_LIVE[code]) candidates.push([code, String(GRADE_LABELS_LIVE[code]).trim().toUpperCase()]);
+    });
+    const hit = candidates.sort((a, b) => b[1].length - a[1].length)
+        .find(([, text]) => text && name.startsWith(text) && !/[0-9]/.test(name.charAt(text.length)));
+    return hit ? hit[0] : '';
 }
 
 export const gradeRankOf = (g) => { const i = GRADE_ORDER_LIVE.indexOf(g); return i === -1 ? 99 : i; };
