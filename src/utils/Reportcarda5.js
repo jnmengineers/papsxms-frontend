@@ -180,25 +180,25 @@ header img { width: 13mm; height: 13mm; object-fit: contain; }
 .sn { font-weight: 800; font-size: 11pt; letter-spacing: .3px; color: #1F3864; text-transform: uppercase; }
 .motto { font-style: italic; color: #2E75B6; font-size: 7.8pt; }
 .contact { color: #5b6475; font-size: 6.8pt; margin-top: .5mm; }
-.band { display: flex; justify-content: space-between; margin-top: 2.5mm; padding: 1.6mm 3mm; background: #1F3864; color: #fff; border-radius: 1.5mm; font-weight: 700; font-size: 8pt; letter-spacing: .6px; }
-.band span:last-child { color: #FFD700; }
-.who { margin-top: 2.5mm; padding: 2mm 3mm; border: .3mm solid #d6dce6; border-left: 1.2mm solid #2E75B6; border-radius: 1.5mm; background: #f6f8fb; }
+.band { display: flex; justify-content: space-between; margin-top: 2.5mm; padding: 1.2mm 0; border-top: .5mm solid #1F3864; border-bottom: .5mm solid #1F3864; color: #1F3864; font-weight: 700; font-size: 8pt; letter-spacing: .6px; }
+.band span:last-child { color: #2E75B6; }
+.who { margin-top: 2.5mm; padding: 2mm 3mm; border: .3mm solid #d6dce6; border-left: 1.2mm solid #2E75B6; border-radius: 1.5mm; background: #fff; }
 .nm { font-weight: 800; font-size: 11.5pt; color: #1F3864; text-transform: uppercase; }
 .facts { display: flex; flex-wrap: wrap; gap: 1mm 4mm; margin-top: .8mm; font-size: 7.8pt; color: #333; }
 .facts b { color: #5b6475; font-weight: 600; margin-right: .8mm; }
 .tablewrap { margin-top: 2.5mm; }
 table.marks { width: 100%; border-collapse: collapse; }
 .marks td { height: 5.8mm; }
-.marks tfoot td { background: #eef3fa; border-top: .3mm solid #2E75B6; font-weight: 700; color: #1F3864; }
+.marks tfoot td { background: none; border-top: .3mm solid #1F3864; font-weight: 700; color: #1F3864; }
 .cnts { display: flex; flex-wrap: wrap; gap: 1mm 2.5mm; }
 .cnt { white-space: nowrap; }
-.marks th { background: #2E75B6; color: #fff; font-size: 7pt; font-weight: 700; padding: 1.3mm 1mm; text-align: center; letter-spacing: .3px; }
+.marks th { background: none; color: #1F3864; border-bottom: .4mm solid #1F3864; font-size: 7pt; font-weight: 700; padding: 1.3mm 1mm; text-align: center; letter-spacing: .3px; }
 .marks th.sub { text-align: left; padding-left: 2mm; border-top-left-radius: 1.2mm; }
 .marks th.barh { border-top-right-radius: 1.2mm; width: 16mm; }
-.marks th.ex { border-left: .3mm solid #fff; }
-.marks tr.sub2 th { font-size: 6pt; padding: .6mm .5mm; background: #4a8bc9; }
+.marks th.ex { border-left: .2mm solid #c9d3e3; }
+.marks tr.sub2 th { font-size: 6pt; padding: .6mm .5mm; color: #5b6475; border-bottom: .3mm solid #1F3864; }
 .marks td { padding: 1mm .6mm; border-bottom: .2mm solid #e3e7ee; font-size: 8.4pt; }
-.marks tr.alt td { background: #f8fafc; }
+.marks tr.alt td { background: none; }
 .marks td.sub { padding-left: 2mm; font-weight: 600; }
 .n { text-align: center; font-variant-numeric: tabular-nums; }
 .b { font-weight: 800; color: #1F3864; }
