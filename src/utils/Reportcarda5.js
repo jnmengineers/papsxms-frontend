@@ -19,7 +19,7 @@ const mark = (v) => (v === null ? '–' : Number.isInteger(v) ? String(v) : fmt2
 /** Grading-key boundaries exactly as set (75, 74.5…) */
 const bound = (v) => String(Number(v));
 const fmtDate = (d) => (d ? new Date(String(d).slice(0, 10) + 'T00:00:00').toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '');
-const EXAMS = [['opening', 'OPN', 'Opener'], ['midTerm', 'MID', 'Mid-term'], ['endTerm', 'END', 'End-term']];
+const EXAMS = [['opening', 'OPN', 'Opener'], ['midTerm', 'MID', 'Mid'], ['endTerm', 'END', 'End']];
 
 /** Text colour that stays readable on white paper: pale colours (e.g. yellow) are darkened. */
 const ink = (hex) => {
