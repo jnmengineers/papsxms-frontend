@@ -121,17 +121,17 @@ export default function ExpensesTab({ termOptions, defaultTerm, setError, flashS
     const startCheque = () => {
         const bills = (toPay?.expenses || []).filter(x => payTicked.has(x.expenseId));
         const payees = [...new Set(bills.map(b => (b.payee || '').trim()).filter(Boolean))];
-        setCheque({ payee: payees.length === 1 ? payees[0] : '', chequeNumber: '', chequeDate: new Date().toISOString().slice(0, 10), memo: '', manyPayees: payees.length > 1, total: bills.reduce((a, b) => a + num(b.amount), 0) });
+        setCheque({ payee: payees.length === 1 ? payees[0] : '', chequeNumber: '', chequeDate: new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10), memo: '', manyPayees: payees.length > 1, total: bills.reduce((a, b) => a + num(b.amount), 0) });
     };
     // ── Paying approved bills from the school's M-Pesa line ──
     const [lineBalance, setLineBalance] = useState(null);
     const [mpesa, setMpesa] = useState(null);   // { code, paidOn, charge, total }
-    const loadLine = useCallback(() => { const d = new Date().toISOString().slice(0, 10); return api.get('/api/finance/float', { params: { from: d, to: d } }).then(r => setLineBalance(num(r.data.balanceNow))).catch(() => setLineBalance(null)); }, []);
+    const loadLine = useCallback(() => { const d = new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10); return api.get('/api/finance/float', { params: { from: d, to: d } }).then(r => setLineBalance(num(r.data.balanceNow))).catch(() => setLineBalance(null)); }, []);
     useEffect(() => { loadLine(); }, [loadLine]);
     const startMpesa = () => {
         const bills = (toPay?.expenses || []).filter(x => payTicked.has(x.expenseId));
         const payees = [...new Set(bills.map(b => (b.payee || '').trim()).filter(Boolean))];
-        setMpesa({ code: '', paidOn: new Date().toISOString().slice(0, 10), charge: '', total: bills.reduce((a, b) => a + num(b.amount), 0), payees });
+        setMpesa({ code: '', paidOn: new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10), charge: '', total: bills.reduce((a, b) => a + num(b.amount), 0), payees });
     };
     const payMpesa = async () => {
         const code = mpesa.code.trim().toUpperCase();
@@ -365,7 +365,7 @@ export default function ExpensesTab({ termOptions, defaultTerm, setError, flashS
                             {mpesa.payees.length > 1 && <p style={{ ...st.small, color: '#b8860b', margin: '0 0 8px' }}>These bills are for different payees — one M-Pesa code usually pays one supplier.</p>}
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                                 <label style={{ ...st.lbl, gridColumn: 'span 2' }}>M-Pesa code (from the confirmation SMS)<input style={{ ...st.input, fontWeight: 700, textTransform: 'uppercase', fontFamily: 'Consolas, monospace' }} maxLength={20} value={mpesa.code} onChange={e => setMpesa(m => ({ ...m, code: e.target.value.toUpperCase().replace(/\s/g, '') }))} /></label>
-                                <label style={st.lbl}>Date paid<input type="date" style={st.input} value={mpesa.paidOn} max={new Date().toISOString().slice(0, 10)} onChange={e => setMpesa(m => ({ ...m, paidOn: e.target.value }))} /></label>
+                                <label style={st.lbl}>Date paid<input type="date" style={st.input} value={mpesa.paidOn} max={new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10)} onChange={e => setMpesa(m => ({ ...m, paidOn: e.target.value }))} /></label>
                                 <label style={st.lbl}>M-Pesa charge (optional)<input style={st.input} inputMode="decimal" value={mpesa.charge} placeholder="e.g. 108" onChange={e => setMpesa(m => ({ ...m, charge: e.target.value.replace(/[^\d.]/g, '') }))} /></label>
                             </div>
                             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '14px' }}>

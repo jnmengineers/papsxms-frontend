@@ -23,7 +23,7 @@ export const GROUPS = [
             { icon: 'mortarboard-fill', label: 'Students', path: '/students', roles: ['ADMIN', 'TEACHER', 'CLERK', 'CHAIRPERSON'], alsoActive: ['/student/'] },
             { icon: 'people-fill', label: 'Parents', path: '/parents', roles: ['ADMIN', 'CLERK', 'ACCOUNTANT'] },
             { icon: 'person-workspace', label: 'Teachers', path: '/teachers', roles: ['ADMIN'] },
-            { icon: 'person-badge-fill', label: 'Staff', path: '/staff', roles: ['ADMIN', 'CHAIRPERSON', 'HEAD_TEACHER'] },
+            { icon: 'person-badge-fill', label: 'Staff', path: '/staff', roles: ['ADMIN', 'CHAIRPERSON', 'HEAD_TEACHER', 'SENIOR_TEACHER'] },
             { icon: 'people-fill', label: 'Users', path: '/users', roles: ['ADMIN'] },
         ]
     },
@@ -60,7 +60,7 @@ export const GROUPS = [
         label: 'Finance',
         items: [
             { icon: 'cash-stack', label: 'Finance', path: '/finance', roles: ['ADMIN', 'ACCOUNTANT', 'CHAIRPERSON'] },
-            { icon: 'person-vcard-fill', label: 'Payroll', path: '/payroll', roles: ['ADMIN', 'ACCOUNTANT', 'CHAIRPERSON'] },
+            { icon: 'person-vcard-fill', label: 'Payroll', path: '/payroll', roles: ['TREASURER'] },
             { icon: 'bus-front-fill', label: 'Transport', path: '/transport', roles: ['ADMIN', 'ACCOUNTANT', 'CHAIRPERSON'] },
         ]
     },

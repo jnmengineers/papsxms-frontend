@@ -44,7 +44,7 @@ export default function FeeRemindersTab({ setError, flashSuccess }) {
         const q = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
         const rows = chosen.map(f => [f.phone.replace('+', ''), f.message, f.parent, f.total].map(q).join(','));
         const blob = new Blob(['\uFEFF' + [['Phone', 'Message', 'Parent', 'Total owed'].map(q).join(','), ...rows].join('\r\n')], { type: 'text/csv;charset=utf-8' });
-        const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `Fee reminders ${new Date().toISOString().slice(0, 10)}.csv`;
+        const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `Fee reminders ${new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10)}.csv`;
         document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
     };
     const markSent = async (list, ch) => {

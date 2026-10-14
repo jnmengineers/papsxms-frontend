@@ -64,7 +64,7 @@ const StudentFormFields = ({ formData, setFormData, classId, setClassId, section
                 <div style={styles.formGroup}>
                     <label style={styles.label}>Date of Birth</label>
                     <input type="date" style={styles.input} value={formData.dateOfBirth}
-                        max={new Date().toISOString().slice(0, 10)}
+                        max={new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10)}
                         onChange={e => setFormData({ ...formData, dateOfBirth: e.target.value })} required />
                 </div>
                 <div style={styles.formGroup}>

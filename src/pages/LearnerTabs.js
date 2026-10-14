@@ -13,7 +13,7 @@ const kes = (n) => `KES ${Number(n || 0).toLocaleString('en-KE', { minimumFracti
 const fmt = (d) => (d ? new Date(`${String(d).slice(0, 10)}T00:00:00`).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '');
 const pretty = (p) => (p && p.startsWith('+254') && p.length === 13 ? `0${p.slice(4, 7)} ${p.slice(7)}` : p || '');
 const yearStart = () => `${new Date().getFullYear()}-01-01`;
-const today = () => new Date().toISOString().slice(0, 10);
+const today = () => new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10);
 
 // Teachers too: the server only returns fees for learners in a class they are class teacher of
 export const canSeeFees = () => hasRole('ADMIN', 'ACCOUNTANT', 'CHAIRPERSON', 'TEACHER');

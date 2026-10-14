@@ -9,7 +9,7 @@ import { fmtDate, printLeaveForm, useDayCount, LeaveDates } from './StaffLeave';
 const Icon = ({ name, style }) => <i className={`bi bi-${name}`} aria-hidden="true" style={{ marginRight: '6px', ...style }} />;
 const serverMessage = (err, fallback) => { const d = err?.response?.data; if (typeof d === 'string' && d.length < 300) return d; return d?.message || d?.error || fallback; };
 const STATUS = { PENDING: ['Waiting for approval', '#b8860b'], APPROVED: ['Approved', '#1e7e34'], REJECTED: ['Not approved', '#b02a37'], CANCELLED: ['Cancelled', '#6c757d'] };
-const today = () => new Date().toISOString().slice(0, 10);
+const today = () => new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10);
 
 function MyLeave() {
     const [data, setData] = useState(null);
