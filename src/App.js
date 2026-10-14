@@ -6,6 +6,7 @@ import Dashboard from './pages/Dashboard';
 import Students from './pages/Students';
 import Results from './pages/Results';
 import ReportCards from './pages/ReportCards';
+import Overview from './pages/Overview';
 import Teachers from './pages/Teachers';
 import Classes from './pages/Classes';
 import Subjects from './pages/Subjects';
@@ -63,6 +64,11 @@ function App() {
                 <Route path="/students" element={
                     <PrivateRoute allowedRoles={['ADMIN', 'TEACHER', 'CLERK', 'CHAIRPERSON']}>
                         <Students />
+                    </PrivateRoute>
+                } />
+                <Route path="/overview" element={
+                    <PrivateRoute allowedRoles={['ADMIN', 'HEAD_TEACHER', 'CHAIRPERSON', 'SENIOR_TEACHER']}>
+                        <Overview />
                     </PrivateRoute>
                 } />
                 <Route path="/reportcards" element={

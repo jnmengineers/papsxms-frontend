@@ -11,6 +11,7 @@ export const GROUPS = [
         label: 'Overview',
         items: [
             { icon: 'house-door-fill', label: 'Dashboard', path: '/dashboard', roles: ['ADMIN', 'TEACHER', 'CLERK', 'ACCOUNTANT', 'CHAIRPERSON'] },
+            { icon: 'speedometer2', label: 'School Overview', path: '/overview', roles: ['ADMIN', 'HEAD_TEACHER', 'CHAIRPERSON', 'SENIOR_TEACHER'] },
             { icon: 'calendar-week-fill', label: 'Timetable', path: '/timetable', roles: ['ADMIN', 'TEACHER', 'CLERK', 'ACCOUNTANT', 'CHAIRPERSON'] },
             { icon: 'megaphone-fill', label: 'Notices', path: '/announcements', roles: ['ADMIN', 'TEACHER', 'CLERK', 'ACCOUNTANT', 'CHAIRPERSON'] },
             { icon: 'calendar2-heart-fill', label: 'My Leave & Duty', path: '/my-leave', roles: ['ADMIN', 'TEACHER', 'CLERK', 'ACCOUNTANT'] },

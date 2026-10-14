@@ -11,7 +11,7 @@ import { ROLE_LABELS } from '../utils/roles';
 // What each role may do (shown when ticking roles)
 const ROLE_HELP = {
     SUPER_ADMIN: 'everything + gives roles', ADMIN: 'runs the system', TREASURER: 'approves the bursar\'s bills',
-    ACCOUNTANT: 'prepares fees & bills', CHAIRPERSON: 'views everything', HEAD_TEACHER: 'approves staff leave', TEACHER: 'own classes & marks', CLERK: 'records & results',
+    ACCOUNTANT: 'prepares fees & bills', CHAIRPERSON: 'views everything', HEAD_TEACHER: 'approves staff leave', DEPUTY_HEAD: 'Deputy head teacher: everything the head teacher can do', SENIOR_TEACHER: 'Senior teacher: a teacher who also sees the School Overview', TEACHER: 'own classes & marks', CLERK: 'records & results',
 };
 
 const Icon = ({ name, style }) => <i className={`bi bi-${name}`} aria-hidden="true" style={{ marginRight: '6px', ...style }} />;

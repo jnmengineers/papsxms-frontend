@@ -6,6 +6,7 @@
 export const ROLE_LABELS = {
     SUPER_ADMIN: 'Super admin', ADMIN: 'Admin', TREASURER: 'Treasurer', ACCOUNTANT: 'Bursar',
     CHAIRPERSON: 'Chairperson', HEAD_TEACHER: 'Head teacher', TEACHER: 'Teacher', CLERK: 'Clerk',
+    DEPUTY_HEAD: 'Deputy head teacher', SENIOR_TEACHER: 'Senior teacher',
 };
 
 export const myRoles = () => {
