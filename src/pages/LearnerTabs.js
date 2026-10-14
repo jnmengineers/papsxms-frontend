@@ -49,29 +49,51 @@ export function FeesTab({ studentId }) {
     useEffect(() => { api.get(`/api/finance/students/${studentId}/statement`).then(r => setData(r.data)).catch(() => setError('Could not load the fees.')); }, [studentId]);
     if (error) return <p style={st.muted}>{error}</p>;
     if (!data) return <p style={st.muted}>Loading…</p>;
-    const entries = (data.entries || []).filter(e => !e.cancelled);
-    const billed = entries.reduce((a, e) => a + Number(e.debit || 0), 0);
-    const paid = entries.reduce((a, e) => a + Number(e.credit || 0), 0);
+    const entries = data.entries || [];
+    const live = entries.filter(e => !e.cancelled);
+    const billed = live.reduce((a, e) => a + Number(e.debit || 0), 0);
+    const paid = live.reduce((a, e) => a + Number(e.credit || 0), 0);
     const bal = Number(data.balance || 0);
+    const invoices = entries.filter(e => e.type === 'INVOICE');
+    const latest = invoices[invoices.length - 1];
+    const extras = live.filter(e => (e.type === 'CHARGE' || e.type === 'TRANSPORT') && e.debit);
+    const payments = entries.filter(e => e.type === 'PAYMENT').slice().reverse();
     return (
         <div>
             <div style={st.glance}>
-                <div style={{ ...st.card, borderTopColor: '#1F3864' }}><b>{kes(billed)}</b><span>Billed</span></div>
-                <div style={{ ...st.card, borderTopColor: '#1e7e34' }}><b>{kes(paid)}</b><span>Paid</span></div>
-                <div style={{ ...st.card, borderTopColor: bal > 0 ? '#b02a37' : '#1e7e34' }}><b style={{ color: bal > 0 ? '#b02a37' : '#1e7e34' }}>{kes(Math.abs(bal))}</b><span>{bal > 0 ? 'Balance owed' : bal < 0 ? 'In credit' : 'Fully paid'}</span></div>
+                <div style={{ ...st.card, borderTopColor: '#1F3864' }}><b>{kes(billed)}</b><span>Total billed</span></div>
+                <div style={{ ...st.card, borderTopColor: '#1e7e34' }}><b>{kes(paid)}</b><span>Total paid</span></div>
+                <div style={{ ...st.card, borderTopColor: bal > 0 ? '#b02a37' : '#1e7e34' }}><b style={{ color: bal > 0 ? '#b02a37' : '#1e7e34' }}>{kes(Math.abs(bal))}</b><span>{bal > 0 ? 'Fee balance' : bal < 0 ? 'In credit' : 'Fully paid'}</span></div>
             </div>
-            <div style={{ ...st.panel, overflowX: 'auto' }}>
-                <table style={st.table}>
-                    <thead><tr>{['Date', 'Details', 'Billed', 'Paid'].map(h => <th key={h} style={h === 'Billed' || h === 'Paid' ? st.thN : st.th}>{h}</th>)}</tr></thead>
-                    <tbody>{entries.slice().reverse().map((e, i) => (
-                        <tr key={e.sortKey || i} style={{ backgroundColor: i % 2 ? 'white' : '#fafafa' }}>
-                            <td style={st.td}>{fmt(e.date)}</td>
-                            <td style={st.td}>{e.description}{e.receiptNumber ? <span style={st.small}> · {e.receiptNumber}</span> : null}{e.reference ? <span style={st.small}> · {e.reference}</span> : null}</td>
-                            <td style={st.tdN}>{e.debit ? kes(e.debit) : ''}</td>
-                            <td style={{ ...st.tdN, color: '#1e7e34' }}>{e.credit ? kes(e.credit) : ''}</td>
-                        </tr>))}
-                        {!entries.length && <tr><td colSpan={4} style={{ ...st.td, color: '#888', textAlign: 'center' }}>Nothing billed yet.</td></tr>}</tbody>
-                </table>
+
+            <div style={st.panel}>
+                <h4 style={st.h4}><i className="bi bi-list-ul" style={{ marginRight: '6px' }} />Fee structure{latest ? ` — ${latest.description.replace(/^Fees — /, '')}` : ''}</h4>
+                {latest ? (
+                    <table style={st.table}><tbody>
+                        {(latest.lines || []).map((l, i) => <tr key={i}><td style={st.td}>{l.name}</td><td style={st.tdN}>{kes(l.amount)}</td></tr>)}
+                        <tr><td style={{ ...st.td, fontWeight: 700 }}>Term fees total</td><td style={{ ...st.tdN, fontWeight: 700 }}>{kes(latest.debit)}</td></tr>
+                    </tbody></table>
+                ) : <p style={{ ...st.muted, margin: 0 }}>No term fees billed yet.</p>}
+                {extras.length > 0 && <>
+                    <h4 style={{ ...st.h4, margin: '12px 0 6px', fontSize: '13px' }}>Extra charges &amp; transport</h4>
+                    <table style={st.table}><tbody>{extras.map((e, i) => <tr key={i}><td style={st.td}>{fmt(e.date)}</td><td style={st.td}>{e.description}</td><td style={st.tdN}>{kes(e.debit)}</td></tr>)}</tbody></table>
+                </>}
+            </div>
+
+            <div style={st.panel}>
+                <h4 style={st.h4}><i className="bi bi-receipt" style={{ marginRight: '6px' }} />Payment history ({payments.length})</h4>
+                {payments.length ? (
+                    <div style={{ overflowX: 'auto' }}><table style={st.table}>
+                        <thead><tr>{['Date', 'Paid by / reference', 'Receipt', 'Amount'].map(h => <th key={h} style={h === 'Amount' ? st.thN : st.th}>{h}</th>)}</tr></thead>
+                        <tbody>{payments.map((p, i) => {
+                            const reversed = /REVERSED/.test(p.description || '');
+                            return (<tr key={p.sortKey || i} style={reversed ? { color: '#999', textDecoration: 'line-through' } : null}>
+                                <td style={st.td}>{fmt(p.date)}</td><td style={st.td}>{p.description}</td><td style={st.td}>{p.receiptNumber || '—'}</td>
+                                <td style={{ ...st.tdN, color: reversed ? '#999' : '#1e7e34' }}>{kes(reversed ? 0 : p.credit)}</td></tr>);
+                        })}
+                            <tr><td style={{ ...st.td, fontWeight: 700 }} colSpan={3}>Total paid</td><td style={{ ...st.tdN, fontWeight: 700, color: '#1e7e34' }}>{kes(paid)}</td></tr>
+                        </tbody></table></div>
+                ) : <p style={{ ...st.muted, margin: 0 }}>No payments recorded.</p>}
                 <p style={{ ...st.muted, margin: '10px 0 0' }}>The full printable statement is on <Link to="/finance?tab=statement">Finance → Statement</Link>.</p>
             </div>
         </div>

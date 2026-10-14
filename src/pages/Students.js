@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import api from '../services/api';
+import { LeaveButton, FormerLearners } from '../components/LeaveSchool';
 import '../index.css';
 import { classDisplayName } from '../utils/classUtils';
 import { useNavigate, useSearchParams } from 'react-router-dom';
@@ -457,7 +458,7 @@ function Students() {
                                         ))}
                                     </ol>
                                 </nav>
-                                <h2 style={styles.title}>{pageTitle}</h2>
+                                <h2 style={styles.title}>{pageTitle}<FormerLearners onChange={(m) => { showToast(m); fetchStudents(); }} /></h2>
                                 <p style={styles.breadcrumb}>{pageSubtitle}</p>
                             </div>
                         </div>
@@ -573,7 +574,8 @@ function Students() {
                                                                                 <button onClick={() => handleEdit(s)} style={isEditing ? { ...styles.editBtn, backgroundColor: '#6c757d' } : styles.editBtn} title={isEditing ? 'Close editor' : 'Edit'}>
                                                                                     <i className={`bi bi-${isEditing ? 'x-lg' : 'pencil-fill'}`} />
                                                                                 </button>
-                                                                                <button onClick={() => handleDelete(s)} style={styles.deleteBtn} title="Delete"><i className="bi bi-trash-fill" /></button>
+                                                                                <LeaveButton student={s} onDone={(m) => { showToast(m); fetchStudents(); }} />
+                                                                                {!isTeacher && <button onClick={() => handleDelete(s)} style={styles.deleteBtn} title="Delete"><i className="bi bi-trash-fill" /></button>}
                                                                             </td>
                                                                         </tr>
                                                                         {isEditing && (
@@ -774,7 +776,8 @@ function Students() {
                                                                     <button onClick={() => handleEdit(student)} style={isEditing ? styles.cancelEditBtnSm : styles.editBtnSm} title={isEditing ? 'Close editor' : 'Edit'}>
                                                                         <i className={`bi bi-${isEditing ? 'x-lg' : 'pencil-fill'}`} />
                                                                     </button>
-                                                                    <button onClick={() => handleDelete(student)} style={styles.deleteBtnSm} title="Delete"><i className="bi bi-trash-fill" /></button>
+                                                                    <LeaveButton small student={student} onDone={(m) => { showToast(m); fetchStudents(); }} />
+                                                                    {!isTeacher && <button onClick={() => handleDelete(student)} style={styles.deleteBtnSm} title="Delete"><i className="bi bi-trash-fill" /></button>}
                                                                 </div>
                                                             </div>
                                                             {isEditing && editForm(student)}

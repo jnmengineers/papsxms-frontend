@@ -160,7 +160,8 @@ const printResults = ({ title, examObj, students, subjects, pivot }) => {
         "this.style.background='#FFD700';this.style.color='#1F3864';";
 
     const html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">' +
-        '<title>' + esc(title) + ' Results</title>' +
+        // Name of the printout / saved PDF: class, exam, term and year (so each exam's file is named differently)
+        '<title>' + esc([title, examLabel, examObj ? ('Term ' + examObj.term + ' ' + examObj.academicYear) : ''].filter(Boolean).join(' - ')) + ' Results</title>' +
         '<style>*{box-sizing:border-box;margin:0;padding:0;}body{font-family:\'Times New Roman\',Times,serif;font-size:12px;color:#000;padding:10px;}' +
         '.orient{border:1px solid white;padding:6px 14px;border-radius:4px;cursor:pointer;font-size:12px;font-weight:bold;margin-right:4px;}' +
         '@media print{.no-print{display:none!important;}body{-webkit-print-color-adjust:exact;print-color-adjust:exact;}}</style>' +
