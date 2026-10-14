@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../services/api';
 import { hasRole } from '../utils/roles';
+import { letterheadHtml } from '../utils/school';
 
 /**
  * Extra tabs on the learner profile: Fees, Attendance and Parents, plus an "at a glance" strip
@@ -44,6 +45,61 @@ export function LearnerGlance({ studentId }) {
     );
 }
 
+/** Printable fee payment history for one learner (letterhead, summary, fee structure, payments). */
+function printFeeHistory(data) {
+    const esc = (v) => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    const st = data.student || {};
+    const name = st.name || `${st.firstName || ''} ${st.lastName || ''}`.trim();
+    const entries = data.entries || [];
+    const live = entries.filter(e => !e.cancelled);
+    const billed = live.reduce((a, e) => a + Number(e.debit || 0), 0);
+    const paid = live.reduce((a, e) => a + Number(e.credit || 0), 0);
+    const bal = Number(data.balance || 0);
+    const invoices = entries.filter(e => e.type === 'INVOICE');
+    const latest = invoices[invoices.length - 1];
+    const pays = entries.filter(e => e.type === 'PAYMENT');
+    let run = 0;
+    const payRows = pays.map((p, i) => {
+        const rev = /REVERSED/.test(p.description || '');
+        if (!rev) run += Number(p.credit || 0);
+        return `<tr${rev ? ' class="rev"' : ''}><td>${i + 1}</td><td>${fmt(p.date)}</td><td>${esc(p.receiptNumber || '—')}</td><td>${esc(p.description)}</td><td class="n">${rev ? '0.00' : kes(p.credit).replace('KES ', '')}</td><td class="n">${kes(run).replace('KES ', '')}</td></tr>`;
+    }).join('') || '<tr><td colspan="6" class="c">No payments recorded</td></tr>';
+    const structure = latest ? (latest.lines || []).map(l => `<tr><td>${esc(l.name)}</td><td class="n">${kes(l.amount).replace('KES ', '')}</td></tr>`).join('')
+        + `<tr class="t"><td>Term total</td><td class="n">${kes(latest.debit).replace('KES ', '')}</td></tr>` : '<tr><td colspan="2" class="c">No term fees billed</td></tr>';
+    const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Fee payment history - ${esc(name)}</title><style>
+        @page { size: A4; margin: 12mm; } * { box-sizing: border-box; } body { font-family: Arial, Helvetica, sans-serif; font-size: 11px; color: #222; margin: 0; }
+        .bar { background: #1F3864; color: #fff; padding: 10px 16px; display: flex; justify-content: space-between; align-items: center; }
+        .bar button { background: #FFD700; border: 0; padding: 7px 16px; border-radius: 5px; font-weight: 700; cursor: pointer; }
+        .page { max-width: 780px; margin: 0 auto; padding: 12px; }
+        h2 { text-align: center; color: #1F3864; letter-spacing: 1px; border-top: 2px solid #1F3864; border-bottom: 2px solid #1F3864; padding: 5px 0; margin: 8px 0 10px; font-size: 14px; }
+        .who { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 20px; margin-bottom: 10px; } .who b { color: #1F3864; }
+        .sum { display: flex; gap: 10px; margin-bottom: 12px; } .sum div { flex: 1; border: 1px solid #ccd3df; border-radius: 6px; padding: 6px 10px; text-align: center; }
+        .sum span { display: block; font-size: 9px; color: #666; text-transform: uppercase; } .sum strong { font-size: 14px; color: #1F3864; }
+        h3 { color: #1F3864; font-size: 12px; margin: 12px 0 5px; }
+        table { width: 100%; border-collapse: collapse; } th { text-align: left; border-bottom: 1.5px solid #1F3864; color: #1F3864; padding: 5px; font-size: 10px; }
+        td { padding: 4px 5px; border-bottom: 1px solid #e3e7ee; } .n { text-align: right; } .c { text-align: center; color: #888; }
+        .t td { font-weight: 700; border-top: 1.5px solid #1F3864; } .rev td { color: #999; text-decoration: line-through; }
+        .sig { display: flex; justify-content: space-between; margin-top: 28px; font-size: 10px; } .foot { text-align: center; color: #999; font-size: 9px; margin-top: 14px; }
+        @media print { .bar { display: none; } .page { padding: 0; } body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
+    </style></head><body><div class="bar"><b>Fee payment history — ${esc(name)}</b><button onclick="window.print()">Print / Save PDF</button></div><div class="page">
+        ${letterheadHtml({ logoSize: 50 })}
+        <h2>LEARNER FEE PAYMENT HISTORY</h2>
+        <div class="who"><div><b>Learner:</b> ${esc(name)}</div><div><b>Adm No:</b> ${esc(st.admissionNumber || '')}</div>
+            <div><b>Class:</b> ${esc(st.className || '')}${st.stream ? ' ' + esc(st.stream) : ''}</div><div><b>Printed:</b> ${fmt(new Date().toISOString())}</div></div>
+        <div class="sum"><div><span>Total billed</span><strong>${kes(billed)}</strong></div><div><span>Total paid</span><strong>${kes(paid)}</strong></div>
+            <div><span>${bal > 0 ? 'Balance owed' : bal < 0 ? 'In credit' : 'Fully paid'}</span><strong style="color:${bal > 0 ? '#b02a37' : '#1e7e34'}">${kes(Math.abs(bal))}</strong></div></div>
+        <h3>Fee structure${latest ? ' — ' + esc(latest.description.replace(/^Fees — /, '')) : ''}</h3>
+        <table><thead><tr><th>Item</th><th class="n">Amount (KES)</th></tr></thead><tbody>${structure}</tbody></table>
+        <h3>Payments (${pays.length})</h3>
+        <table><thead><tr><th>#</th><th>Date</th><th>Receipt</th><th>Paid by / reference</th><th class="n">Amount (KES)</th><th class="n">Running total</th></tr></thead><tbody>${payRows}</tbody></table>
+        <div class="sig"><span>Bursar: ____________________ Sign: ____________</span><span>Date: ____________ Stamp</span></div>
+        <div class="foot">This is a record of payments received. Reversed payments are shown crossed out.</div>
+    </div></body></html>`;
+    const w = window.open('', '_blank');
+    if (!w) { alert('Allow pop-ups for this site to print.'); return; }
+    w.document.write(html); w.document.close(); w.focus();
+}
+
 export function FeesTab({ studentId }) {
     const [data, setData] = useState(null);
     const [error, setError] = useState('');
@@ -61,6 +117,11 @@ export function FeesTab({ studentId }) {
     const payments = entries.filter(e => e.type === 'PAYMENT').slice().reverse();
     return (
         <div>
+            {hasRole('ADMIN', 'ACCOUNTANT', 'CHAIRPERSON') && <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '8px' }}>
+                <button onClick={() => printFeeHistory(data)} style={{ backgroundColor: '#1F3864', color: 'white', border: 'none', padding: '8px 14px', borderRadius: '8px', fontWeight: 700, cursor: 'pointer' }}>
+                    <i className="bi bi-printer-fill" style={{ marginRight: '6px' }} />Print fee history
+                </button>
+            </div>}
             <div style={st.glance}>
                 <div style={{ ...st.card, borderTopColor: '#1F3864' }}><b>{kes(billed)}</b><span>Total billed</span></div>
                 <div style={{ ...st.card, borderTopColor: '#1e7e34' }}><b>{kes(paid)}</b><span>Total paid</span></div>
