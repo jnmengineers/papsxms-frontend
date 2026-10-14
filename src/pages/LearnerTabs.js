@@ -14,7 +14,8 @@ const pretty = (p) => (p && p.startsWith('+254') && p.length === 13 ? `0${p.slic
 const yearStart = () => `${new Date().getFullYear()}-01-01`;
 const today = () => new Date().toISOString().slice(0, 10);
 
-export const canSeeFees = () => hasRole('ADMIN', 'ACCOUNTANT', 'CHAIRPERSON');
+// Teachers too: the server only returns fees for learners in a class they are class teacher of
+export const canSeeFees = () => hasRole('ADMIN', 'ACCOUNTANT', 'CHAIRPERSON', 'TEACHER');
 export const canSeeParents = () => hasRole('ADMIN', 'CLERK', 'ACCOUNTANT');
 
 /** Attendance this year: counts by status and the rate (present + late out of all marked days). */
@@ -46,7 +47,7 @@ export function LearnerGlance({ studentId }) {
 export function FeesTab({ studentId }) {
     const [data, setData] = useState(null);
     const [error, setError] = useState('');
-    useEffect(() => { api.get(`/api/finance/students/${studentId}/statement`).then(r => setData(r.data)).catch(() => setError('Could not load the fees.')); }, [studentId]);
+    useEffect(() => { api.get(`/api/finance/students/${studentId}/statement`).then(r => setData(r.data)).catch(err => setError(err?.response?.status === 403 ? 'Only the class teacher (and the finance office) can see this learner\'s fees.' : 'Could not load the fees.')); }, [studentId]);
     if (error) return <p style={st.muted}>{error}</p>;
     if (!data) return <p style={st.muted}>Loading…</p>;
     const entries = data.entries || [];
