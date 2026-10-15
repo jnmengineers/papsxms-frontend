@@ -7,6 +7,7 @@ import Students from './pages/Students';
 import Results from './pages/Results';
 import ReportCards from './pages/ReportCards';
 import Overview from './pages/Overview';
+import Enquiries from './pages/Enquiries';
 import Teachers from './pages/Teachers';
 import Classes from './pages/Classes';
 import Subjects from './pages/Subjects';
@@ -64,6 +65,11 @@ function App() {
                 <Route path="/students" element={
                     <PrivateRoute allowedRoles={['ADMIN', 'TEACHER', 'CLERK', 'CHAIRPERSON']}>
                         <Students />
+                    </PrivateRoute>
+                } />
+                <Route path="/enquiries" element={
+                    <PrivateRoute allowedRoles={['ADMIN', 'CLERK']}>
+                        <Enquiries />
                     </PrivateRoute>
                 } />
                 <Route path="/overview" element={

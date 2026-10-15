@@ -3,13 +3,10 @@ import api from '../services/api';
 import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
 import Footer from '../components/Footer';
-import AdmitDialog from '../components/AdmitDialog';
-import { printApplication, printAdmissionLetter } from '../utils/admissionPrint';
 
 /** Admission applications and messages sent from the public website. */
 const fmt = (d) => (d ? new Date(d).toLocaleString('en-GB', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : '');
-const COLORS = { NEW: '#b02a37', CONTACTED: '#b8860b', INTERVIEW: '#6f42c1', ADMITTED: '#1e7e34', NOT_ADMITTED: '#6c757d', CLOSED: '#6c757d' };
-const STAGES = { NEW: 'New', CONTACTED: 'Contacted', INTERVIEW: 'Interview / assessment', ADMITTED: 'Admitted', NOT_ADMITTED: 'Not admitted', CLOSED: 'Closed' };
+const COLORS = { NEW: '#b02a37', CONTACTED: '#b8860b', CLOSED: '#1e7e34' };
 
 function Enquiries() {
     const [list, setList] = useState(null);
@@ -22,8 +19,7 @@ function Enquiries() {
         if (note === null) return;
         try { await api.put(`/api/enquiries/${e.enquiryId}`, { status, staffNote: note }); load(); } catch (err) { setError('Could not update.'); }
     };
-    const update = async (e, patch) => { try { await api.put(`/api/enquiries/${e.enquiryId}`, { status: e.status, staffNote: e.staffNote, ...patch }); load(); } catch (err) { setError('Could not update.'); } };
-    const shown = (list || []).filter(e => filter === 'ALL' || (filter === 'OPEN' ? !['CLOSED', 'ADMITTED', 'NOT_ADMITTED'].includes(e.status) : e.kind === filter));
+    const shown = (list || []).filter(e => filter === 'ALL' || (filter === 'OPEN' ? e.status !== 'CLOSED' : e.kind === filter));
     const newCount = (list || []).filter(e => e.status === 'NEW').length;
     return (
         <div style={{ minHeight: '100vh', backgroundColor: '#f0f2f5' }}>
@@ -42,7 +38,7 @@ function Enquiries() {
                         <div key={e.enquiryId} style={{ backgroundColor: 'white', borderRadius: '12px', padding: '14px 16px', marginBottom: '10px', borderLeft: `5px solid ${COLORS[e.status] || '#999'}`, boxShadow: '0 2px 6px rgba(0,0,0,0.05)' }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '6px' }}>
                                 <b style={{ color: '#1F3864' }}>{e.kind === 'ADMISSION' ? '🎓 Admission' : '✉ Message'} — {e.parentName}</b>
-                                <span style={{ fontSize: '12px', color: '#777' }}>{fmt(e.createdAt)} · <b style={{ color: COLORS[e.status] }}>{STAGES[e.status] || e.status}</b>{e.admittedAs ? ` · ${e.admittedAs}` : ''}</span>
+                                <span style={{ fontSize: '12px', color: '#777' }}>{fmt(e.createdAt)} · <b style={{ color: COLORS[e.status] }}>{e.status}</b></span>
                             </div>
                             <div style={{ fontSize: '14px', margin: '4px 0' }}>
                                 <a href={`tel:${e.phone}`}>{e.phone}</a>{e.email && <> · <a href={`mailto:${e.email}`}>{e.email}</a></>}
@@ -50,15 +46,11 @@ function Enquiries() {
                             </div>
                             {e.message && <p style={{ margin: '4px 0', whiteSpace: 'pre-line', color: '#333' }}>{e.message}</p>}
                             {e.staffNote && <p style={{ margin: '4px 0', fontSize: '12px', color: '#555' }}>Note: {e.staffNote}{e.handledBy ? ` (${e.handledBy})` : ''}</p>}
-                            <div style={{ display: 'flex', gap: '6px', marginTop: '6px', flexWrap: 'wrap', alignItems: 'center' }}>
-                                <select value={e.status} onChange={ev => update(e, { status: ev.target.value })} style={{ padding: '5px', borderRadius: '7px', fontSize: '12px' }} aria-label="Stage">
-                                    {Object.entries(STAGES).filter(([k]) => k !== 'ADMITTED' || e.status === 'ADMITTED').map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-                                </select>
-                                {e.status === 'INTERVIEW' && <input type="date" value={e.interviewDate || ''} onChange={ev => update(e, { interviewDate: ev.target.value })} title="Interview date" style={{ padding: '4px', borderRadius: '7px', fontSize: '12px' }} />}
-                                <button onClick={() => printApplication(e)} style={btn('#1F3864')}><i className="bi bi-printer" /> Application</button>
-                                {e.status === 'ADMITTED' && e.admittedAs && <button onClick={() => printAdmissionLetter({ learnerName: e.learnerName, admissionNumber: e.admittedAs, className: e.gradeWanted, parentName: e.parentName })} style={btn('#1e7e34')}><i className="bi bi-printer" /> Admission letter</button>}
-                                {e.kind === 'ADMISSION' && !['CLOSED', 'ADMITTED', 'NOT_ADMITTED'].includes(e.status) && <AdmitDialog small enquiry={e} label="Admit" onDone={(m) => { window.alert(m); load(); }} />}
-                                </div>
+                            <div style={{ display: 'flex', gap: '6px', marginTop: '6px' }}>
+                                {e.status !== 'CONTACTED' && e.status !== 'CLOSED' && <button onClick={() => setStatus(e, 'CONTACTED')} style={btn('#b8860b')}>Mark contacted</button>}
+                                {e.status !== 'CLOSED' && <button onClick={() => setStatus(e, 'CLOSED')} style={btn('#1e7e34')}>Close</button>}
+                                {e.status === 'CLOSED' && <button onClick={() => setStatus(e, 'NEW')} style={btn('#6c757d')}>Reopen</button>}
+                            </div>
                         </div>))}
                 </div>
             </div>

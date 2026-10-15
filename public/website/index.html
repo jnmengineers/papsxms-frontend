@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>School</title>
+<meta name="description" content="Pipeline Adventist Primary & Junior Secondary School, Nairobi — CBC education from Pre-Primary to Junior School.">
+<style>
+  :root { --navy: #1F3864; --blue: #2E75B6; --gold: #FFD700; --ink: #1d2433; --muted: #5b6475; --bg: #f5f7fb; }
+  * { box-sizing: border-box; } html { scroll-behavior: smooth; }
+  body { margin: 0; font-family: "Segoe UI", Arial, sans-serif; color: var(--ink); background: #fff; line-height: 1.6; }
+  a { color: var(--blue); }
+  header { position: sticky; top: 0; z-index: 10; background: #fff; box-shadow: 0 1px 8px rgba(0,0,0,.08); }
+  .bar { max-width: 1100px; margin: 0 auto; display: flex; align-items: center; gap: 12px; padding: 10px 18px; }
+  .bar img { width: 46px; height: 46px; object-fit: contain; }
+  .brand b { display: block; color: var(--navy); font-size: 15px; line-height: 1.2; } .brand span { font-size: 12px; color: var(--blue); font-style: italic; }
+  nav { margin-left: auto; display: flex; gap: 16px; flex-wrap: wrap; } nav a { text-decoration: none; color: var(--navy); font-weight: 600; font-size: 14px; }
+  .login { background: var(--navy); color: #fff !important; padding: 7px 14px; border-radius: 8px; }
+  .hero { background: linear-gradient(135deg, var(--navy), var(--blue)); color: #fff; padding: 70px 18px; text-align: center; }
+  .hero h1 { margin: 0 0 10px; font-size: clamp(26px, 5vw, 42px); } .hero p { margin: 0 auto 22px; max-width: 640px; opacity: .92; }
+  .btn { display: inline-block; background: var(--gold); color: var(--navy); font-weight: 700; padding: 11px 22px; border-radius: 10px; text-decoration: none; border: 0; cursor: pointer; font-size: 15px; }
+  .btn.ghost { background: transparent; color: #fff; border: 2px solid #fff; margin-left: 8px; }
+  section { padding: 56px 18px; } section:nth-of-type(even) { background: var(--bg); }
+  .wrap { max-width: 1100px; margin: 0 auto; }
+  h2 { color: var(--navy); font-size: 26px; margin: 0 0 6px; } .lead { color: var(--muted); margin: 0 0 26px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 16px; }
+  .card { background: #fff; border-radius: 14px; padding: 20px; box-shadow: 0 2px 10px rgba(0,0,0,.06); border-top: 4px solid var(--blue); }
+  .card h3 { margin: 0 0 6px; color: var(--navy); font-size: 17px; } .card p { margin: 0; color: var(--muted); font-size: 14px; }
+  .fees { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; }
+  .fees table { width: 100%; border-collapse: collapse; font-size: 14px; } .fees td { padding: 5px 0; border-bottom: 1px solid #eef1f6; } .fees td:last-child { text-align: right; white-space: nowrap; }
+  .fees tr.t td { font-weight: 700; color: var(--navy); border-top: 2px solid var(--navy); }
+  form { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; } form .full { grid-column: 1 / -1; }
+  label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; font-weight: 600; color: var(--navy); }
+  input, select, textarea { font: inherit; font-weight: 400; padding: 10px; border: 1.5px solid #d6dce6; border-radius: 9px; }
+  .tabs { display: flex; gap: 8px; margin-bottom: 14px; } .tabs button { flex: 1; padding: 10px; border-radius: 9px; border: 2px solid var(--navy); background: #fff; color: var(--navy); font-weight: 700; cursor: pointer; }
+  .tabs button.on { background: var(--navy); color: #fff; }
+  .msg { padding: 10px 14px; border-radius: 9px; margin-top: 10px; display: none; } .ok { background: #d4edda; color: #155724; } .err { background: #f8d7da; color: #721c24; }
+  .hp { position: absolute; left: -9999px; }
+  footer { background: var(--navy); color: #cfd8e8; text-align: center; padding: 22px 18px; font-size: 13px; }
+  @media (max-width: 640px) { nav { display: none; } form { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<header><div class="bar">
+  <img id="logo" alt="" onerror="this.style.display='none'">
+  <div class="brand"><b id="name">Our School</b><span id="motto"></span></div>
+  <nav><a href="#about">About</a><a href="#academics">Academics</a><a href="#fees">Admissions &amp; Fees</a><a href="#contact">Contact</a><a class="login" href="/login">Staff login</a></nav>
+</div></header>
+
+<div class="hero">
+  <h1 id="heroName">Welcome</h1>
+  <p id="heroMotto">Quality, Christ-centred education from Pre-Primary to Junior School.</p>
+  <a class="btn" href="#apply">Apply for admission</a><a class="btn ghost" href="#fees">See fees</a>
+</div>
+
+<section id="about"><div class="wrap">
+  <h2>About us</h2>
+  <p class="lead">A Seventh-day Adventist school offering the Competency Based Curriculum (CBC) in a caring, disciplined and Christ-centred environment.</p>
+  <div class="grid">
+    <div class="card"><h3>Our mission</h3><p>To nurture every learner academically, spiritually, physically and socially, preparing them for service in this life and the life to come.</p></div>
+    <div class="card"><h3>Adventist values</h3><p>Integrity, respect, love for God and others, hard work and responsibility — lived out every day in class and beyond.</p></div>
+    <div class="card"><h3>Why choose us</h3><p>Dedicated teachers, small classes, regular assessment and clear progress reports for every learner.</p></div>
+  </div>
+</div></section>
+
+<section id="academics"><div class="wrap">
+  <h2>Academics</h2>
+  <p class="lead">We follow the Kenyan CBC curriculum from the early years through Junior School.</p>
+  <div class="grid">
+    <div class="card"><h3>Pre-Primary</h3><p>Play Group, PP1 and PP2 — language, numeracy, creativity and early life skills through play.</p></div>
+    <div class="card"><h3>Lower Primary</h3><p>Grades 1–3 — strong foundations in literacy, numeracy, Kiswahili and integrated learning areas.</p></div>
+    <div class="card"><h3>Upper Primary</h3><p>Grades 4–6 — sciences, agriculture, creative arts, social studies and religious education.</p></div>
+    <div class="card"><h3>Junior School</h3><p>Grades 7–9 — integrated science, pre-technical studies, agriculture and more, preparing for senior school.</p></div>
+  </div>
+</div></section>
+
+<section id="fees"><div class="wrap">
+  <h2>Admissions &amp; fees</h2>
+  <p class="lead" id="feesLead">Fee structure per term.</p>
+  <div class="fees" id="feeList"><p class="lead">Loading fees…</p></div>
+</div></section>
+
+<section id="contact"><div class="wrap" id="apply">
+  <h2>Apply or contact us</h2>
+  <p class="lead" id="contactLine"></p>
+  <div class="card" style="max-width:760px">
+    <div class="tabs"><button type="button" id="tA" class="on" onclick="mode('ADMISSION')">Apply for admission</button><button type="button" id="tC" onclick="mode('CONTACT')">Send a message</button></div>
+    <form id="f" onsubmit="return send(event)">
+      <label>Parent / guardian name<input name="parentName" required maxlength="100"></label>
+      <label>Phone<input name="phone" required inputmode="tel" placeholder="0712 345678"></label>
+      <label>Email (optional)<input name="email" type="email" maxlength="100"></label>
+      <label class="adm">Learner's name<input name="learnerName" maxlength="100"></label>
+      <label class="adm">Grade applying for
+        <select name="gradeWanted"><option value="">Choose</option><option>Play Group</option><option>PP1</option><option>PP2</option>
+          <option>Grade 1</option><option>Grade 2</option><option>Grade 3</option><option>Grade 4</option><option>Grade 5</option><option>Grade 6</option>
+          <option>Grade 7</option><option>Grade 8</option><option>Grade 9</option></select></label>
+      <label class="full">Message<textarea name="message" rows="4" maxlength="1500"></textarea></label>
+      <input class="hp" name="website" tabindex="-1" autocomplete="off" aria-hidden="true">
+      <div class="full"><button class="btn" id="sendBtn">Send</button></div>
+    </form>
+    <div class="msg" id="msg"></div>
+  </div>
+</div></section>
+
+<footer><span id="foot"></span><br>&copy; <span id="yr"></span></footer>
+
+<script>
+  const $ = (id) => document.getElementById(id);
+  const kes = (n) => 'KES ' + Number(n || 0).toLocaleString('en-KE');
+  const SECTIONS = { PRE_SCHOOL: 'Pre-Primary', LOWER_PRIMARY: 'Lower Primary (Grades 1–3)', UPPER_PRIMARY: 'Upper Primary (Grades 4–6)', JUNIOR_SCHOOL: 'Junior School (Grades 7–9)' };
+  let kind = 'ADMISSION';
+  $('yr').textContent = new Date().getFullYear();
+
+  // School details from the system's settings
+  fetch('/api/settings/public').then(r => r.json()).then(p => {
+    const name = p.name || p.schoolName || 'Our School';
+    document.title = name; $('name').textContent = name; $('heroName').textContent = 'Welcome to ' + name;
+    if (p.motto) { $('motto').textContent = p.motto; $('heroMotto').textContent = p.motto; }
+    const logo = p.logoLeft || p.logo; if (logo) $('logo').src = logo; else $('logo').style.display = 'none';
+    const contact = [p.address || p.postalAddress, p.phone || p.phones, p.email].filter(Boolean).join(' · ');
+    $('contactLine').textContent = contact || 'Fill in the form and we will get back to you.';
+    $('foot').textContent = name + (contact ? ' — ' + contact : '');
+  }).catch(() => {});
+
+  // Fee structures from Finance
+  fetch('/api/public/fees').then(r => r.json()).then(list => {
+    if (!list.length) { $('feeList').innerHTML = '<p class="lead">Contact the school office for the current fee structure.</p>'; return; }
+    $('feesLead').textContent = 'Fee structure for ' + list[0].year + ', per term.';
+    $('feeList').innerHTML = list.map(f => `<div class="card"><h3>${SECTIONS[f.section] || f.section} — Term ${f.term}</h3><table>${
+      f.items.map(i => `<tr><td>${String(i.name).replace(/</g, '&lt;')}</td><td>${kes(i.amount)}</td></tr>`).join('')
+    }<tr class="t"><td>Total</td><td>${kes(f.total)}</td></tr></table></div>`).join('');
+  }).catch(() => { $('feeList').innerHTML = '<p class="lead">Contact the school office for the current fee structure.</p>'; });
+
+  function mode(k) {
+    kind = k; $('tA').classList.toggle('on', k === 'ADMISSION'); $('tC').classList.toggle('on', k === 'CONTACT');
+    document.querySelectorAll('.adm').forEach(e => e.style.display = k === 'ADMISSION' ? '' : 'none');
+  }
+  async function send(e) {
+    e.preventDefault();
+    const data = Object.fromEntries(new FormData($('f'))); data.kind = kind;
+    const m = $('msg'); $('sendBtn').disabled = true;
+    try {
+      const r = await fetch('/api/public/enquiry', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(j.message || 'Could not send. Please try again or call the school.');
+      m.className = 'msg ok'; m.textContent = j.message; $('f').reset();
+    } catch (err) { m.className = 'msg err'; m.textContent = err.message; }
+    m.style.display = 'block'; $('sendBtn').disabled = false;
+    return false;
+  }
+</script>
+</body>
+</html>
