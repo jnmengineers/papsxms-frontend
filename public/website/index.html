@@ -1,153 +1,193 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>School</title>
-<meta name="description" content="Pipeline Adventist Primary & Junior Secondary School, Nairobi — CBC education from Pre-Primary to Junior School.">
+<meta name="description" content="Pipeline Adventist Primary & Junior Secondary School, Nairobi — CBC from Play Group to Junior School.">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700&family=Open+Sans:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
 <style>
-  :root { --navy: #1F3864; --blue: #2E75B6; --gold: #FFD700; --ink: #1d2433; --muted: #5b6475; --bg: #f5f7fb; }
-  * { box-sizing: border-box; } html { scroll-behavior: smooth; }
-  body { margin: 0; font-family: "Segoe UI", Arial, sans-serif; color: var(--ink); background: #fff; line-height: 1.6; }
-  a { color: var(--blue); }
-  header { position: sticky; top: 0; z-index: 10; background: #fff; box-shadow: 0 1px 8px rgba(0,0,0,.08); }
-  .bar { max-width: 1100px; margin: 0 auto; display: flex; align-items: center; gap: 12px; padding: 10px 18px; }
-  .bar img { width: 46px; height: 46px; object-fit: contain; }
-  .brand b { display: block; color: var(--navy); font-size: 15px; line-height: 1.2; } .brand span { font-size: 12px; color: var(--blue); font-style: italic; }
-  nav { margin-left: auto; display: flex; gap: 16px; flex-wrap: wrap; } nav a { text-decoration: none; color: var(--navy); font-weight: 600; font-size: 14px; }
-  .login { background: var(--navy); color: #fff !important; padding: 7px 14px; border-radius: 8px; }
-  .hero { background: linear-gradient(135deg, var(--navy), var(--blue)); color: #fff; padding: 70px 18px; text-align: center; }
-  .hero h1 { margin: 0 0 10px; font-size: clamp(26px, 5vw, 42px); } .hero p { margin: 0 auto 22px; max-width: 640px; opacity: .92; }
-  .btn { display: inline-block; background: var(--gold); color: var(--navy); font-weight: 700; padding: 11px 22px; border-radius: 10px; text-decoration: none; border: 0; cursor: pointer; font-size: 15px; }
-  .btn.ghost { background: transparent; color: #fff; border: 2px solid #fff; margin-left: 8px; }
-  section { padding: 56px 18px; } section:nth-of-type(even) { background: var(--bg); }
-  .wrap { max-width: 1100px; margin: 0 auto; }
-  h2 { color: var(--navy); font-size: 26px; margin: 0 0 6px; } .lead { color: var(--muted); margin: 0 0 26px; }
-  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 16px; }
-  .card { background: #fff; border-radius: 14px; padding: 20px; box-shadow: 0 2px 10px rgba(0,0,0,.06); border-top: 4px solid var(--blue); }
-  .card h3 { margin: 0 0 6px; color: var(--navy); font-size: 17px; } .card p { margin: 0; color: var(--muted); font-size: 14px; }
-  .fees { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; }
-  .fees table { width: 100%; border-collapse: collapse; font-size: 14px; } .fees td { padding: 5px 0; border-bottom: 1px solid #eef1f6; } .fees td:last-child { text-align: right; white-space: nowrap; }
-  .fees tr.t td { font-weight: 700; color: var(--navy); border-top: 2px solid var(--navy); }
-  form { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; } form .full { grid-column: 1 / -1; }
-  label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; font-weight: 600; color: var(--navy); }
-  input, select, textarea { font: inherit; font-weight: 400; padding: 10px; border: 1.5px solid #d6dce6; border-radius: 9px; }
-  .tabs { display: flex; gap: 8px; margin-bottom: 14px; } .tabs button { flex: 1; padding: 10px; border-radius: 9px; border: 2px solid var(--navy); background: #fff; color: var(--navy); font-weight: 700; cursor: pointer; }
-  .tabs button.on { background: var(--navy); color: #fff; }
-  .msg { padding: 10px 14px; border-radius: 9px; margin-top: 10px; display: none; } .ok { background: #d4edda; color: #155724; } .err { background: #f8d7da; color: #721c24; }
-  .hp { position: absolute; left: -9999px; }
-  footer { background: var(--navy); color: #cfd8e8; text-align: center; padding: 22px 18px; font-size: 13px; }
-  @media (max-width: 640px) { nav { display: none; } form { grid-template-columns: 1fr; } }
+:root{--navy:#0B1F44;--navy2:#13306B;--blue:#2B4F8C;--red:#C8102E;--grey:#E9ECF1;--ink:#1d2433;--muted:#5b6475;--bg:#F3F4F7}
+*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;font-family:"Open Sans",Arial,sans-serif;color:var(--ink);line-height:1.65}
+h1,h2,h3,h4{font-family:Poppins,"Segoe UI",sans-serif;line-height:1.25}a{color:var(--blue)}
+.wrap{max-width:1180px;margin:0 auto;padding:0 18px}
+.top{background:var(--navy);color:#cfd8e8;font-size:13px}.top .wrap{display:flex;gap:18px;align-items:center;min-height:38px;flex-wrap:wrap}
+.top a{color:#cfd8e8;text-decoration:none}.top .r{margin-left:auto;display:flex;gap:16px}.top i{color:#fff;opacity:.85;margin-right:5px}
+.ann{background:var(--red);color:#fff;text-align:center;font-weight:700;font-size:14px;padding:7px 10px}.ann a{color:#fff}
+header{position:sticky;top:0;z-index:20;background:#fff;box-shadow:0 2px 12px rgba(0,0,0,.08)}
+header .wrap{display:flex;align-items:center;gap:12px;min-height:72px}header img{width:54px;height:54px;object-fit:contain}
+.brand b{display:block;font-family:Poppins;color:var(--navy2);font-size:16px;line-height:1.2}.brand span{font-size:12px;color:var(--blue);font-style:italic}
+nav{margin-left:auto;display:flex;gap:22px}nav a{text-decoration:none;color:var(--navy2);font-weight:600;font-size:14px;padding:6px 0;border-bottom:2px solid transparent}nav a:hover{border-color:var(--red)}
+.burger{display:none;margin-left:auto;background:none;border:0;font-size:26px;color:var(--navy2)}
+.hero{position:relative;height:min(78vh,600px);overflow:hidden;color:#fff}
+.slide{position:absolute;inset:0;background-size:cover;background-position:center;opacity:0;transition:opacity 1s}.slide.on{opacity:1}
+.slide::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,rgba(20,40,75,.88),rgba(20,40,75,.35))}
+.slide .in{position:relative;z-index:1;height:100%;display:flex;flex-direction:column;justify-content:center;max-width:1180px;margin:0 auto;padding:0 18px}
+.slide small{color:#fff;opacity:.85;font-weight:700;letter-spacing:2px;text-transform:uppercase}.slide h1{font-size:clamp(28px,5vw,52px);margin:8px 0;max-width:720px}.slide p{max-width:600px;opacity:.92;font-size:17px}
+.dots{position:absolute;bottom:18px;left:0;right:0;display:flex;justify-content:center;gap:8px;z-index:2}.dots button{width:11px;height:11px;border-radius:50%;border:2px solid #fff;background:transparent;cursor:pointer}.dots button.on{background:var(--red);border-color:var(--red)}
+.btn{display:inline-block;background:var(--red);color:#fff;font-weight:700;padding:12px 24px;border-radius:6px;text-decoration:none;border:0;cursor:pointer;font-size:15px;margin:6px 8px 0 0}.btn.o{background:transparent;color:#fff;border:2px solid #fff}
+.stats{background:var(--navy2);color:#fff}.stats .wrap{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));text-align:center;padding:26px 18px}
+.stats b{display:block;font-family:Poppins;font-size:34px;color:#fff;border-bottom:3px solid var(--red);width:fit-content;margin:0 auto 4px}.stats span{font-size:14px;opacity:.85}
+section{padding:64px 0}section.alt{background:var(--bg)}
+.head{text-align:center;max-width:720px;margin:0 auto 34px}.head small{color:var(--red);font-weight:700;letter-spacing:2px;text-transform:uppercase;font-size:12px}.head h2{color:var(--navy2);font-size:clamp(24px,3.5vw,34px);margin:6px 0}.head p{color:var(--muted);margin:0}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:20px}
+.card{background:#fff;border-radius:10px;box-shadow:0 4px 18px rgba(20,40,75,.08);overflow:hidden;transition:transform .2s}.card:hover{transform:translateY(-4px)}
+.card .p{padding:20px}.card h3{color:var(--navy2);margin:0 0 6px;font-size:18px}.card p{color:var(--muted);margin:0;font-size:14px}
+.ico{width:52px;height:52px;border-radius:50%;background:var(--grey);color:var(--navy2);display:flex;align-items:center;justify-content:center;font-size:24px;margin-bottom:12px}
+.img{height:170px;background:linear-gradient(135deg,var(--navy2),var(--blue));background-size:cover;background-position:center}
+.tag{display:inline-block;background:var(--red);color:#fff;font-size:11px;font-weight:700;padding:2px 9px;border-radius:20px;margin-bottom:6px}
+.fees table{width:100%;border-collapse:collapse;font-size:14px}.fees td{padding:6px 0;border-bottom:1px solid #eef1f6}.fees td:last-child{text-align:right;white-space:nowrap}.fees tr.t td{font-weight:700;color:var(--navy2);border-top:2px solid var(--navy2);border-bottom:0}
+.gal{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px}.gal div{height:180px;border-radius:8px;background:linear-gradient(135deg,var(--blue),var(--navy2));background-size:cover;background-position:center}
+.cta{background:linear-gradient(90deg,var(--navy),var(--blue));color:#fff;text-align:center;padding:56px 18px}.cta h2{margin:0 0 8px;font-size:clamp(24px,3.5vw,34px)}
+form{display:grid;grid-template-columns:1fr 1fr;gap:12px}form .full{grid-column:1/-1}
+label{display:flex;flex-direction:column;gap:4px;font-size:13px;font-weight:600;color:var(--navy2)}
+input,select,textarea{font:inherit;font-weight:400;padding:11px;border:1.5px solid #d6dce6;border-radius:6px}
+.tabs{display:flex;gap:8px;margin-bottom:14px}.tabs button{flex:1;padding:11px;border-radius:6px;border:2px solid var(--navy2);background:#fff;color:var(--navy2);font-weight:700;cursor:pointer}.tabs button.on{background:var(--navy2);color:#fff}
+.msg{padding:10px 14px;border-radius:6px;margin-top:10px;display:none}.ok{background:#d4edda;color:#155724}.err{background:#f8d7da;color:#721c24}.hp{position:absolute;left:-9999px}
+footer{background:var(--navy);color:#b8c4d9;font-size:14px}footer .cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:26px;padding:48px 18px}
+footer h4{color:#fff;margin:0 0 12px;font-size:16px}footer a{color:#b8c4d9;text-decoration:none;display:block;margin:6px 0}footer a:hover{color:#fff}
+footer .bottom{border-top:1px solid rgba(255,255,255,.12);text-align:center;padding:14px;font-size:13px}
+.float{position:fixed;right:18px;bottom:18px;z-index:30;box-shadow:0 6px 18px rgba(0,0,0,.25)}
+@media(max-width:820px){nav{display:none;position:absolute;top:72px;left:0;right:0;background:#fff;flex-direction:column;padding:12px 18px;box-shadow:0 8px 16px rgba(0,0,0,.1)}nav.open{display:flex}.burger{display:block}.top .r{display:none}form{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
-<header><div class="bar">
-  <img id="logo" alt="" onerror="this.style.display='none'">
-  <div class="brand"><b id="name">Our School</b><span id="motto"></span></div>
-  <nav><a href="#about">About</a><a href="#academics">Academics</a><a href="#fees">Admissions &amp; Fees</a><a href="#contact">Contact</a><a class="login" href="/login">Staff login</a></nav>
+<div class="top"><div class="wrap"><span id="tPhone"></span><span id="tEmail"></span><div class="r"><a href="#fees">Fees</a><a href="#apply">Apply</a><a href="/login"><i class="bi bi-person-lock"></i>Staff login</a></div></div></div>
+<div class="ann" id="ann"></div>
+<header><div class="wrap">
+  <img id="logo" alt="" onerror="this.style.display='none'"><div class="brand"><b id="name">Our School</b><span id="motto"></span></div>
+  <button class="burger" onclick="document.querySelector('nav').classList.toggle('open')" aria-label="Menu"><i class="bi bi-list"></i></button>
+  <nav onclick="this.classList.remove('open')"><a href="#home">Home</a><a href="#about">About</a><a href="#academics">Academics</a><a href="#fees">Admissions</a><a href="#news">News</a><a href="#gallery">Gallery</a><a href="#apply">Contact</a></nav>
 </div></header>
 
-<div class="hero">
-  <h1 id="heroName">Welcome</h1>
-  <p id="heroMotto">Quality, Christ-centred education from Pre-Primary to Junior School.</p>
-  <a class="btn" href="#apply">Apply for admission</a><a class="btn ghost" href="#fees">See fees</a>
-</div>
+<div class="hero" id="home"><div id="slides"></div><div class="dots" id="dots"></div></div>
+<div class="stats"><div class="wrap" id="stats"></div></div>
 
 <section id="about"><div class="wrap">
-  <h2>About us</h2>
-  <p class="lead">A Seventh-day Adventist school offering the Competency Based Curriculum (CBC) in a caring, disciplined and Christ-centred environment.</p>
-  <div class="grid">
-    <div class="card"><h3>Our mission</h3><p>To nurture every learner academically, spiritually, physically and socially, preparing them for service in this life and the life to come.</p></div>
-    <div class="card"><h3>Adventist values</h3><p>Integrity, respect, love for God and others, hard work and responsibility — lived out every day in class and beyond.</p></div>
-    <div class="card"><h3>Why choose us</h3><p>Dedicated teachers, small classes, regular assessment and clear progress reports for every learner.</p></div>
-  </div>
+  <div class="head"><small>Who we are</small><h2>Why choose us</h2><p id="aboutLead"></p></div>
+  <div class="grid" id="why"></div>
 </div></section>
 
-<section id="academics"><div class="wrap">
-  <h2>Academics</h2>
-  <p class="lead">We follow the Kenyan CBC curriculum from the early years through Junior School.</p>
-  <div class="grid">
-    <div class="card"><h3>Pre-Primary</h3><p>Play Group, PP1 and PP2 — language, numeracy, creativity and early life skills through play.</p></div>
-    <div class="card"><h3>Lower Primary</h3><p>Grades 1–3 — strong foundations in literacy, numeracy, Kiswahili and integrated learning areas.</p></div>
-    <div class="card"><h3>Upper Primary</h3><p>Grades 4–6 — sciences, agriculture, creative arts, social studies and religious education.</p></div>
-    <div class="card"><h3>Junior School</h3><p>Grades 7–9 — integrated science, pre-technical studies, agriculture and more, preparing for senior school.</p></div>
-  </div>
+<section id="academics" class="alt"><div class="wrap">
+  <div class="head"><small>Academics</small><h2>From Play Group to Junior School</h2><p>We follow Kenya's Competency Based Curriculum (CBC).</p></div>
+  <div class="grid" id="levels"></div>
 </div></section>
 
 <section id="fees"><div class="wrap">
-  <h2>Admissions &amp; fees</h2>
-  <p class="lead" id="feesLead">Fee structure per term.</p>
-  <div class="fees" id="feeList"><p class="lead">Loading fees…</p></div>
+  <div class="head"><small>Admissions</small><h2>Fee structure</h2><p id="feesLead">Per term.</p></div>
+  <div class="grid fees" id="feeList"><p>Loading fees…</p></div>
 </div></section>
 
-<section id="contact"><div class="wrap" id="apply">
-  <h2>Apply or contact us</h2>
-  <p class="lead" id="contactLine"></p>
-  <div class="card" style="max-width:760px">
+<section id="news" class="alt"><div class="wrap">
+  <div class="head"><small>What's happening</small><h2>News &amp; events</h2></div>
+  <div class="grid" id="newsList"></div>
+</div></section>
+
+<section id="gallery"><div class="wrap">
+  <div class="head"><small>Campus life</small><h2>Gallery</h2></div>
+  <div class="gal" id="gal"></div>
+</div></section>
+
+<div class="cta"><h2>Ready to join our school family?</h2><p>Applications are open for all levels. Apply online in two minutes.</p><a class="btn" href="#apply">Apply now</a><a class="btn o" href="#fees">See fees</a></div>
+
+<section id="apply" class="alt"><div class="wrap" style="max-width:800px">
+  <div class="head"><small>Get in touch</small><h2>Apply or contact us</h2><p id="contactLine"></p></div>
+  <div class="card"><div class="p">
     <div class="tabs"><button type="button" id="tA" class="on" onclick="mode('ADMISSION')">Apply for admission</button><button type="button" id="tC" onclick="mode('CONTACT')">Send a message</button></div>
     <form id="f" onsubmit="return send(event)">
       <label>Parent / guardian name<input name="parentName" required maxlength="100"></label>
       <label>Phone<input name="phone" required inputmode="tel" placeholder="0712 345678"></label>
       <label>Email (optional)<input name="email" type="email" maxlength="100"></label>
       <label class="adm">Learner's name<input name="learnerName" maxlength="100"></label>
-      <label class="adm">Grade applying for
-        <select name="gradeWanted"><option value="">Choose</option><option>Play Group</option><option>PP1</option><option>PP2</option>
-          <option>Grade 1</option><option>Grade 2</option><option>Grade 3</option><option>Grade 4</option><option>Grade 5</option><option>Grade 6</option>
-          <option>Grade 7</option><option>Grade 8</option><option>Grade 9</option></select></label>
+      <label class="adm">Grade applying for<select name="gradeWanted"><option value="">Choose</option><option>Play Group</option><option>PP1</option><option>PP2</option><option>Grade 1</option><option>Grade 2</option><option>Grade 3</option><option>Grade 4</option><option>Grade 5</option><option>Grade 6</option><option>Grade 7</option><option>Grade 8</option><option>Grade 9</option></select></label>
       <label class="full">Message<textarea name="message" rows="4" maxlength="1500"></textarea></label>
       <input class="hp" name="website" tabindex="-1" autocomplete="off" aria-hidden="true">
       <div class="full"><button class="btn" id="sendBtn">Send</button></div>
-    </form>
-    <div class="msg" id="msg"></div>
-  </div>
+    </form><div class="msg" id="msg"></div>
+  </div></div>
 </div></section>
 
-<footer><span id="foot"></span><br>&copy; <span id="yr"></span></footer>
+<footer><div class="wrap cols">
+  <div><h4 id="fName">Our School</h4><p id="fMotto" style="margin:0 0 10px"></p><p id="fContact" style="margin:0"></p></div>
+  <div><h4>Quick links</h4><a href="#about">About us</a><a href="#academics">Academics</a><a href="#fees">Fees &amp; admissions</a><a href="#news">News &amp; events</a></div>
+  <div><h4>Resources</h4><a href="/login">Staff portal</a><a href="#apply">Apply online</a><a href="#gallery">Gallery</a></div>
+  <div><h4>Visit us</h4><p id="fVisit" style="margin:0"></p></div>
+</div><div class="bottom">&copy; <span id="yr"></span> <span id="fName2"></span>. All rights reserved.</div></footer>
+<a class="btn float" href="#apply"><i class="bi bi-pencil-square"></i> Apply now</a>
 
 <script>
-  const $ = (id) => document.getElementById(id);
-  const kes = (n) => 'KES ' + Number(n || 0).toLocaleString('en-KE');
-  const SECTIONS = { PRE_SCHOOL: 'Pre-Primary', LOWER_PRIMARY: 'Lower Primary (Grades 1–3)', UPPER_PRIMARY: 'Upper Primary (Grades 4–6)', JUNIOR_SCHOOL: 'Junior School (Grades 7–9)' };
-  let kind = 'ADMISSION';
-  $('yr').textContent = new Date().getFullYear();
-
-  // School details from the system's settings
-  fetch('/api/settings/public').then(r => r.json()).then(p => {
-    const name = p.name || p.schoolName || 'Our School';
-    document.title = name; $('name').textContent = name; $('heroName').textContent = 'Welcome to ' + name;
-    if (p.motto) { $('motto').textContent = p.motto; $('heroMotto').textContent = p.motto; }
-    const logo = p.logoLeft || p.logo; if (logo) $('logo').src = logo; else $('logo').style.display = 'none';
-    const contact = [p.address || p.postalAddress, p.phone || p.phones, p.email].filter(Boolean).join(' · ');
-    $('contactLine').textContent = contact || 'Fill in the form and we will get back to you.';
-    $('foot').textContent = name + (contact ? ' — ' + contact : '');
-  }).catch(() => {});
-
-  // Fee structures from Finance
-  fetch('/api/public/fees').then(r => r.json()).then(list => {
-    if (!list.length) { $('feeList').innerHTML = '<p class="lead">Contact the school office for the current fee structure.</p>'; return; }
-    $('feesLead').textContent = 'Fee structure for ' + list[0].year + ', per term.';
-    $('feeList').innerHTML = list.map(f => `<div class="card"><h3>${SECTIONS[f.section] || f.section} — Term ${f.term}</h3><table>${
-      f.items.map(i => `<tr><td>${String(i.name).replace(/</g, '&lt;')}</td><td>${kes(i.amount)}</td></tr>`).join('')
-    }<tr class="t"><td>Total</td><td>${kes(f.total)}</td></tr></table></div>`).join('');
-  }).catch(() => { $('feeList').innerHTML = '<p class="lead">Contact the school office for the current fee structure.</p>'; });
-
-  function mode(k) {
-    kind = k; $('tA').classList.toggle('on', k === 'ADMISSION'); $('tC').classList.toggle('on', k === 'CONTACT');
-    document.querySelectorAll('.adm').forEach(e => e.style.display = k === 'ADMISSION' ? '' : 'none');
-  }
-  async function send(e) {
-    e.preventDefault();
-    const data = Object.fromEntries(new FormData($('f'))); data.kind = kind;
-    const m = $('msg'); $('sendBtn').disabled = true;
-    try {
-      const r = await fetch('/api/public/enquiry', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
-      const j = await r.json().catch(() => ({}));
-      if (!r.ok) throw new Error(j.message || 'Could not send. Please try again or call the school.');
-      m.className = 'msg ok'; m.textContent = j.message; $('f').reset();
-    } catch (err) { m.className = 'msg err'; m.textContent = err.message; }
-    m.style.display = 'block'; $('sendBtn').disabled = false;
-    return false;
-  }
+/* ══════════ EDIT THE WEBSITE TEXT HERE ══════════
+   Photos: put them in public/website/img/ (e.g. hero1.jpg) and write the file name below. */
+const SITE = {
+  announcement: 'Admissions are open for all levels — <a href="#apply">apply online now</a>.',
+  slides: [
+    { img: 'img/hero1.jpg', small: 'Welcome', title: 'Abreast with the best in holistic education', text: 'Christ-centred, competency based learning from Play Group to Junior School.' },
+    { img: 'img/hero2.jpg', small: 'Academics', title: 'Strong foundations, bright futures', text: 'Dedicated teachers, small classes and clear progress reports for every learner.' },
+    { img: 'img/hero3.jpg', small: 'Admissions', title: 'Join our school family', text: 'Applications are open. Apply online in two minutes.' },
+  ],
+  stats: [['1,000+', 'Learners'], ['50+', 'Teachers & staff'], ['12', 'Grade levels'], ['20+', 'Years of service']],
+  about: 'A Seventh-day Adventist school nurturing learners academically, spiritually, physically and socially.',
+  why: [
+    ['mortarboard-fill', 'Academic excellence', 'Consistent results through regular assessment and personal attention.'],
+    ['heart-fill', 'Adventist values', 'Integrity, respect and love for God and others — lived every day.'],
+    ['people-fill', 'Caring teachers', 'Qualified, dedicated staff who know every learner by name.'],
+    ['shield-check', 'Safe environment', 'A secure, disciplined and nurturing school community.'],
+    ['palette-fill', 'Talent development', 'Music, sports, clubs and creative arts for every child.'],
+    ['bus-front-fill', 'School transport', 'Reliable transport routes across the neighbourhood.'],
+  ],
+  levels: [
+    ['img/pp.jpg', 'Pre-Primary', 'Play Group, PP1 and PP2 — language, numeracy and life skills through play.'],
+    ['img/lower.jpg', 'Lower Primary', 'Grades 1–3 — strong literacy and numeracy foundations.'],
+    ['img/upper.jpg', 'Upper Primary', 'Grades 4–6 — sciences, agriculture, creative arts and more.'],
+    ['img/jss.jpg', 'Junior School', 'Grades 7–9 — integrated science, pre-technical studies and more.'],
+  ],
+  news: [
+    ['img/news1.jpg', 'Event', 'Opening of Term', 'Learners report back to school. Fees can be paid by M-Pesa or bank.'],
+    ['img/news2.jpg', 'Academics', 'Term assessments', 'Opener, mid-term and end-term assessments run each term, with report cards for parents.'],
+    ['img/news3.jpg', 'Admissions', 'Now admitting', 'Spaces available from Play Group to Grade 9. Apply online or visit the office.'],
+  ],
+  gallery: ['img/g1.jpg', 'img/g2.jpg', 'img/g3.jpg', 'img/g4.jpg', 'img/g5.jpg', 'img/g6.jpg'],
+};
+/* ══════════════════════════════════════════════ */
+const $ = (id) => document.getElementById(id), esc = (v) => String(v ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const bg = (img) => img ? `background-image:url('${img}')` : '';
+const SECTIONS = { PRE_SCHOOL: 'Pre-Primary', LOWER_PRIMARY: 'Lower Primary (Grades 1–3)', UPPER_PRIMARY: 'Upper Primary (Grades 4–6)', JUNIOR_SCHOOL: 'Junior School (Grades 7–9)' };
+const kes = (n) => 'KES ' + Number(n || 0).toLocaleString('en-KE');
+$('yr').textContent = new Date().getFullYear(); $('ann').innerHTML = SITE.announcement; $('aboutLead').textContent = SITE.about;
+$('slides').innerHTML = SITE.slides.map((s, i) => `<div class="slide${i ? '' : ' on'}" style="${bg(s.img)}"><div class="in"><small>${esc(s.small)}</small><h1>${esc(s.title)}</h1><p>${esc(s.text)}</p><div><a class="btn" href="#apply">Apply now</a><a class="btn o" href="#about">Learn more</a></div></div></div>`).join('');
+$('dots').innerHTML = SITE.slides.map((_, i) => `<button class="${i ? '' : 'on'}" onclick="go(${i})" aria-label="Slide ${i + 1}"></button>`).join('');
+let cur = 0; function go(i) { document.querySelectorAll('.slide').forEach((s, k) => s.classList.toggle('on', k === i)); document.querySelectorAll('.dots button').forEach((d, k) => d.classList.toggle('on', k === i)); cur = i; }
+setInterval(() => go((cur + 1) % SITE.slides.length), 6000);
+$('stats').innerHTML = SITE.stats.map(([n, l]) => `<div><b>${esc(n)}</b><span>${esc(l)}</span></div>`).join('');
+$('why').innerHTML = SITE.why.map(([i, t, d]) => `<div class="card"><div class="p"><div class="ico"><i class="bi bi-${i}"></i></div><h3>${esc(t)}</h3><p>${esc(d)}</p></div></div>`).join('');
+$('levels').innerHTML = SITE.levels.map(([img, t, d]) => `<div class="card"><div class="img" style="${bg(img)}"></div><div class="p"><h3>${esc(t)}</h3><p>${esc(d)}</p></div></div>`).join('');
+$('newsList').innerHTML = SITE.news.map(([img, tag, t, d]) => `<div class="card"><div class="img" style="${bg(img)}"></div><div class="p"><span class="tag">${esc(tag)}</span><h3>${esc(t)}</h3><p>${esc(d)}</p></div></div>`).join('');
+$('gal').innerHTML = SITE.gallery.map(g => `<div style="${bg(g)}"></div>`).join('');
+fetch('/api/settings/public').then(r => r.json()).then(p => {
+  const name = p.name || p.schoolName || 'Our School'; document.title = name;
+  ['name', 'fName', 'fName2'].forEach(id => $(id).textContent = name);
+  if (p.motto) { $('motto').textContent = p.motto; $('fMotto').textContent = p.motto; }
+  const logo = p.logoLeft || p.logo; if (logo) $('logo').src = logo; else $('logo').style.display = 'none';
+  const phone = p.phone || p.phones, email = p.email, addr = p.address || p.postalAddress;
+  if (phone) $('tPhone').innerHTML = `<i class="bi bi-telephone-fill"></i>${esc(phone)}`; if (email) $('tEmail').innerHTML = `<i class="bi bi-envelope-fill"></i>${esc(email)}`;
+  const contact = [addr, phone, email].filter(Boolean).map(esc).join('<br>'); $('fContact').innerHTML = contact; $('fVisit').innerHTML = esc(addr || 'Nairobi, Kenya');
+  $('contactLine').textContent = [addr, phone, email].filter(Boolean).join(' · ') || 'Fill in the form and we will get back to you.';
+}).catch(() => {});
+fetch('/api/public/fees').then(r => r.json()).then(list => {
+  if (!list.length) { $('feeList').innerHTML = '<p>Contact the school office for the current fee structure.</p>'; return; }
+  $('feesLead').textContent = 'Fee structure for ' + list[0].year + ', per term.';
+  $('feeList').innerHTML = list.map(f => `<div class="card"><div class="p"><h3>${esc(SECTIONS[f.section] || f.section)} — Term ${esc(f.term)}</h3><table>${f.items.map(i => `<tr><td>${esc(i.name)}</td><td>${kes(i.amount)}</td></tr>`).join('')}<tr class="t"><td>Total</td><td>${kes(f.total)}</td></tr></table></div></div>`).join('');
+}).catch(() => { $('feeList').innerHTML = '<p>Contact the school office for the current fee structure.</p>'; });
+let kind = 'ADMISSION';
+function mode(k) { kind = k; $('tA').classList.toggle('on', k === 'ADMISSION'); $('tC').classList.toggle('on', k === 'CONTACT'); document.querySelectorAll('.adm').forEach(e => e.style.display = k === 'ADMISSION' ? '' : 'none'); }
+async function send(e) {
+  e.preventDefault(); const data = Object.fromEntries(new FormData($('f'))); data.kind = kind; const m = $('msg'); $('sendBtn').disabled = true;
+  try { const r = await fetch('/api/public/enquiry', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }); const j = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(j.message || 'Could not send. Please try again or call the school.'); m.className = 'msg ok'; m.textContent = j.message; $('f').reset();
+  } catch (err) { m.className = 'msg err'; m.textContent = err.message; }
+  m.style.display = 'block'; $('sendBtn').disabled = false; return false;
+}
 </script>
 </body>
 </html>
