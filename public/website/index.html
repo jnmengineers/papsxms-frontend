@@ -164,6 +164,19 @@ $('why').innerHTML = SITE.why.map(([i, t, d]) => `<div class="card"><div class="
 $('levels').innerHTML = SITE.levels.map(([img, t, d]) => `<div class="card"><div class="img" style="${bg(img)}"></div><div class="p"><h3>${esc(t)}</h3><p>${esc(d)}</p></div></div>`).join('');
 $('newsList').innerHTML = SITE.news.map(([img, tag, t, d]) => `<div class="card"><div class="img" style="${bg(img)}"></div><div class="p"><span class="tag">${esc(tag)}</span><h3>${esc(t)}</h3><p>${esc(d)}</p></div></div>`).join('');
 $('gal').innerHTML = SITE.gallery.map(g => `<div style="${bg(g)}"></div>`).join('');
+// Posted from the system (Website News & Gallery); the samples above stay until something is posted
+const fmtD = (d) => d ? new Date(d + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '';
+fetch('/api/public/posts?kind=NEWS,EVENT&limit=6').then(r => r.json()).then(list => { if (!list.length) return;
+  $('newsList').innerHTML = list.map(p => `<div class="card"><div class="img" style="${bg(p.image)}"></div><div class="p"><span class="tag">${esc(p.tag || (p.kind === 'EVENT' ? 'Event' : 'News'))}</span>${p.eventDate ? ` <small style="color:var(--muted)">${fmtD(p.eventDate)}</small>` : ''}<h3>${esc(p.title)}</h3><p>${esc(p.body || '')}</p></div></div>`).join('');
+}).catch(() => {});
+fetch('/api/public/posts?kind=SLIDE&limit=6').then(r => r.json()).then(list => { if (!list.length) return;
+  SITE.slides = list.map(p => ({ img: p.image, small: p.tag || '', title: p.title || '', text: p.body || '' }));
+  $('slides').innerHTML = SITE.slides.map((s, i) => `<div class="slide${i ? '' : ' on'}" style="${bg(s.img)}"><div class="in"><small>${esc(s.small)}</small><h1>${esc(s.title)}</h1><p>${esc(s.text)}</p><div><a class="btn" href="#apply">Apply now</a><a class="btn o" href="#about">Learn more</a></div></div></div>`).join('');
+  $('dots').innerHTML = SITE.slides.map((_, i) => `<button class="${i ? '' : 'on'}" onclick="go(${i})" aria-label="Slide ${i + 1}"></button>`).join(''); cur = 0;
+}).catch(() => {});
+fetch('/api/public/posts?kind=GALLERY&limit=12').then(r => r.json()).then(list => { if (!list.length) return;
+  $('gal').innerHTML = list.map(p => `<div style="${bg(p.image)}" title="${esc(p.title || '')}"></div>`).join('');
+}).catch(() => {});
 fetch('/api/settings/public').then(r => r.json()).then(p => {
   const name = p.name || p.schoolName || 'Our School'; document.title = name;
   ['name', 'fName', 'fName2'].forEach(id => $(id).textContent = name);
