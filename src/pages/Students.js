@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import api from '../services/api';
 import { LeaveButton, FormerLearners } from '../components/LeaveSchool';
+import AdmitDialog from '../components/AdmitDialog';
 import '../index.css';
 import { classDisplayName } from '../utils/classUtils';
 import { useNavigate, useSearchParams } from 'react-router-dom';
@@ -458,7 +459,7 @@ function Students() {
                                         ))}
                                     </ol>
                                 </nav>
-                                <h2 style={styles.title}>{pageTitle}<FormerLearners onChange={(m) => { showToast(m); fetchStudents(); }} /></h2>
+                                <h2 style={styles.title}>{pageTitle}<FormerLearners onChange={(m) => { showToast(m); fetchStudents(); }} />{!isTeacher && <AdmitDialog onDone={(m) => { showToast(m); fetchStudents(); }} />}</h2>
                                 <p style={styles.breadcrumb}>{pageSubtitle}</p>
                             </div>
                         </div>
