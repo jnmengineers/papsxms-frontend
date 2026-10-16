@@ -144,7 +144,9 @@ export function buildA5Card(card, singleResults, progressiveData) {
     <div><div class="ct">Head teacher</div><div class="cb">${card.principalComment ? esc(card.principalComment) : '&nbsp;'}</div><div class="sig">Sign ____________ <span class="stamp">Stamp</span></div></div>
   </div>
   <div class="foot">
-    <div class="dates">${exam.termClosingDate ? `<span><b>Closing:</b> ${fmtDate(exam.termClosingDate)}</span>` : ''}${exam.termOpeningDate ? `<span><b>Opening:</b> ${fmtDate(exam.termOpeningDate)}</span>` : ''}<span><b>Parent's sign:</b> ____________</span></div>
+    <div class="dates">${/\bend\b/i.test(exam.examName || '') || exam.examType === 'END_TERM'
+      ? '<span><b>Closing date:</b> ________________</span><span><b>Next term opens on:</b> ________________</span>'
+      : ''}</div>
     ${key ? `<div class="keys"><b>Grading key:</b> ${key}</div>` : ''}
     <div class="issued">Issued ${fmtDate(new Date().toISOString())} · ${esc(schoolName())}</div>
   </div>

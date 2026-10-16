@@ -9,6 +9,7 @@ import ReportCards from './pages/ReportCards';
 import Overview from './pages/Overview';
 import Enquiries from './pages/Enquiries';
 import SitePosts from './pages/SitePosts';
+import DeletedMarks from './pages/DeletedMarks';
 import Teachers from './pages/Teachers';
 import Classes from './pages/Classes';
 import Subjects from './pages/Subjects';
@@ -68,6 +69,11 @@ function App() {
                         <Students />
                     </PrivateRoute>
                 } />
+                <Route path="/deleted-marks" element={
+                    <PrivateRoute allowedRoles={['ADMIN']}>
+                        <DeletedMarks />
+                    </PrivateRoute>
+                } />
                 <Route path="/site-posts" element={
                     <PrivateRoute allowedRoles={['ADMIN', 'CLERK']}>
                         <SitePosts />
@@ -84,6 +90,11 @@ function App() {
                     </PrivateRoute>
                 } />
                 <Route path="/reportcards" element={
+                    <PrivateRoute allowedRoles={['ADMIN', 'TEACHER', 'CLERK', 'CHAIRPERSON']}>
+                        <ReportCards />
+                    </PrivateRoute>
+                } />
+                <Route path="/reportcards/class/:classKey" element={
                     <PrivateRoute allowedRoles={['ADMIN', 'TEACHER', 'CLERK', 'CHAIRPERSON']}>
                         <ReportCards />
                     </PrivateRoute>

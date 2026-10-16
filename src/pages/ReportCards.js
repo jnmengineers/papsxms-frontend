@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import { gradeOf as scaleGrade, pctColor } from '../utils/grading';
 import { useSchoolSettings } from '../context/SchoolSettingsContext';
@@ -170,8 +171,8 @@ const buildReportPage = (card, singleResults, progressiveData) => {
         + '<p style="margin:0;color:#666;font-size:10px;">Signature: _________________ Date: _________</p>'
         + '</div></div>'
         + '<div style="display:flex;justify-content:space-between;border-top:1px solid #ddd;padding-top:8px;margin-bottom:6px;font-size:10px;">'
-        + '<div><strong style="color:#1F3864;">Term Opens:</strong> ' + fmtDate(exam?.termOpeningDate) + '</div>'
-        + '<div><strong style="color:#1F3864;">Term Closes:</strong> ' + fmtDate(exam?.termClosingDate) + '</div>'
+        + (/\bend\b/i.test(exam?.examName || '') || exam?.examType === 'END_TERM' ? '<div><strong style="color:#1F3864;">Next term opens on:</strong> ________________</div>' : '')
+        + (/\bend\b/i.test(exam?.examName || '') || exam?.examType === 'END_TERM' ? '<div><strong style="color:#1F3864;">Term Closes:</strong> ________________</div>' : '')
         + '</div>'
         + '<p style="text-align:center;font-size:9px;color:#999;border-top:2px solid #1F3864;padding-top:6px;">'
         + esc(schoolShortName()) + ' - Official Assessment Report - Issued: ' + new Date().toLocaleDateString()
@@ -216,7 +217,21 @@ const writePrintWindow = (win, html) => {
     return true;
 };
 
+// Term dates for the card: closing = this term's end, opening = next term's start (Academic Years page).
+// Dates typed on the exam itself still win.
+let yearsCache = null;
+const withTermDates = async (exam) => {
+    if (!exam || (exam.termClosingDate && exam.termOpeningDate)) return exam;
+    try { if (!yearsCache) yearsCache = (await api.get('/api/academic-years')).data || []; } catch (e) { return exam; }
+    const y = String(exam.academicYear ?? '').trim(), t = Number(exam.term);
+    const find = (yy, tt) => yearsCache.find(a => String(a.yearLabel).trim() === String(yy) && Number(a.term) === tt);
+    const cur = find(y, t);
+    const next = find(y, t + 1) || (/^\d{4}$/.test(y) ? find(String(Number(y) + 1), 1) : null);
+    return { ...exam, termClosingDate: exam.termClosingDate || cur?.endDate || null, termOpeningDate: exam.termOpeningDate || next?.startDate || null };
+};
+
 const fetchCardPrintData = async (card) => {
+    card = { ...card, exam: await withTermDates(card.exam) };
     const resultsRes = await api.get('/api/results/student/' + card.student?.studentId + '/exam/' + card.exam?.examId);
     let progressiveData = null;
     try {
@@ -225,7 +240,7 @@ const fetchCardPrintData = async (card) => {
             progressiveData = progRes.data;
         }
     } catch (e) { /* no progressive data — fall back to single-exam card */ }
-    return { singleResults: resultsRes.data || [], progressiveData };
+    return { singleResults: resultsRes.data || [], progressiveData, card };
 };
 
 const runLimited = async (items, limit, job, onProgress) => {
@@ -275,7 +290,10 @@ function ReportCards() {
     const [classesWithResults, setClassesWithResults] = useState([]);
     const [genStudent, setGenStudent] = useState('');
     const [bulkProgress, setBulkProgress] = useState(null);
-    const [selectedClassFilter, setSelectedClassFilter] = useState('');
+    const { classKey } = useParams();
+    const navigate = useNavigate();
+    const selectedClassFilter = classKey ? decodeURIComponent(classKey) : '';
+    const setSelectedClassFilter = (k) => { navigate(k ? `/reportcards/class/${encodeURIComponent(k)}` : '/reportcards'); window.scrollTo(0, 0); };
     const [editForm, setEditForm] = useState({ termRank: '', Remarks: '', teacherComment: '', principalComment: '' });
     const [deleteConfirm, setDeleteConfirm] = useState(null);
     const [deleteAllConfirm, setDeleteAllConfirm] = useState(false);
@@ -444,7 +462,6 @@ function ReportCards() {
     const handleEdit = (card) => {
         setEditingCard(card);
         setEditForm({ termRank: card.termRank || '', Remarks: card.Remarks || '', teacherComment: card.teacherComment || '', principalComment: card.principalComment || '' });
-        window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
     const handleUpdate = async (e) => {
@@ -466,11 +483,11 @@ function ReportCards() {
         if (!win) { setError(POPUP_BLOCKED_MSG); return; }
         setPrinting(card.reportId);
         try {
-            const { singleResults, progressiveData } = await fetchCardPrintData(card);
+            const { singleResults, progressiveData, card: dated } = await fetchCardPrintData(card);
             const name = card.student ? card.student.firstName + ' ' + card.student.lastName : '';
             writePrintWindow(win, layout === 'A5'
-                ? buildA5Document([buildA5Card(card, singleResults, progressiveData)], 'Report card - ' + name)
-                : buildPrintDocument([buildReportPage(card, singleResults, progressiveData)], 'Assessment Report - ' + name));
+                ? buildA5Document([buildA5Card(dated, singleResults, progressiveData)], 'Report card - ' + name)
+                : buildPrintDocument([buildReportPage(dated, singleResults, progressiveData)], 'Assessment Report - ' + name));
         } catch (e) {
             if (!win.closed) win.close();
             setError('Failed to load results for printing');
@@ -494,7 +511,7 @@ function ReportCards() {
         const pages = [];
         const failedNames = [];
         cards.forEach((card, i) => {
-            if (data[i].ok) pages.push((layout === 'A5' ? buildA5Card : buildReportPage)(card, data[i].value.singleResults, data[i].value.progressiveData));
+            if (data[i].ok) pages.push((layout === 'A5' ? buildA5Card : buildReportPage)(data[i].value.card, data[i].value.singleResults, data[i].value.progressiveData));
             else failedNames.push(`${card.student?.firstName || ''} ${card.student?.lastName || ''}`.trim());
         });
 
@@ -639,10 +656,10 @@ function ReportCards() {
                 <h2 style={s.title}><Bi name="clipboard-data" style={{ marginRight: '10px' }} />Report Cards</h2>
                 <p style={s.subtitle}>Generate, view and print student assessment reports with progressive term tracking</p>
 
-                {error && <p style={s.error} role="alert"><Bi name="exclamation-triangle-fill" />{error}</p>}
-                {successMsg && <p style={s.success}><Bi name="check-circle-fill" />{successMsg}</p>}
+                {error && <div style={{ ...s.toast, borderLeftColor: '#dc3545' }} role="alert"><Bi name="exclamation-triangle-fill" style={{ color: '#dc3545' }} /><span style={{ flex: 1, whiteSpace: 'pre-line' }}>{error}</span><button onClick={() => setError('')} style={s.toastX} aria-label="Dismiss">×</button></div>}
+                {successMsg && <div style={{ ...s.toast, bottom: error ? '96px' : '20px', borderLeftColor: '#28a745' }} role="status"><Bi name="check-circle-fill" style={{ color: '#28a745' }} /><span style={{ flex: 1 }}>{successMsg}</span></div>}
 
-                <div style={s.genCard}>
+                <div style={{ ...s.genCard, display: selectedClassFilter ? 'none' : undefined }}>
                     <h3 style={{ color: '#1F3864', margin: '0 0 12px 0', fontSize: '16px', fontWeight: 800 }}>
                         <Bi name="file-earmark-plus-fill" />Generate Assessment Reports
                     </h3>
@@ -736,7 +753,8 @@ function ReportCards() {
                 </div>
 
                 {editingCard && (
-                    <div style={s.editCard}>
+                    <div style={s.modalBackdrop} onClick={e => { if (e.target === e.currentTarget) setEditingCard(null); }}>
+                    <div style={{ ...s.editCard, width: '100%', maxWidth: '640px', maxHeight: '90vh', overflowY: 'auto', marginBottom: 0 }} role="dialog" aria-modal="true">
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
                             <h3 style={{ color: '#2E75B6', margin: 0, fontWeight: 800 }}>
                                 <Bi name="pencil-square" />Edit: {editingCard.student?.firstName} {editingCard.student?.lastName}
@@ -776,9 +794,10 @@ function ReportCards() {
                             </div>
                         </form>
                     </div>
+                    </div>
                 )}
 
-                {!loading && classTiles.length > 0 && (
+                {!loading && classTiles.length > 0 && !selectedClassFilter && (
                     <div style={{ marginBottom: '25px' }}>
                         <h3 style={{ color: '#1F3864', margin: '0 0 12px 0', fontWeight: 800 }}>
                             <Bi name="grid-3x3-gap-fill" />Classes with Assessment Reports
@@ -839,15 +858,20 @@ function ReportCards() {
 
                 {selectedClassFilter ? (
                     <React.Fragment>
-                        <div style={s.filterRow}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1 }}>
-                                <span style={{ backgroundColor: sectionColor(selectedTile?.section), color: 'white', padding: '5px 12px', borderRadius: '20px', fontWeight: 'bold', fontSize: '13px', whiteSpace: 'nowrap' }}>
-                                    {selectedClassLabel}
-                                </span>
-                                <button onClick={closeClassView} style={{ backgroundColor: '#6c757d', color: 'white', border: 'none', padding: '5px 10px', borderRadius: '8px', cursor: 'pointer', fontSize: '12px', fontWeight: 700 }}>
-                                    <Bi name="x-lg" style={{ marginRight: '4px' }} />Close
-                                </button>
+                        <div style={{ ...s.classBanner, background: `linear-gradient(120deg, ${sectionColor(selectedTile?.section)} 0%, #13306B 100%)` }}>
+                            <button onClick={closeClassView} style={s.backBtn}><Bi name="arrow-left" />All classes</button>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap', marginTop: '10px' }}>
+                                <h2 style={s.bannerTitle}>{selectedClassLabel}</h2>
+                                {selectedTile && classStream(selectedTile) && <span style={{ ...s.streamBadge, backgroundColor: STREAM_COLORS_LIVE[classStream(selectedTile)] || '#6c757d', color: textOn(STREAM_COLORS_LIVE[classStream(selectedTile)] || '#6c757d') }}>{streamLabel(classStream(selectedTile))}</span>}
                             </div>
+                            <div style={s.bannerStats}>
+                                <div><b style={{ display: 'block', fontSize: '22px' }}>{selectedTile?.count ?? 0}</b><span>report cards</span></div>
+                                <div><b style={{ display: 'block', fontSize: '22px' }}>{selectedTile?.exams?.size ?? 0}</b><span>exams</span></div>
+                                {selectedTile?.avgCount > 0 && <div><b style={{ display: 'block', fontSize: '22px' }}>{(selectedTile.avgSum / selectedTile.avgCount).toFixed(2)}%</b><span>class average</span></div>}
+                            </div>
+                        </div>
+                        <div style={s.filterRow}>
+                            <div style={{ flex: 1 }} />
                             <div style={s.searchBox}>
                                 <Bi name="search" style={{ color: '#888', marginRight: '8px' }} />
                                 <input style={s.searchInput} placeholder="Search name or admission no..." value={search} onChange={e => setSearch(e.target.value)} />
@@ -1089,7 +1113,13 @@ const s = {
     classTileLbl: { fontSize: '9px', color: '#888' },
     classDivider: { width: '1px', height: '28px', backgroundColor: '#eee' },
     classTileAction: { color: 'white', textAlign: 'center', padding: '7px', fontSize: '11px', fontWeight: 700 },
-    filterRow: { display: 'flex', gap: '10px', marginBottom: '20px', flexWrap: 'wrap', alignItems: 'center' },
+    filterRow: { display: 'flex', gap: '10px', marginBottom: '20px', flexWrap: 'wrap', alignItems: 'center', position: 'sticky', top: 0, zIndex: 20, backgroundColor: 'rgba(240,242,245,0.96)', backdropFilter: 'blur(4px)', padding: '10px 0' },
+    classBanner: { color: 'white', borderRadius: '16px', padding: '18px 22px', marginBottom: '16px', boxShadow: '0 6px 20px rgba(19,48,107,0.25)' },
+    backBtn: { background: 'rgba(255,255,255,0.18)', color: 'white', border: '1px solid rgba(255,255,255,0.35)', padding: '6px 12px', borderRadius: '8px', cursor: 'pointer', fontWeight: 700, fontSize: '13px' },
+    bannerTitle: { margin: 0, fontSize: '28px', fontWeight: 800, letterSpacing: '0.3px' },
+    bannerStats: { display: 'flex', gap: '28px', marginTop: '12px', flexWrap: 'wrap', fontSize: '12px', opacity: 0.95 },
+    toast: { position: 'fixed', right: '20px', bottom: '20px', zIndex: 10001, maxWidth: '420px', display: 'flex', gap: '8px', alignItems: 'flex-start', backgroundColor: 'white', borderLeft: '5px solid', borderRadius: '10px', padding: '12px 14px', boxShadow: '0 10px 30px rgba(0,0,0,0.18)', fontSize: '14px', maxHeight: '40vh', overflowY: 'auto' },
+    toastX: { background: 'none', border: 'none', fontSize: '20px', lineHeight: 1, cursor: 'pointer', color: '#888' },
     searchBox: { flex: 2, display: 'flex', alignItems: 'center', minWidth: '200px', border: '1.5px solid #ddd', borderRadius: '8px', padding: '0 10px', backgroundColor: 'white' },
     searchInput: { flex: 1, minWidth: 0, padding: '10px 0', border: 'none', outline: 'none', fontSize: '16px', backgroundColor: 'transparent' },
     filterSelect: { flex: 1, padding: '10px', borderRadius: '8px', border: '1.5px solid #ddd', fontSize: '16px', minWidth: '150px', backgroundColor: 'white' },
