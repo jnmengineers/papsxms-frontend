@@ -9,7 +9,7 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
 <style>
 :root{--navy:#0B1F44;--navy2:#13306B;--blue:#2B4F8C;--red:#C8102E;--grey:#E9ECF1;--ink:#1d2433;--muted:#5b6475;--bg:#F3F4F7}
-*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;font-family:"Open Sans",Arial,sans-serif;color:var(--ink);line-height:1.65}
+*{box-sizing:border-box}body{margin:0;font-family:"Open Sans",Arial,sans-serif;color:var(--ink);line-height:1.65}
 h1,h2,h3,h4{font-family:Poppins,"Segoe UI",sans-serif;line-height:1.25}a{color:var(--blue)}
 .wrap{max-width:1180px;margin:0 auto;padding:0 18px}
 .top{background:var(--navy);color:#cfd8e8;font-size:13px}.top .wrap{display:flex;gap:18px;align-items:center;min-height:38px;flex-wrap:wrap}
@@ -31,7 +31,9 @@ nav{margin-left:auto;display:flex;gap:22px}nav a{text-decoration:none;color:var(
 .stats b{display:block;font-family:Poppins;font-size:34px;color:#fff;border-bottom:3px solid var(--red);width:fit-content;margin:0 auto 4px}.stats span{font-size:14px;opacity:.85}
 section{padding:64px 0}section.alt{background:var(--bg)}
 .head{text-align:center;max-width:720px;margin:0 auto 34px}.head small{color:var(--red);font-weight:700;letter-spacing:2px;text-transform:uppercase;font-size:12px}.head h2{color:var(--navy2);font-size:clamp(24px,3.5vw,34px);margin:6px 0}.head p{color:var(--muted);margin:0}
-.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:20px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,300px));justify-content:center;gap:20px}
+.card .p{text-align:center}.ico{margin-left:auto;margin-right:auto}.fees td:first-child{text-align:left}
+.page-fade{animation:pf .25s ease}@keyframes pf{from{opacity:0}to{opacity:1}}
 .card{background:#fff;border-radius:10px;box-shadow:0 4px 18px rgba(20,40,75,.08);overflow:hidden;transition:transform .2s}.card:hover{transform:translateY(-4px)}
 .card .p{padding:20px}.card h3{color:var(--navy2);margin:0 0 6px;font-size:18px}.card p{color:var(--muted);margin:0;font-size:14px}
 .ico{width:52px;height:52px;border-radius:50%;background:var(--grey);color:var(--navy2);display:flex;align-items:center;justify-content:center;font-size:24px;margin-bottom:12px}
@@ -59,11 +61,11 @@ footer .bottom{border-top:1px solid rgba(255,255,255,.12);text-align:center;padd
 <header><div class="wrap">
   <img id="logo" alt="" onerror="this.style.display='none'"><div class="brand"><b id="name">Our School</b><span id="motto"></span></div>
   <button class="burger" onclick="document.querySelector('nav').classList.toggle('open')" aria-label="Menu"><i class="bi bi-list"></i></button>
-  <nav onclick="this.classList.remove('open')"><a href="#home">Home</a><a href="#about">About</a><a href="#academics">Academics</a><a href="#fees">Admissions</a><a href="#leaders">Management</a><a href="#news">News</a><a href="#gallery">Gallery</a><a href="#apply">Contact</a></nav>
+  <nav onclick="this.classList.remove('open')"><a href="#home">Home</a><a href="#about">About</a><a href="#academics">Academics</a><a href="#fees">Admissions</a><a href="#leaders">Management</a><a href="#donate">Support us</a><a href="#news">News</a><a href="#gallery">Gallery</a><a href="#apply">Contact</a></nav>
 </div></header>
 
 <div class="hero" id="home"><div id="slides"></div><div class="dots" id="dots"></div></div>
-<div class="stats"><div class="wrap" id="stats"></div></div>
+<div class="stats" id="statsBand"><div class="wrap" id="stats"></div></div>
 
 <section id="about"><div class="wrap">
   <div class="head"><small>Who we are</small><h2>Why choose us</h2><p id="aboutLead"></p></div>
@@ -90,7 +92,7 @@ footer .bottom{border-top:1px solid rgba(255,255,255,.12);text-align:center;padd
   <div class="gal" id="gal"></div>
 </div></section>
 
-<section id="leaders"><div class="wrap">
+<section id="leaders" style="display:none"><div class="wrap">
   <div class="head"><small>Qualified teachers</small><h2>Meet our management</h2><p>A dedicated team committed to the academic, spiritual and personal growth of every learner.</p></div>
   <h3 style="color:var(--navy2);text-align:center;margin:0 0 14px">Board of management</h3><div class="grid people" id="board"></div>
   <h3 style="color:var(--navy2);text-align:center;margin:30px 0 14px">School management</h3><div class="grid people" id="mgmt"></div>
@@ -101,7 +103,7 @@ footer .bottom{border-top:1px solid rgba(255,255,255,.12);text-align:center;padd
   <div class="grid" id="donAcc" style="max-width:560px;margin:0 auto"></div>
 </div></section>
 
-<div class="cta"><h2>Ready to join our school family?</h2><p>Applications are open for all levels. Apply online in two minutes.</p><a class="btn" href="#apply">Apply now</a><a class="btn o" href="#fees">See fees</a></div>
+<div class="cta" id="ctaBand"><h2>Ready to join our school family?</h2><p>Applications are open for all levels. Apply online in two minutes.</p><a class="btn" href="#apply">Apply now</a><a class="btn o" href="#fees">See fees</a></div>
 
 <section id="apply" class="alt"><div class="wrap" style="max-width:800px">
   <div class="head"><small>Get in touch</small><h2>Apply or contact us</h2><p id="contactLine"></p></div>
@@ -154,17 +156,8 @@ const SITE = {
     ['', 'Primary School (ages 6–12)', 'Essential skills and knowledge across core subjects, in a supportive environment that encourages exploration and critical thinking.'],
     ['', 'Junior Secondary (ages 13–15)', 'A rigorous curriculum that emphasises academic excellence and personal development, preparing learners for higher education.'],
   ],
-  board: [
-    ['', 'Gideon Gachoki', 'Chairman'], ['', 'Jane Mungare', 'Vice Chairman'],
-    ['', 'Joshua Osero', 'Treasurer'], ['', 'Wesley Kuria', 'Church Elder'],
-    ['', 'Wycliffe Monda', 'Chief Elder'], ['', 'Julius Kinoti', 'Church Pastor'],
-  ],
-  management: [
-    ['', 'Evans Wanjala', 'Head Teacher'], ['', 'Robert Ombaye', 'Deputy Head Teacher'],
-    ['', 'Virginia Mwende', 'Senior Teacher'], ['', 'Dennis Onyango', 'Head J.S.S'],
-    ['', 'Moses Osoro', 'Head Upper Primary'], ['', 'Jemimah Nyabate', 'Head Lower Primary'],
-    ['', 'Florence Gisare', 'Head Kindergarten'],
-  ],
+  board: [],        // managed in the system: Website News & Gallery → Management member
+  management: [],
   donate: { text: 'Help us provide learners with the tools they need to succeed. Your donation goes directly to quality learning materials, better classrooms, learner meals and extracurricular programmes.',
             accounts: [['Equity Bank', '0820264845815'], ['Stanbic Bank', '0100011935917']] },
   news: [
@@ -179,7 +172,18 @@ const $ = (id) => document.getElementById(id), esc = (v) => String(v ?? '').repl
 const bg = (img) => img ? `background-image:url('${img}')` : '';
 const SECTIONS = { PRE_SCHOOL: 'Pre-Primary', LOWER_PRIMARY: 'Lower Primary (Grades 1–3)', UPPER_PRIMARY: 'Upper Primary (Grades 4–6)', JUNIOR_SCHOOL: 'Junior School (Grades 7–9)' };
 const kes = (n) => 'KES ' + Number(n || 0).toLocaleString('en-KE');
-$('yr').textContent = new Date().getFullYear(); $('ann').innerHTML = SITE.announcement; $('aboutLead').textContent = SITE.about;
+$('yr').textContent = new Date().getFullYear();
+// ── One page at a time: each menu link opens its own page (no long scrolling) ──
+const PAGES = { home: ['home', 'statsBand', 'about', 'ctaBand'], about: ['about', 'leaders', 'donate'], academics: ['academics'], fees: ['fees'],
+  news: ['news'], gallery: ['gallery'], leaders: ['leaders'], donate: ['donate'], apply: ['apply'] };
+function showPage() {
+  const want = (location.hash || '#home').slice(1), page = PAGES[want] ? want : 'home', on = new Set(PAGES[page]);
+  [...new Set(Object.values(PAGES).flat())].forEach(id => { const e = $(id); if (!e) return;
+    const visible = on.has(id) && (id !== 'leaders' || window.hasLeaders); e.style.display = visible ? '' : 'none'; if (visible) { e.classList.remove('page-fade'); void e.offsetWidth; e.classList.add('page-fade'); } });
+  document.querySelectorAll('nav a').forEach(a => a.style.borderColor = a.getAttribute('href') === '#' + page ? 'var(--red)' : '');
+  window.scrollTo(0, 0);
+}
+window.addEventListener('hashchange', showPage); $('ann').innerHTML = SITE.announcement; $('aboutLead').textContent = SITE.about;
 $('slides').innerHTML = SITE.slides.map((s, i) => `<div class="slide${i ? '' : ' on'}" style="${bg(s.img)}"><div class="in"><small>${esc(s.small)}</small><h1>${esc(s.title)}</h1><p>${esc(s.text)}</p><div><a class="btn" href="#apply">Apply now</a><a class="btn o" href="#about">Learn more</a></div></div></div>`).join('');
 $('dots').innerHTML = SITE.slides.map((_, i) => `<button class="${i ? '' : 'on'}" onclick="go(${i})" aria-label="Slide ${i + 1}"></button>`).join('');
 let cur = 0; function go(i) { document.querySelectorAll('.slide').forEach((s, k) => s.classList.toggle('on', k === i)); document.querySelectorAll('.dots button').forEach((d, k) => d.classList.toggle('on', k === i)); cur = i; }
@@ -197,6 +201,7 @@ $('donAcc').innerHTML = SITE.donate.accounts.map(([b, a]) => `<div class="card">
 const C = SITE.contact; $('tPhone').innerHTML = `<i class="bi bi-telephone-fill"></i>${esc(C.phone)}`; $('tEmail').innerHTML = `<i class="bi bi-envelope-fill"></i>${esc(C.email)}`;
 $('fContact').innerHTML = [C.address, C.phone, C.email].map(esc).join('<br>'); $('fVisit').innerHTML = esc(C.address); $('contactLine').textContent = [C.address, C.phone, C.email].join(' · ');
 $('gal').innerHTML = SITE.gallery.map(g => `<div style="${bg(g)}"></div>`).join('');
+showPage();
 // Posted from the system (Website News & Gallery); the samples above stay until something is posted
 const fmtD = (d) => d ? new Date(d + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '';
 fetch('/api/public/posts?kind=NEWS,EVENT&limit=6').then(r => r.json()).then(list => { if (!list.length) return;
@@ -211,7 +216,7 @@ fetch('/api/public/posts?kind=SLIDE&limit=6').then(r => r.json()).then(list => {
 fetch('/api/public/posts?kind=PERSON&limit=30').then(r => r.json()).then(list => { if (!list.length) return;
   const rows = list.slice().reverse();   // in the order they were added
   const pick = (g) => rows.filter(p => (p.tag || 'SCHOOL') === g).map(p => [p.image, p.title, p.body || '']);
-  const b = pick('BOARD'), m = pick('SCHOOL'); if (b.length) $('board').innerHTML = b.map(person).join(''); if (m.length) $('mgmt').innerHTML = m.map(person).join('');
+  const b = pick('BOARD'), m = pick('SCHOOL'); if (b.length || m.length) { window.hasLeaders = true; showPage(); } if (b.length) $('board').innerHTML = b.map(person).join(''); if (m.length) $('mgmt').innerHTML = m.map(person).join('');
 }).catch(() => {});
 fetch('/api/public/posts?kind=PROGRAM&limit=10').then(r => r.json()).then(list => { if (!list.length) return;
   $('levels').innerHTML = list.slice().reverse().map(p => `<div class="card"><div class="img" style="${bg(p.image)}"></div><div class="p"><h3>${esc(p.title)}</h3><p>${esc(p.body || '')}</p></div></div>`).join('');
