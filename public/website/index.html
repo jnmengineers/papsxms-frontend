@@ -45,6 +45,7 @@ label{display:flex;flex-direction:column;gap:4px;font-size:13px;font-weight:600;
 input,select,textarea{font:inherit;font-weight:400;padding:11px;border:1.5px solid #d6dce6;border-radius:6px}
 .tabs{display:flex;gap:8px;margin-bottom:14px}.tabs button{flex:1;padding:11px;border-radius:6px;border:2px solid var(--navy2);background:#fff;color:var(--navy2);font-weight:700;cursor:pointer}.tabs button.on{background:var(--navy2);color:#fff}
 .msg{padding:10px 14px;border-radius:6px;margin-top:10px;display:none}.ok{background:#d4edda;color:#155724}.err{background:#f8d7da;color:#721c24}.hp{position:absolute;left:-9999px}
+.people .card{text-align:center}.people img{width:120px;height:120px;border-radius:50%;object-fit:cover;margin:18px auto 0;display:block;background:var(--grey)}.people h3{font-size:16px;margin:10px 0 2px}.people p{color:var(--red);font-weight:600}.av{width:120px;height:120px;border-radius:50%;margin:18px auto 0;background:var(--navy2);color:#fff;display:flex;align-items:center;justify-content:center;font:700 34px Poppins,sans-serif}
 footer{background:var(--navy);color:#b8c4d9;font-size:14px}footer .cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:26px;padding:48px 18px}
 footer h4{color:#fff;margin:0 0 12px;font-size:16px}footer a{color:#b8c4d9;text-decoration:none;display:block;margin:6px 0}footer a:hover{color:#fff}
 footer .bottom{border-top:1px solid rgba(255,255,255,.12);text-align:center;padding:14px;font-size:13px}
@@ -53,12 +54,12 @@ footer .bottom{border-top:1px solid rgba(255,255,255,.12);text-align:center;padd
 </style>
 </head>
 <body>
-<div class="top"><div class="wrap"><span id="tPhone"></span><span id="tEmail"></span><div class="r"><a href="#fees">Fees</a><a href="#apply">Apply</a><a href="/login"><i class="bi bi-person-lock"></i>Staff login</a></div></div></div>
+<div class="top"><div class="wrap"><span id="tPhone"></span><span id="tEmail"></span><div class="r"><a href="#apply">Book a visit</a><a href="#fees">Fees</a><a href="#apply">Apply</a><a href="/login"><i class="bi bi-person-lock"></i>Staff login</a></div></div></div>
 <div class="ann" id="ann"></div>
 <header><div class="wrap">
   <img id="logo" alt="" onerror="this.style.display='none'"><div class="brand"><b id="name">Our School</b><span id="motto"></span></div>
   <button class="burger" onclick="document.querySelector('nav').classList.toggle('open')" aria-label="Menu"><i class="bi bi-list"></i></button>
-  <nav onclick="this.classList.remove('open')"><a href="#home">Home</a><a href="#about">About</a><a href="#academics">Academics</a><a href="#fees">Admissions</a><a href="#news">News</a><a href="#gallery">Gallery</a><a href="#apply">Contact</a></nav>
+  <nav onclick="this.classList.remove('open')"><a href="#home">Home</a><a href="#about">About</a><a href="#academics">Academics</a><a href="#fees">Admissions</a><a href="#leaders">Management</a><a href="#news">News</a><a href="#gallery">Gallery</a><a href="#apply">Contact</a></nav>
 </div></header>
 
 <div class="hero" id="home"><div id="slides"></div><div class="dots" id="dots"></div></div>
@@ -87,6 +88,17 @@ footer .bottom{border-top:1px solid rgba(255,255,255,.12);text-align:center;padd
 <section id="gallery"><div class="wrap">
   <div class="head"><small>Campus life</small><h2>Gallery</h2></div>
   <div class="gal" id="gal"></div>
+</div></section>
+
+<section id="leaders"><div class="wrap">
+  <div class="head"><small>Qualified teachers</small><h2>Meet our management</h2><p>A dedicated team committed to the academic, spiritual and personal growth of every learner.</p></div>
+  <h3 style="color:var(--navy2);text-align:center;margin:0 0 14px">Board of management</h3><div class="grid people" id="board"></div>
+  <h3 style="color:var(--navy2);text-align:center;margin:30px 0 14px">School management</h3><div class="grid people" id="mgmt"></div>
+</div></section>
+
+<section id="donate" class="alt"><div class="wrap" style="max-width:820px;text-align:center">
+  <div class="head"><small>Support our cause</small><h2>Help us develop our school</h2><p id="donText"></p></div>
+  <div class="grid" id="donAcc" style="max-width:560px;margin:0 auto"></div>
 </div></section>
 
 <div class="cta"><h2>Ready to join our school family?</h2><p>Applications are open for all levels. Apply online in two minutes.</p><a class="btn" href="#apply">Apply now</a><a class="btn o" href="#fees">See fees</a></div>
@@ -120,32 +132,45 @@ footer .bottom{border-top:1px solid rgba(255,255,255,.12);text-align:center;padd
 /* ══════════ EDIT THE WEBSITE TEXT HERE ══════════
    Photos: put them in public/website/img/ (e.g. hero1.jpg) and write the file name below. */
 const SITE = {
-  announcement: 'Admissions are open for all levels — <a href="#apply">apply online now</a>.',
+  announcement: 'Admissions are open for Kindergarten, Primary and Junior Secondary — <a href="#apply">apply online</a> or <a href="#apply">book a visit</a>.',
+  contact: { phone: '+254 713 301 521', email: 'info@papschool.co.ke', address: 'Tassia, Embakasi, Nairobi, Kenya' },   // used if Settings has none
   slides: [
-    { img: 'img/hero1.jpg', small: 'Welcome', title: 'Abreast with the best in holistic education', text: 'Christ-centred, competency based learning from Play Group to Junior School.' },
-    { img: 'img/hero2.jpg', small: 'Academics', title: 'Strong foundations, bright futures', text: 'Dedicated teachers, small classes and clear progress reports for every learner.' },
-    { img: 'img/hero3.jpg', small: 'Admissions', title: 'Join our school family', text: 'Applications are open. Apply online in two minutes.' },
+    { img: 'img/hero1.jpg', small: 'Welcome', title: 'Firmly founded on holistic education', text: 'A place to learn, grow, and thrive!' },
+    { img: 'img/hero2.jpg', small: 'Our mission', title: 'Empowering young minds', text: 'Every child is filled with potential waiting to be unlocked — through academic excellence, spiritual growth and personal development.' },
+    { img: 'img/hero3.jpg', small: 'Admissions', title: 'Join our school family', text: 'Kindergarten, Primary and Junior Secondary. Apply online in two minutes.' },
   ],
   stats: [['700+', 'Learners'], ['35+', 'Teachers & staff'], ['12', 'Grade levels'], ['15+', 'Years of service']],   // ← edit these numbers
-  about: 'A Seventh-day Adventist school nurturing learners academically, spiritually, physically and socially.',
+  about: 'We create a supportive environment that fosters academic success, personal development and spiritual growth, ensuring learners excel in their studies, character and faith.',
   why: [
-    ['mortarboard-fill', 'Academic excellence', 'Consistent results through regular assessment and personal attention.'],
-    ['heart-fill', 'Adventist values', 'Integrity, respect and love for God and others — lived every day.'],
-    ['people-fill', 'Caring teachers', 'Qualified, dedicated staff who know every learner by name.'],
-    ['shield-check', 'Safe environment', 'A secure, disciplined and nurturing school community.'],
-    ['palette-fill', 'Talent development', 'Music, sports, clubs and creative arts for every child.'],
-    ['bus-front-fill', 'School transport', 'Reliable transport routes across the neighbourhood.'],
+    ['heart-fill', 'Faith', 'Rooted in Christian principles, we guide learners to grow spiritually and build a strong moral foundation.'],
+    ['shield-check', 'Integrity', 'We instil honesty and accountability, encouraging learners to always act with honour.'],
+    ['trophy-fill', 'Excellence', 'Committed to high standards, we inspire learners to reach their full academic and personal potential.'],
+    ['hand-thumbs-up-fill', 'Compassion', 'We nurture empathy and kindness, teaching learners to care for others and their community.'],
+    ['mortarboard-fill', 'Holistic education', 'We nurture the whole child — intellectually, emotionally, socially and spiritually.'],
+    ['people-fill', 'Supportive community', 'A strong sense of community where every learner feels valued and supported.'],
   ],
   levels: [
-    ['img/pp.jpg', 'Pre-Primary', 'Play Group, PP1 and PP2 — language, numeracy and life skills through play.'],
-    ['img/lower.jpg', 'Lower Primary', 'Grades 1–3 — strong literacy and numeracy foundations.'],
-    ['img/upper.jpg', 'Upper Primary', 'Grades 4–6 — sciences, agriculture, creative arts and more.'],
-    ['img/jss.jpg', 'Junior School', 'Grades 7–9 — integrated science, pre-technical studies and more.'],
+    ['', 'Kindergarten (ages 3–5)', 'A vibrant programme that lays a strong foundation for early learning, fostering curiosity and creativity through engaging activities.'],
+    ['', 'Primary School (ages 6–12)', 'Essential skills and knowledge across core subjects, in a supportive environment that encourages exploration and critical thinking.'],
+    ['', 'Junior Secondary (ages 13–15)', 'A rigorous curriculum that emphasises academic excellence and personal development, preparing learners for higher education.'],
   ],
+  board: [
+    ['', 'Gideon Gachoki', 'Chairman'], ['', 'Jane Mungare', 'Vice Chairman'],
+    ['', 'Joshua Osero', 'Treasurer'], ['', 'Wesley Kuria', 'Church Elder'],
+    ['', 'Wycliffe Monda', 'Chief Elder'], ['', 'Julius Kinoti', 'Church Pastor'],
+  ],
+  management: [
+    ['', 'Evans Wanjala', 'Head Teacher'], ['', 'Robert Ombaye', 'Deputy Head Teacher'],
+    ['', 'Virginia Mwende', 'Senior Teacher'], ['', 'Dennis Onyango', 'Head J.S.S'],
+    ['', 'Moses Osoro', 'Head Upper Primary'], ['', 'Jemimah Nyabate', 'Head Lower Primary'],
+    ['', 'Florence Gisare', 'Head Kindergarten'],
+  ],
+  donate: { text: 'Help us provide learners with the tools they need to succeed. Your donation goes directly to quality learning materials, better classrooms, learner meals and extracurricular programmes.',
+            accounts: [['Equity Bank', '0820264845815'], ['Stanbic Bank', '0100011935917']] },
   news: [
     ['img/news1.jpg', 'Event', 'Opening of Term', 'Learners report back to school. Fees can be paid by M-Pesa or bank.'],
     ['img/news2.jpg', 'Academics', 'Term assessments', 'Opener, mid-term and end-term assessments run each term, with report cards for parents.'],
-    ['img/news3.jpg', 'Admissions', 'Now admitting', 'Spaces available from Play Group to Grade 9. Apply online or visit the office.'],
+    ['img/news3.jpg', 'Admissions', 'Now admitting', 'Spaces available from Kindergarten to Junior Secondary. Apply online or visit the office.'],
   ],
   gallery: ['img/g1.jpg', 'img/g2.jpg', 'img/g3.jpg', 'img/g4.jpg', 'img/g5.jpg', 'img/g6.jpg'],
 };
@@ -163,6 +188,14 @@ $('stats').innerHTML = SITE.stats.map(([n, l]) => `<div><b>${esc(n)}</b><span>${
 $('why').innerHTML = SITE.why.map(([i, t, d]) => `<div class="card"><div class="p"><div class="ico"><i class="bi bi-${i}"></i></div><h3>${esc(t)}</h3><p>${esc(d)}</p></div></div>`).join('');
 $('levels').innerHTML = SITE.levels.map(([img, t, d]) => `<div class="card"><div class="img" style="${bg(img)}"></div><div class="p"><h3>${esc(t)}</h3><p>${esc(d)}</p></div></div>`).join('');
 $('newsList').innerHTML = SITE.news.map(([img, tag, t, d]) => `<div class="card"><div class="img" style="${bg(img)}"></div><div class="p"><span class="tag">${esc(tag)}</span><h3>${esc(t)}</h3><p>${esc(d)}</p></div></div>`).join('');
+const initials = (n) => String(n).split(/\s+/).map(x => x[0] || '').slice(0, 2).join('').toUpperCase();
+const person = ([img, n, r]) => `<div class="card">${img ? `<img src="${esc(img)}" alt="">` : `<div class="av">${esc(initials(n))}</div>`}<div class="p"><h3>${esc(n)}</h3><p>${esc(r)}</p></div></div>`;
+$('board').innerHTML = SITE.board.map(person).join(''); $('mgmt').innerHTML = SITE.management.map(person).join('');
+$('donText').textContent = SITE.donate.text;
+$('donAcc').innerHTML = SITE.donate.accounts.map(([b, a]) => `<div class="card"><div class="p"><h3>${esc(b)}</h3><p style="font-size:18px;font-weight:700;color:var(--navy2)">A/c ${esc(a)}</p></div></div>`).join('');
+// Contacts from the old website, used when Settings has none
+const C = SITE.contact; $('tPhone').innerHTML = `<i class="bi bi-telephone-fill"></i>${esc(C.phone)}`; $('tEmail').innerHTML = `<i class="bi bi-envelope-fill"></i>${esc(C.email)}`;
+$('fContact').innerHTML = [C.address, C.phone, C.email].map(esc).join('<br>'); $('fVisit').innerHTML = esc(C.address); $('contactLine').textContent = [C.address, C.phone, C.email].join(' · ');
 $('gal').innerHTML = SITE.gallery.map(g => `<div style="${bg(g)}"></div>`).join('');
 // Posted from the system (Website News & Gallery); the samples above stay until something is posted
 const fmtD = (d) => d ? new Date(d + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '';
@@ -173,6 +206,15 @@ fetch('/api/public/posts?kind=SLIDE&limit=6').then(r => r.json()).then(list => {
   SITE.slides = list.map(p => ({ img: p.image, small: p.tag || '', title: p.title || '', text: p.body || '' }));
   $('slides').innerHTML = SITE.slides.map((s, i) => `<div class="slide${i ? '' : ' on'}" style="${bg(s.img)}"><div class="in"><small>${esc(s.small)}</small><h1>${esc(s.title)}</h1><p>${esc(s.text)}</p><div><a class="btn" href="#apply">Apply now</a><a class="btn o" href="#about">Learn more</a></div></div></div>`).join('');
   $('dots').innerHTML = SITE.slides.map((_, i) => `<button class="${i ? '' : 'on'}" onclick="go(${i})" aria-label="Slide ${i + 1}"></button>`).join(''); cur = 0;
+}).catch(() => {});
+// Management and programmes from the database (Website News & Gallery)
+fetch('/api/public/posts?kind=PERSON&limit=30').then(r => r.json()).then(list => { if (!list.length) return;
+  const rows = list.slice().reverse();   // in the order they were added
+  const pick = (g) => rows.filter(p => (p.tag || 'SCHOOL') === g).map(p => [p.image, p.title, p.body || '']);
+  const b = pick('BOARD'), m = pick('SCHOOL'); if (b.length) $('board').innerHTML = b.map(person).join(''); if (m.length) $('mgmt').innerHTML = m.map(person).join('');
+}).catch(() => {});
+fetch('/api/public/posts?kind=PROGRAM&limit=10').then(r => r.json()).then(list => { if (!list.length) return;
+  $('levels').innerHTML = list.slice().reverse().map(p => `<div class="card"><div class="img" style="${bg(p.image)}"></div><div class="p"><h3>${esc(p.title)}</h3><p>${esc(p.body || '')}</p></div></div>`).join('');
 }).catch(() => {});
 fetch('/api/public/posts?kind=GALLERY&limit=12').then(r => r.json()).then(list => { if (!list.length) return;
   $('gal').innerHTML = list.map(p => `<div style="${bg(p.image)}" title="${esc(p.title || '')}"></div>`).join('');

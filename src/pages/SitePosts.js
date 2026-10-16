@@ -5,7 +5,7 @@ import Sidebar from '../components/Sidebar';
 import Footer from '../components/Footer';
 
 /** Website news, events and gallery photos — shown on the public website automatically. */
-const KINDS = { NEWS: 'News', EVENT: 'Event', GALLERY: 'Gallery photo', SLIDE: 'Slider background' };
+const KINDS = { NEWS: 'News', EVENT: 'Event', GALLERY: 'Gallery photo', SLIDE: 'Slider background', PERSON: 'Management member', PROGRAM: 'Programme' };
 const EMPTY = { kind: 'NEWS', title: '', tag: '', body: '', eventDate: '', published: true };
 const msg = (err, f) => { const d = err?.response?.data; return (typeof d === 'string' && d.length < 300 ? d : d?.message || d?.error) || f; };
 
@@ -30,7 +30,7 @@ function SitePosts() {
     const pick = async (e) => { const file = e.target.files?.[0]; if (!file) return; try { const data = await shrink(file); setForm(f => ({ ...f, imageBase64: data, preview: data, removeImage: false })); } catch (err) { setError(err.message); } };
     const save = async () => {
         setBusy(true); setError('');
-        const body = { ...form, eventDate: form.eventDate || null, imageType: form.imageBase64 ? 'image/jpeg' : null };
+        const body = { ...form, tag: form.kind === 'PERSON' ? (form.tag || 'SCHOOL') : form.tag, eventDate: form.eventDate || null, imageType: form.imageBase64 ? 'image/jpeg' : null };
         try { if (form.postId) await api.put(`/api/site-posts/${form.postId}`, body); else await api.post('/api/site-posts', body); setForm(null); load(); }
         catch (err) { setError(msg(err, 'Could not save.')); }
         setBusy(false);
@@ -56,11 +56,12 @@ function SitePosts() {
                         <div style={st.card}>
                             <div style={st.grid}>
                                 <label style={st.lbl}>Type<select style={st.in} value={form.kind} onChange={set('kind')}>{Object.entries(KINDS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></label>
-                                <label style={st.lbl}>Title{form.kind === 'GALLERY' ? ' (optional)' : ''}<input style={st.in} maxLength={150} value={form.title} onChange={set('title')} /></label>
-                                {form.kind !== 'GALLERY' && <label style={st.lbl}>{form.kind === 'SLIDE' ? 'Small label (e.g. Welcome)' : 'Label (e.g. Sports)'}<input style={st.in} maxLength={30} value={form.tag} onChange={set('tag')} /></label>}
+                                <label style={st.lbl}>{form.kind === 'PERSON' ? 'Name' : form.kind === 'PROGRAM' ? 'Programme (e.g. Kindergarten (ages 3–5))' : 'Title'}{form.kind === 'GALLERY' ? ' (optional)' : ''}<input style={st.in} maxLength={150} value={form.title} onChange={set('title')} /></label>
+                                {form.kind === 'PERSON' ? <label style={st.lbl}>Group<select style={st.in} value={form.tag || 'SCHOOL'} onChange={set('tag')}><option value="BOARD">Board of management</option><option value="SCHOOL">School management</option></select></label>
+                                    : !['GALLERY', 'PROGRAM'].includes(form.kind) && <label style={st.lbl}>{form.kind === 'SLIDE' ? 'Small label (e.g. Welcome)' : 'Label (e.g. Sports)'}<input style={st.in} maxLength={30} value={form.tag} onChange={set('tag')} /></label>}
                                 {form.kind === 'EVENT' && <label style={st.lbl}>Event date<input type="date" style={st.in} value={form.eventDate} onChange={set('eventDate')} /></label>}
                             </div>
-                            {form.kind !== 'GALLERY' && <label style={{ ...st.lbl, marginTop: '10px' }}>Text<textarea style={st.in} rows={4} maxLength={2000} value={form.body} onChange={set('body')} /></label>}
+                            {form.kind !== 'GALLERY' && <label style={{ ...st.lbl, marginTop: '10px' }}>{form.kind === 'PERSON' ? 'Role (e.g. Head Teacher)' : 'Text'}<textarea style={st.in} rows={4} maxLength={2000} value={form.body} onChange={set('body')} /></label>}
                             <div style={{ display: 'flex', gap: '14px', alignItems: 'center', marginTop: '10px', flexWrap: 'wrap' }}>
                                 {form.preview && <img src={form.preview} alt="" style={{ height: '90px', borderRadius: '8px' }} />}
                                 {!form.preview && form.hasImage && <span style={{ color: '#777', fontSize: '13px' }}>Photo saved (hidden item)</span>}
