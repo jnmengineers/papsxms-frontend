@@ -285,6 +285,7 @@ function ReportCards() {
     const [filterExam, setFilterExam] = useState('');
     const [filtered, setFiltered] = useState([]);
     const [genMode, setGenMode] = useState('class');
+    const [showGen, setShowGen] = useState(false);   // Generate opens in a pop-up, so the classes show first
     const [genExam, setGenExam] = useState('');
     const [genClassId, setGenClassId] = useState(isTeacher && linkedClassId ? linkedClassId : '');
     const [classesWithResults, setClassesWithResults] = useState([]);
@@ -655,11 +656,19 @@ function ReportCards() {
                 <div style={s.content}>
                 <h2 style={s.title}><Bi name="clipboard-data" style={{ marginRight: '10px' }} />Report Cards</h2>
                 <p style={s.subtitle}>Generate, view and print student assessment reports with progressive term tracking</p>
+                {!selectedClassFilter && (
+                    <div style={{ marginBottom: '18px' }}>
+                        <button onClick={() => setShowGen(true)} style={s.generateBtn}><Bi name="file-earmark-plus-fill" />Generate report cards</button>
+                    </div>
+                )}
 
                 {error && <div style={{ ...s.toast, borderLeftColor: '#dc3545' }} role="alert"><Bi name="exclamation-triangle-fill" style={{ color: '#dc3545' }} /><span style={{ flex: 1, whiteSpace: 'pre-line' }}>{error}</span><button onClick={() => setError('')} style={s.toastX} aria-label="Dismiss">×</button></div>}
                 {successMsg && <div style={{ ...s.toast, bottom: error ? '96px' : '20px', borderLeftColor: '#28a745' }} role="status"><Bi name="check-circle-fill" style={{ color: '#28a745' }} /><span style={{ flex: 1 }}>{successMsg}</span></div>}
 
-                <div style={{ ...s.genCard, display: selectedClassFilter ? 'none' : undefined }}>
+                {showGen && !selectedClassFilter && (
+                <div style={s.modalBackdrop} onClick={e => { if (e.target === e.currentTarget && !generating) setShowGen(false); }}>
+                    <div style={{ ...s.genCard, width: '100%', maxWidth: '760px', maxHeight: '90vh', overflowY: 'auto', marginBottom: 0, position: 'relative' }} role="dialog" aria-modal="true">
+                        <button onClick={() => !generating && setShowGen(false)} disabled={generating} style={{ position: 'absolute', top: '12px', right: '14px', background: 'none', border: 'none', fontSize: '22px', cursor: 'pointer', color: '#888' }} aria-label="Close">×</button>
                     <h3 style={{ color: '#1F3864', margin: '0 0 12px 0', fontSize: '16px', fontWeight: 800 }}>
                         <Bi name="file-earmark-plus-fill" />Generate Assessment Reports
                     </h3>
@@ -751,6 +760,10 @@ function ReportCards() {
                         </div>
                     )}
                 </div>
+                </div>
+                )}
+
+                
 
                 {editingCard && (
                     <div style={s.modalBackdrop} onClick={e => { if (e.target === e.currentTarget) setEditingCard(null); }}>
