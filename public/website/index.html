@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>School</title>
-<link rel="icon" id="favicon" href="img/logo.png">
+<link rel="icon" id="favicon" href="/favicon.ico">
 <meta name="description" content="Pipeline Adventist Primary & Junior Secondary School, Nairobi — CBC from Play Group to Junior School.">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700&family=Open+Sans:wght@400;600&display=swap" rel="stylesheet">
@@ -27,7 +27,14 @@ nav{margin-left:auto;display:flex;gap:22px}nav a{text-decoration:none;color:var(
 .slide .in{position:relative;z-index:1;height:100%;display:flex;flex-direction:column;justify-content:center;max-width:1180px;margin:0 auto;padding:0 18px}
 .slide small{color:#fff;opacity:.85;font-weight:700;letter-spacing:2px;text-transform:uppercase}.slide h1{font-size:clamp(28px,5vw,52px);margin:8px 0;max-width:720px}.slide p{max-width:600px;opacity:.92;font-size:17px}
 .dots{position:absolute;bottom:18px;left:0;right:0;display:flex;justify-content:center;gap:8px;z-index:2}.dots button{width:11px;height:11px;border-radius:50%;border:2px solid #fff;background:transparent;cursor:pointer}.dots button.on{background:var(--red);border-color:var(--red)}
-.btn{display:inline-block;background:var(--red);color:#fff;font-weight:700;padding:12px 24px;border-radius:6px;text-decoration:none;border:0;cursor:pointer;font-size:15px;margin:6px 8px 0 0}.btn.o{background:transparent;color:#fff;border:2px solid #fff}.cta .btn:not(.o){background:#fff;color:var(--red)}
+.btn{display:inline-block;background:var(--red);color:#fff;font-weight:700;padding:12px 24px;border-radius:6px;text-decoration:none;border:0;cursor:pointer;font-size:15px;margin:6px 8px 0 0}.btn.dl{opacity:.45;pointer-events:none}
+.job .p{text-align:left;display:flex;flex-direction:column;height:100%;gap:8px}.job h3{margin:0;font-size:19px}
+.jtags{display:flex;gap:6px;flex-wrap:wrap}.tag.soon{background:#fff;color:var(--red);border:1.5px solid var(--red)}.tag.type{background:var(--grey);color:var(--navy2)}
+.jsum{color:var(--muted);font-size:14px;margin:0;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.jmeta{display:flex;gap:14px;flex-wrap:wrap;font-size:13px;color:var(--ink);border-top:1px solid var(--grey);padding-top:10px;margin-top:auto}.jmeta i{color:var(--red);margin-right:4px}
+.jbtns{display:flex;gap:8px}.jbtns .btn{margin:0;flex:1;text-align:center;padding:10px 12px;font-size:14px}.btn.line{background:#fff;color:var(--navy2);border:2px solid var(--navy2)}
+#jobsGrid{grid-template-columns:repeat(auto-fit,minmax(280px,340px))}
+.jd h4{color:var(--navy2);margin:14px 0 6px;font-size:15px}.jd ul{margin:0;padding-left:20px}.jd li{margin:3px 0}.jd p{margin:6px 0;color:var(--ink)}.btn.o{background:transparent;color:#fff;border:2px solid #fff}.cta .btn:not(.o){background:#fff;color:var(--red)}
 .stats{background:var(--bg);color:var(--muted);border-bottom:1px solid var(--grey)}.stats .wrap{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));text-align:center;padding:26px 18px}
 .stats b{display:block;font-family:Poppins;font-size:34px;color:var(--navy2);border-bottom:3px solid var(--red);width:fit-content;margin:0 auto 4px}.stats span{font-size:14px;opacity:.85}
 section{padding:64px 0}section.alt{background:var(--bg)}
@@ -60,7 +67,7 @@ footer .bottom{background:#fff;border-top:1px solid var(--grey);text-align:cente
 <div class="top"><div class="wrap"><span id="tPhone"></span><span id="tEmail"></span><div class="r"><a href="#apply">Book a visit</a><a href="#fees">Fees</a><a href="#apply">Apply</a><a href="/login"><i class="bi bi-person-lock"></i>Staff login</a></div></div></div>
 <div class="ann" id="ann"></div>
 <header><div class="wrap">
-  <img id="logo" src="img/logo.png" alt="School logo" onerror="this.style.display='none'"><div class="brand"><b id="name">Our School</b><span id="motto"></span></div>
+  <img id="logo" alt="School logo" style="display:none"><div class="brand"><b id="name">Our School</b><span id="motto"></span></div>
   <button class="burger" onclick="document.querySelector('nav').classList.toggle('open')" aria-label="Menu"><i class="bi bi-list"></i></button>
   <nav onclick="this.classList.remove('open')"><a href="#home">Home</a><a href="#about">About</a><a href="#academics">Academics</a><a href="#fees">Admissions</a><a href="#leaders">Management</a><a href="#careers">Careers</a><a href="#donate">Support us</a><a href="#news">News</a><a href="#gallery">Gallery</a><a href="#apply">Contact</a></nav>
 </div></header>
@@ -79,11 +86,10 @@ footer .bottom{background:#fff;border-top:1px solid var(--grey);text-align:cente
 </div></section>
 
 <section id="fees"><div class="wrap">
-  <div class="head"><small>Admissions</small><h2>Join our school</h2>
-    <p>Admissions are open for Kindergarten, Primary and Junior School. Download the current fee structure for your child's level, then apply online or visit the school office. The list of requirements and reporting details is available from the office.</p></div>
+  <div class="head"><small>Admissions</small><h2>School fees structure</h2><p>Download the current fee structure for your child's level.</p></div>
   <div class="grid" id="feeDocs">
-    <div class="card"><div class="p"><div class="ico"><i class="bi bi-file-earmark-pdf-fill" style="color:var(--red)"></i></div><h3>Kindergarten &amp; Primary</h3><p id="docPRIMARY">Fee structure — contact the school office.</p></div></div>
-    <div class="card"><div class="p"><div class="ico"><i class="bi bi-file-earmark-pdf-fill" style="color:var(--red)"></i></div><h3>Junior School</h3><p id="docJSS">Fee structure — contact the school office.</p></div></div>
+    <div class="card"><div class="p"><div class="ico"><i class="bi bi-file-earmark-pdf-fill" style="color:var(--red)"></i></div><h3>Kindergarten &amp; Primary</h3><p><a class="btn dl" id="docPRIMARY"><i class="bi bi-download"></i> Download fee structure (PDF)</a></p></div></div>
+    <div class="card"><div class="p"><div class="ico"><i class="bi bi-file-earmark-pdf-fill" style="color:var(--red)"></i></div><h3>Junior School</h3><p><a class="btn dl" id="docJSS"><i class="bi bi-download"></i> Download fee structure (PDF)</a></p></div></div>
   </div>
   <p style="text-align:center;margin-top:22px"><a class="btn" href="#apply">Apply online</a></p>
 </div></section>
@@ -106,8 +112,15 @@ footer .bottom{background:#fff;border-top:1px solid var(--grey);text-align:cente
 
 <section id="careers"><div class="wrap">
   <div class="head"><small>Careers</small><h2>Work with us</h2><p>Join a dedicated team committed to holistic, Christ-centred education.</p></div>
-  <div class="grid" id="jobs"><p style="text-align:center;color:var(--muted)">There are no vacancies at the moment. Please check again later.</p></div>
+  <div class="grid" id="jobsGrid"><div id="jobs" style="display:contents"><p style="text-align:center;color:var(--muted)">There are no vacancies at the moment. Please check again later.</p></div></div>
 </div></section>
+
+<div id="jobView" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:49;align-items:center;justify-content:center;padding:15px" onclick="if(event.target===this)this.style.display='none'">
+  <div class="card" style="width:100%;max-width:680px;max-height:90vh;overflow-y:auto"><div class="p jd" style="text-align:left">
+    <div id="jvHead"></div><div id="jvBody"></div>
+    <div style="display:flex;gap:8px;margin-top:16px"><button class="btn" id="jvApply" style="flex:1">Apply for this job</button><button class="btn line" style="flex:1" onclick="$('jobView').style.display='none'">Close</button></div>
+  </div></div>
+</div>
 
 <div id="jobModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:50;align-items:center;justify-content:center;padding:15px" onclick="if(event.target===this)closeJob()">
   <div class="card" style="width:100%;max-width:620px;max-height:92vh;overflow-y:auto"><div class="p" style="text-align:left">
@@ -253,28 +266,67 @@ fetch('/api/public/posts?kind=PROGRAM&limit=10').then(r => r.json()).then(list =
 fetch('/api/public/posts?kind=GALLERY&limit=12').then(r => r.json()).then(list => { if (!list.length) return;
   $('gal').innerHTML = list.map(p => `<div style="${bg(p.image)}" title="${esc(p.title || '')}"></div>`).join('');
 }).catch(() => {});
+// The school logo, from the system: uploaded in Settings, or the system's own built-in logo (found in its file list)
+function setLogo(src) { $('logo').src = src; $('logo').style.display = ''; $('favicon').href = src; }
+function systemLogo() {
+  fetch('/asset-manifest.json').then(r => r.json()).then(m => {
+    const files = m.files || {}, key = Object.keys(files).find(k => /logo1\.[a-z]+$/i.test(k)) || Object.keys(files).find(k => /logo/i.test(k) && /\.(png|jpe?g|svg|webp)$/i.test(k));
+    if (key) setLogo(files[key]);
+  }).catch(() => {});
+}
 fetch('/api/settings/public').then(r => r.json()).then(p => {
   const name = p.name || p.schoolName || 'Our School'; document.title = name;
   ['name', 'fName', 'fName2'].forEach(id => $(id).textContent = name);
   if (p.motto) { $('motto').textContent = p.motto; $('fMotto').textContent = p.motto; }
-  const logo = p.logoLeft || p.logo; if (logo) { $('logo').src = logo; $('logo').style.display = ''; $('favicon').href = logo; }   // uploaded logo wins; else img/logo.png
+  const logo = p.logoLeft || p.logo; if (logo) setLogo(logo); else systemLogo();   // uploaded logo wins; else the system's built-in logo
   const phone = p.phone || p.phones, email = p.email, addr = p.address || p.postalAddress;
   if (phone) $('tPhone').innerHTML = `<i class="bi bi-telephone-fill"></i>${esc(phone)}`; if (email) $('tEmail').innerHTML = `<i class="bi bi-envelope-fill"></i>${esc(email)}`;
   const contact = [addr, phone, email].filter(Boolean).map(esc).join('<br>'); $('fContact').innerHTML = contact; $('fVisit').innerHTML = esc(addr || 'Nairobi, Kenya');
   $('contactLine').textContent = [addr, phone, email].filter(Boolean).join(' · ') || 'Fill in the form and we will get back to you.';
-}).catch(() => {});
+}).catch(() => systemLogo());
 // Fee structure PDFs uploaded in the system (Website News & Gallery → Fee structure)
 fetch('/api/public/posts?kind=DOC&limit=10').then(r => r.json()).then(list => {
-  ['PRIMARY', 'JSS'].forEach(t => { const d = list.find(p => p.tag === t); if (d) $('doc' + t).innerHTML = `<a class="btn" href="${esc(d.image)}" target="_blank" rel="noopener"><i class="bi bi-download"></i> Download fee structure (PDF)</a>`; });
+  ['PRIMARY', 'JSS'].forEach(t => { const d = list.find(p => p.tag === t), a = $('doc' + t); if (d) { a.href = d.image; a.target = '_blank'; a.rel = 'noopener'; a.classList.remove('dl'); } });
 }).catch(() => {});
 // Job vacancies (posted in the system); hidden after their closing date
 let jobId = null;
 fetch('/api/public/posts?kind=JOB&limit=20').then(r => r.json()).then(list => {
   const today = new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10);
   const open = list.filter(j => !j.eventDate || j.eventDate >= today); if (!open.length) return;
-  $('jobs').innerHTML = open.map(j => `<div class="card"><div class="p"><span class="tag">${esc(j.tag || 'Vacancy')}</span><h3>${esc(j.title)}</h3><p style="white-space:pre-line;text-align:left">${esc(j.body || '')}</p>${j.eventDate ? `<p style="margin-top:8px"><b>Closes:</b> ${fmtD(j.eventDate)}</p>` : ''}<button class="btn" onclick="openJob(${j.postId}, '${esc(j.title).replace(/'/g, "&#39;")}')">Apply</button></div></div>`).join('');
+  window.JOBS = {}; open.forEach(j => window.JOBS[j.postId] = j);
+  $('jobs').innerHTML = open.map(jobTile).join('');
 }).catch(() => {});
-function openJob(id, title) { jobId = id; $('jobTitle').textContent = 'Apply: ' + title; $('jmsg').style.display = 'none'; $('jf').reset(); $('jobModal').style.display = 'flex'; }
+const daysLeft = (d) => d ? Math.round((new Date(d + 'T00:00:00') - new Date(new Date().toDateString())) / 86400000) : null;
+const leftText = (n) => n === null ? 'Open until filled' : n === 0 ? 'Last day today' : n === 1 ? '1 day left' : n + ' days left';
+const summary = (t) => { const first = String(t || '').split(/\n\s*\n/)[0].replace(/\s+/g, ' ').trim(); return first.length > 170 ? first.slice(0, 167) + '…' : first; };
+function jobTile(j) {
+  const n = daysLeft(j.eventDate);
+  return `<div class="card job"><div class="p">
+    <div class="jtags"><span class="tag type">${esc(j.tag || 'Vacancy')}</span>${n !== null && n <= 7 ? '<span class="tag soon">Closing soon</span>' : ''}</div>
+    <h3>${esc(j.title)}</h3><p class="jsum">${esc(summary(j.body))}</p>
+    <div class="jmeta">${j.eventDate ? `<span><i class="bi bi-calendar-event"></i>Closes ${fmtD(j.eventDate)}</span>` : ''}<span><i class="bi bi-hourglass-split"></i>${leftText(n)}</span></div>
+    <div class="jbtns"><button class="btn line" onclick="viewJob(${j.postId})">View details</button><button class="btn" onclick="openJob(${j.postId})">Apply</button></div>
+  </div></div>`;
+}
+// Description → headings ("Duties:"), bullet lists ("- …") and paragraphs
+function formatJob(t) {
+  let html = '', list = false;
+  String(t || '').split('\n').map(l => l.trim()).forEach(l => {
+    if (/^[-•*]\s+/.test(l)) { if (!list) { html += '<ul>'; list = true; } html += `<li>${esc(l.replace(/^[-•*]\s+/, ''))}</li>`; return; }
+    if (list) { html += '</ul>'; list = false; }
+    if (!l) return;
+    html += /:$/.test(l) && l.length < 60 ? `<h4>${esc(l.slice(0, -1))}</h4>` : `<p>${esc(l)}</p>`;
+  });
+  return html + (list ? '</ul>' : '');
+}
+function viewJob(id) {
+  const j = window.JOBS[id], n = daysLeft(j.eventDate);
+  $('jvHead').innerHTML = `<div class="jtags"><span class="tag type">${esc(j.tag || 'Vacancy')}</span>${n !== null && n <= 7 ? '<span class="tag soon">Closing soon</span>' : ''}</div><h3 style="margin:8px 0 4px;font-size:22px">${esc(j.title)}</h3><div class="jmeta" style="border:0;padding:0">${j.eventDate ? `<span><i class="bi bi-calendar-event"></i>Closes ${fmtD(j.eventDate)}</span>` : ''}<span><i class="bi bi-hourglass-split"></i>${leftText(n)}</span></div>`;
+  $('jvBody').innerHTML = formatJob(j.body);
+  $('jvApply').onclick = () => { $('jobView').style.display = 'none'; openJob(id); };
+  $('jobView').style.display = 'flex';
+}
+function openJob(id) { const title = (window.JOBS[id] || {}).title || ''; jobId = id; $('jobTitle').textContent = 'Apply: ' + title; $('jmsg').style.display = 'none'; $('jf').reset(); $('jobModal').style.display = 'flex'; }
 function closeJob() { $('jobModal').style.display = 'none'; }
 const readPdf = (f) => new Promise((ok, no) => { const r = new FileReader(); r.onload = () => ok(r.result); r.onerror = no; r.readAsDataURL(f); });
 async function sendJob(e) {
