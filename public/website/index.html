@@ -62,7 +62,7 @@ footer .bottom{background:#fff;border-top:1px solid var(--grey);text-align:cente
 <header><div class="wrap">
   <img id="logo" src="img/logo.png" alt="School logo" onerror="this.style.display='none'"><div class="brand"><b id="name">Our School</b><span id="motto"></span></div>
   <button class="burger" onclick="document.querySelector('nav').classList.toggle('open')" aria-label="Menu"><i class="bi bi-list"></i></button>
-  <nav onclick="this.classList.remove('open')"><a href="#home">Home</a><a href="#about">About</a><a href="#academics">Academics</a><a href="#fees">Admissions</a><a href="#leaders">Management</a><a href="#donate">Support us</a><a href="#news">News</a><a href="#gallery">Gallery</a><a href="#apply">Contact</a></nav>
+  <nav onclick="this.classList.remove('open')"><a href="#home">Home</a><a href="#about">About</a><a href="#academics">Academics</a><a href="#fees">Admissions</a><a href="#leaders">Management</a><a href="#careers">Careers</a><a href="#donate">Support us</a><a href="#news">News</a><a href="#gallery">Gallery</a><a href="#apply">Contact</a></nav>
 </div></header>
 
 <div class="hero" id="home"><div id="slides"></div><div class="dots" id="dots"></div></div>
@@ -103,6 +103,29 @@ footer .bottom{background:#fff;border-top:1px solid var(--grey);text-align:cente
   <h3 style="color:var(--navy2);text-align:center;margin:0 0 14px">Board of management</h3><div class="grid people" id="board"></div>
   <h3 style="color:var(--navy2);text-align:center;margin:30px 0 14px">School management</h3><div class="grid people" id="mgmt"></div>
 </div></section>
+
+<section id="careers"><div class="wrap">
+  <div class="head"><small>Careers</small><h2>Work with us</h2><p>Join a dedicated team committed to holistic, Christ-centred education.</p></div>
+  <div class="grid" id="jobs"><p style="text-align:center;color:var(--muted)">There are no vacancies at the moment. Please check again later.</p></div>
+</div></section>
+
+<div id="jobModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:50;align-items:center;justify-content:center;padding:15px" onclick="if(event.target===this)closeJob()">
+  <div class="card" style="width:100%;max-width:620px;max-height:92vh;overflow-y:auto"><div class="p" style="text-align:left">
+    <h3 id="jobTitle" style="margin:0 0 10px"></h3>
+    <form id="jf" onsubmit="return sendJob(event)">
+      <label>Full name<input name="fullName" required maxlength="100"></label>
+      <label>Phone<input name="phone" required inputmode="tel"></label>
+      <label>Email<input name="email" type="email" maxlength="100"></label>
+      <label>Qualifications<input name="qualifications" maxlength="300" placeholder="e.g. B.Ed Mathematics, TSC registered"></label>
+      <label class="full">Message<textarea name="message" rows="3" maxlength="1500"></textarea></label>
+      <label class="full">CV (PDF, max 3 MB)<input type="file" id="cvFile" accept="application/pdf"></label>
+      <label class="full">Professional documents (PDF, up to 5) — certificates, TSC registration, testimonials<input type="file" id="docFiles" accept="application/pdf" multiple></label>
+      <p class="full" style="margin:0;font-size:12px;color:var(--muted)">CV and documents together: max 6 MB.</p>
+      <input class="hp" name="website" tabindex="-1" autocomplete="off" aria-hidden="true">
+      <div class="full" style="display:flex;gap:8px"><button class="btn" id="jobBtn">Send application</button><button type="button" class="btn" style="background:#6c757d" onclick="closeJob()">Cancel</button></div>
+    </form><div class="msg" id="jmsg"></div>
+  </div></div>
+</div>
 
 <section id="donate" class="alt"><div class="wrap" style="max-width:820px;text-align:center">
   <div class="head"><small>Support our cause</small><h2>Help us develop our school</h2><p id="donText"></p></div>
@@ -181,7 +204,7 @@ const SECTIONS = { PRE_SCHOOL: 'Pre-Primary', LOWER_PRIMARY: 'Lower Primary (Gra
 const kes = (n) => 'KES ' + Number(n || 0).toLocaleString('en-KE');
 $('yr').textContent = new Date().getFullYear();
 // ── All sections on one page; a menu click jumps straight to its section (no visible scrolling) ──
-const SECTIONS_ALL = ['home', 'statsBand', 'about', 'academics', 'fees', 'leaders', 'news', 'gallery', 'donate', 'ctaBand', 'apply'];
+const SECTIONS_ALL = ['home', 'statsBand', 'about', 'academics', 'fees', 'leaders', 'news', 'gallery', 'careers', 'donate', 'ctaBand', 'apply'];
 function showPage() {
   SECTIONS_ALL.forEach(id => { const e = $(id); if (e) e.style.display = (id === 'leaders' && !window.hasLeaders) ? 'none' : ''; });
   const want = (location.hash || '#home').slice(1), t = $(want);
@@ -244,6 +267,32 @@ fetch('/api/settings/public').then(r => r.json()).then(p => {
 fetch('/api/public/posts?kind=DOC&limit=10').then(r => r.json()).then(list => {
   ['PRIMARY', 'JSS'].forEach(t => { const d = list.find(p => p.tag === t); if (d) $('doc' + t).innerHTML = `<a class="btn" href="${esc(d.image)}" target="_blank" rel="noopener"><i class="bi bi-download"></i> Download fee structure (PDF)</a>`; });
 }).catch(() => {});
+// Job vacancies (posted in the system); hidden after their closing date
+let jobId = null;
+fetch('/api/public/posts?kind=JOB&limit=20').then(r => r.json()).then(list => {
+  const today = new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+  const open = list.filter(j => !j.eventDate || j.eventDate >= today); if (!open.length) return;
+  $('jobs').innerHTML = open.map(j => `<div class="card"><div class="p"><span class="tag">${esc(j.tag || 'Vacancy')}</span><h3>${esc(j.title)}</h3><p style="white-space:pre-line;text-align:left">${esc(j.body || '')}</p>${j.eventDate ? `<p style="margin-top:8px"><b>Closes:</b> ${fmtD(j.eventDate)}</p>` : ''}<button class="btn" onclick="openJob(${j.postId}, '${esc(j.title).replace(/'/g, "&#39;")}')">Apply</button></div></div>`).join('');
+}).catch(() => {});
+function openJob(id, title) { jobId = id; $('jobTitle').textContent = 'Apply: ' + title; $('jmsg').style.display = 'none'; $('jf').reset(); $('jobModal').style.display = 'flex'; }
+function closeJob() { $('jobModal').style.display = 'none'; }
+const readPdf = (f) => new Promise((ok, no) => { const r = new FileReader(); r.onload = () => ok(r.result); r.onerror = no; r.readAsDataURL(f); });
+async function sendJob(e) {
+  e.preventDefault(); const data = Object.fromEntries(new FormData($('jf'))); data.vacancyId = jobId; const m = $('jmsg'); $('jobBtn').disabled = true;
+  try {
+    const f = $('cvFile').files[0];
+    if (f) { if (f.type !== 'application/pdf') throw new Error('The CV must be a PDF.'); if (f.size > 3000000) throw new Error('The CV is too large (max 3 MB).');
+      data.cvBase64 = await readPdf(f); data.cvName = f.name; }
+    const docs = [...$('docFiles').files];
+    if (docs.length > 5) throw new Error('Attach at most 5 documents.');
+    if (docs.some(d => d.type !== 'application/pdf')) throw new Error('Documents must be PDF files.');
+    if ([f, ...docs].filter(Boolean).reduce((t, x) => t + x.size, 0) > 6000000) throw new Error('The CV and documents together are too large (max 6 MB).');
+    data.docs = await Promise.all(docs.map(async d => ({ name: d.name, base64: await readPdf(d) })));
+    const r = await fetch('/api/public/job-apply', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }); const j = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(j.message || 'Could not send. Please try again.'); m.className = 'msg ok'; m.textContent = j.message; $('jf').reset();
+  } catch (err) { m.className = 'msg err'; m.textContent = err.message; }
+  m.style.display = 'block'; $('jobBtn').disabled = false; return false;
+}
 let kind = 'ADMISSION';
 { const d = new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10); $('prefDate').min = d; }
 function mode(k) { kind = k; $('tA').classList.toggle('on', k === 'ADMISSION'); $('tC').classList.toggle('on', k === 'CONTACT'); document.querySelectorAll('.adm').forEach(e => e.style.display = k === 'ADMISSION' ? '' : 'none'); }

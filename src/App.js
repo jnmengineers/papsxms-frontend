@@ -10,6 +10,7 @@ import Overview from './pages/Overview';
 import Enquiries from './pages/Enquiries';
 import SitePosts from './pages/SitePosts';
 import DeletedMarks from './pages/DeletedMarks';
+import JobApplications from './pages/JobApplications';
 import Teachers from './pages/Teachers';
 import Classes from './pages/Classes';
 import Subjects from './pages/Subjects';
@@ -69,6 +70,11 @@ function App() {
                 <Route path="/students" element={
                     <PrivateRoute allowedRoles={['ADMIN', 'TEACHER', 'CLERK', 'CHAIRPERSON']}>
                         <Students />
+                    </PrivateRoute>
+                } />
+                <Route path="/job-applications" element={
+                    <PrivateRoute allowedRoles={['ADMIN', 'HEAD_TEACHER']}>
+                        <JobApplications />
                     </PrivateRoute>
                 } />
                 <Route path="/deleted-marks" element={
