@@ -48,6 +48,7 @@ export const GROUPS = [
             { icon: 'calendar2-check-fill', label: 'Attendance', path: '/attendance', roles: ['ADMIN', 'TEACHER', 'CHAIRPERSON'] },
             { icon: 'bar-chart-fill', label: 'Results', path: '/results', roles: ['ADMIN', 'TEACHER', 'CLERK', 'CHAIRPERSON'] },
             { icon: 'clipboard-data-fill', label: 'Report Cards', path: '/reportcards', roles: ['ADMIN', 'TEACHER', 'CLERK', 'CHAIRPERSON'] },
+            { icon: 'trash3', label: 'Deleted Marks', path: '/deleted-marks', roles: ['ADMIN'] },
             { icon: 'graph-up-arrow', label: 'Progressive Report', path: '/progressive-report', roles: ['ADMIN', 'TEACHER', 'CLERK', 'CHAIRPERSON'] },
             { icon: 'pie-chart-fill', label: 'Section Report', path: '/section-report', roles: ['ADMIN', 'CHAIRPERSON'] },
         ]

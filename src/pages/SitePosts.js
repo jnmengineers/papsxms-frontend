@@ -5,7 +5,7 @@ import Sidebar from '../components/Sidebar';
 import Footer from '../components/Footer';
 
 /** Website news, events and gallery photos — shown on the public website automatically. */
-const KINDS = { NEWS: 'News', EVENT: 'Event', GALLERY: 'Gallery photo', SLIDE: 'Slider background', PERSON: 'Management member', PROGRAM: 'Programme' };
+const KINDS = { NEWS: 'News', EVENT: 'Event', GALLERY: 'Gallery photo', SLIDE: 'Slider background', PERSON: 'Management member', PROGRAM: 'Programme', DOC: 'Fee structure (PDF)' };
 const EMPTY = { kind: 'NEWS', title: '', tag: '', body: '', eventDate: '', published: true };
 const msg = (err, f) => { const d = err?.response?.data; return (typeof d === 'string' && d.length < 300 ? d : d?.message || d?.error) || f; };
 
@@ -27,10 +27,16 @@ function SitePosts() {
     const load = () => api.get('/api/site-posts').then(r => setList(r.data || [])).catch(() => setError('Could not load.'));
     useEffect(() => { load(); }, []);
     const set = (k) => (e) => setForm(f => ({ ...f, [k]: e.target.type === 'checkbox' ? e.target.checked : e.target.value }));
-    const pick = async (e) => { const file = e.target.files?.[0]; if (!file) return; try { const data = await shrink(file); setForm(f => ({ ...f, imageBase64: data, preview: data, removeImage: false })); } catch (err) { setError(err.message); } };
+    const pick = async (e) => { const file = e.target.files?.[0]; if (!file) return;
+        if (form.kind === 'DOC') {   // PDFs are uploaded as they are
+            if (file.type !== 'application/pdf') { setError('Choose a PDF file.'); return; }
+            if (file.size > 5000000) { setError('The PDF is too large (max 5 MB).'); return; }
+            const r = new FileReader(); r.onload = () => setForm(f => ({ ...f, imageBase64: r.result, imageType: 'application/pdf', fileName: file.name, preview: null })); r.readAsDataURL(file); return;
+        }
+        try { const data = await shrink(file); setForm(f => ({ ...f, imageBase64: data, preview: data, removeImage: false })); } catch (err) { setError(err.message); } };
     const save = async () => {
         setBusy(true); setError('');
-        const body = { ...form, tag: form.kind === 'PERSON' ? (form.tag || 'SCHOOL') : form.tag, eventDate: form.eventDate || null, imageType: form.imageBase64 ? 'image/jpeg' : null };
+        const body = { ...form, tag: form.kind === 'PERSON' ? (form.tag || 'SCHOOL') : form.tag, eventDate: form.eventDate || null, imageType: form.imageBase64 ? (form.imageType || 'image/jpeg') : null, tag: form.kind === 'DOC' ? (form.tag || 'PRIMARY') : (form.kind === 'PERSON' ? (form.tag || 'SCHOOL') : form.tag) };
         try { if (form.postId) await api.put(`/api/site-posts/${form.postId}`, body); else await api.post('/api/site-posts', body); setForm(null); load(); }
         catch (err) { setError(msg(err, 'Could not save.')); }
         setBusy(false);
@@ -57,7 +63,8 @@ function SitePosts() {
                             <div style={st.grid}>
                                 <label style={st.lbl}>Type<select style={st.in} value={form.kind} onChange={set('kind')}>{Object.entries(KINDS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></label>
                                 <label style={st.lbl}>{form.kind === 'PERSON' ? 'Name' : form.kind === 'PROGRAM' ? 'Programme (e.g. Kindergarten (ages 3–5))' : 'Title'}{form.kind === 'GALLERY' ? ' (optional)' : ''}<input style={st.in} maxLength={150} value={form.title} onChange={set('title')} /></label>
-                                {form.kind === 'PERSON' ? <label style={st.lbl}>Group<select style={st.in} value={form.tag || 'SCHOOL'} onChange={set('tag')}><option value="BOARD">Board of management</option><option value="SCHOOL">School management</option></select></label>
+                                {form.kind === 'DOC' ? <label style={st.lbl}>For<select style={st.in} value={form.tag || 'PRIMARY'} onChange={set('tag')}><option value="PRIMARY">Primary (incl. Kindergarten)</option><option value="JSS">Junior School</option></select></label>
+                                    : form.kind === 'PERSON' ? <label style={st.lbl}>Group<select style={st.in} value={form.tag || 'SCHOOL'} onChange={set('tag')}><option value="BOARD">Board of management</option><option value="SCHOOL">School management</option></select></label>
                                     : !['GALLERY', 'PROGRAM'].includes(form.kind) && <label style={st.lbl}>{form.kind === 'SLIDE' ? 'Small label (e.g. Welcome)' : 'Label (e.g. Sports)'}<input style={st.in} maxLength={30} value={form.tag} onChange={set('tag')} /></label>}
                                 {form.kind === 'EVENT' && <label style={st.lbl}>Event date<input type="date" style={st.in} value={form.eventDate} onChange={set('eventDate')} /></label>}
                             </div>
@@ -65,8 +72,9 @@ function SitePosts() {
                             <div style={{ display: 'flex', gap: '14px', alignItems: 'center', marginTop: '10px', flexWrap: 'wrap' }}>
                                 {form.preview && <img src={form.preview} alt="" style={{ height: '90px', borderRadius: '8px' }} />}
                                 {!form.preview && form.hasImage && <span style={{ color: '#777', fontSize: '13px' }}>Photo saved (hidden item)</span>}
-                                <label style={st.lbl}>{form.preview || form.hasImage ? 'Change photo' : 'Photo'}<input type="file" accept="image/*" onChange={pick} /></label>
-                                {(form.preview || form.hasImage) && !['GALLERY', 'SLIDE'].includes(form.kind) && <button onClick={() => setForm(f => ({ ...f, preview: null, imageBase64: null, hasImage: false, removeImage: true }))} style={st.btn('#6c757d')}>Remove photo</button>}
+                                {form.kind === 'DOC' && form.fileName && <span style={{ fontSize: '13px' }}><i className="bi bi-file-earmark-pdf-fill" style={{ color: '#C8102E' }} /> {form.fileName}</span>}
+                                <label style={st.lbl}>{form.kind === 'DOC' ? (form.hasImage || form.fileName ? 'Replace PDF' : 'PDF file') : form.preview || form.hasImage ? 'Change photo' : 'Photo'}<input type="file" accept={form.kind === 'DOC' ? 'application/pdf' : 'image/*'} onChange={pick} /></label>
+                                {(form.preview || form.hasImage) && !['GALLERY', 'SLIDE', 'DOC'].includes(form.kind) && <button onClick={() => setForm(f => ({ ...f, preview: null, imageBase64: null, hasImage: false, removeImage: true }))} style={st.btn('#6c757d')}>Remove photo</button>}
                                 <label style={{ ...st.lbl, flexDirection: 'row', alignItems: 'center', gap: '6px' }}><input type="checkbox" checked={!!form.published} onChange={set('published')} />Show on website</label>
                             </div>
                             <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
@@ -80,7 +88,8 @@ function SitePosts() {
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '14px' }}>
                             {list.map(p => (
                                 <div key={p.postId} style={{ ...st.card, padding: 0, overflow: 'hidden', opacity: p.published ? 1 : 0.6 }}>
-                                    <div style={{ height: '130px', background: p.published && p.image ? `center/cover url(${p.image})` : 'linear-gradient(135deg,#13306B,#2B4F8C)' }} />
+                                    {p.kind === 'DOC' ? <a href={p.published ? p.image : undefined} target="_blank" rel="noreferrer" style={{ height: '130px', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#F3F4F7', fontSize: '46px', color: '#C8102E' }}><i className="bi bi-file-earmark-pdf-fill" /></a>
+                                    : <div style={{ height: '130px', background: p.published && p.image ? `center/cover url(${p.image})` : 'linear-gradient(135deg,#dfe3ea,#f3f4f7)' }} />}
                                     <div style={{ padding: '10px 12px' }}>
                                         <small style={{ color: '#C8102E', fontWeight: 700 }}>{KINDS[p.kind]}{p.published ? '' : ' · hidden'}</small>
                                         <div style={{ fontWeight: 700, color: '#13306B' }}>{p.title || '(photo)'}</div>

@@ -22,6 +22,7 @@ export function printApplication(e) {
     <table>
       <tr><td>Application no.</td><td>APP-${esc(e.enquiryId)}</td></tr><tr><td>Received</td><td>${day(e.createdAt)}</td></tr>
       <tr><td>Learner's name</td><td>${esc(e.learnerName)}</td></tr><tr><td>Grade applied for</td><td>${esc(e.gradeWanted)}</td></tr>
+      ${e.preferredInterviewDate ? `<tr><td>Preferred interview date</td><td>${day(e.preferredInterviewDate)}</td></tr>` : ''}
       <tr><td>Parent / guardian</td><td>${esc(e.parentName)}</td></tr><tr><td>Phone</td><td>${esc(e.phone)}</td></tr><tr><td>Email</td><td>${esc(e.email)}</td></tr>
       <tr><td>Message</td><td>${esc(e.message)}</td></tr><tr><td>Stage</td><td>${esc(STAGES[e.status] || e.status)}${e.interviewDate ? ` — interview ${day(e.interviewDate)}` : ''}</td></tr>
       ${e.admittedAs ? `<tr><td>Admitted as</td><td>${esc(e.admittedAs)}</td></tr>` : ''}
