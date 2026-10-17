@@ -17,9 +17,14 @@ h1,h2,h3,h4{font-family:Poppins,"Segoe UI",sans-serif;line-height:1.25}a{color:v
 .top a{color:#4a5263;text-decoration:none;font-weight:600}.top a:hover{color:var(--red)}.top .r{margin-left:auto;display:flex;gap:16px}.top i{color:var(--red);margin-right:5px}
 .ann{background:var(--red);color:#fff;text-align:center;font-weight:700;font-size:14px;padding:7px 10px}.ann a{color:#fff}
 header{position:sticky;top:0;z-index:20;background:#fff;box-shadow:0 2px 12px rgba(0,0,0,.08)}
-header .wrap{display:flex;align-items:center;gap:12px;min-height:72px}header img{width:54px;height:54px;object-fit:contain}
-.brand b{display:block;font-family:Poppins;color:var(--navy2);font-size:16px;line-height:1.2}.brand span{font-size:12px;color:var(--blue);font-style:italic}
-nav{margin-left:auto;display:flex;gap:22px}nav a{text-decoration:none;color:var(--navy2);font-weight:600;font-size:14px;padding:6px 0;border-bottom:2px solid transparent}nav a:hover{border-color:var(--red)}
+header .wrap{display:flex;align-items:center;gap:12px;min-height:72px;max-width:none;padding:0 22px}header img{width:54px;height:54px;object-fit:contain}
+.brand b{display:block;font-family:Poppins;color:var(--navy2);font-size:16px;line-height:1.2;white-space:nowrap}.brand span{display:none}
+.ticker{overflow:hidden;background:var(--bg);border-top:1px solid var(--grey);white-space:nowrap}
+.ticker div{display:inline-block;padding:6px 0;color:var(--red);font-style:italic;font-weight:600;font-size:13px;letter-spacing:.3px;animation:tick 28s linear infinite;padding-left:100%}
+.ticker:hover div{animation-play-state:paused}@keyframes tick{to{transform:translateX(-100%)}}
+@media(prefers-reduced-motion:reduce){.ticker div{animation:none;padding-left:22px}}
+@media(max-width:1100px) and (min-width:821px){nav{gap:14px}nav a{font-size:13px}}
+nav{margin-left:auto;display:flex;gap:20px;flex-wrap:nowrap}nav a{text-decoration:none;color:var(--navy2);font-weight:600;font-size:14px;padding:6px 0;border-bottom:2px solid transparent;white-space:nowrap}nav a:hover{border-color:var(--red)}
 .burger{display:none;margin-left:auto;background:none;border:0;font-size:26px;color:var(--navy2)}
 .hero{position:relative;height:min(78vh,600px);overflow:hidden;color:#fff}
 .slide{position:absolute;inset:0;background-color:#3a3f4b;background-size:cover;background-position:center;opacity:0;transition:opacity 1s}.slide.on{opacity:1}
@@ -70,7 +75,9 @@ footer .bottom{background:#fff;border-top:1px solid var(--grey);text-align:cente
   <img id="logo" alt="School logo" style="display:none"><div class="brand"><b id="name">Our School</b><span id="motto"></span></div>
   <button class="burger" onclick="document.querySelector('nav').classList.toggle('open')" aria-label="Menu"><i class="bi bi-list"></i></button>
   <nav onclick="this.classList.remove('open')"><a href="#home">Home</a><a href="#about">About</a><a href="#academics">Academics</a><a href="#fees">Admissions</a><a href="#leaders">Management</a><a href="#careers">Careers</a><a href="#donate">Support us</a><a href="#news">News</a><a href="#gallery">Gallery</a><a href="#apply">Contact</a></nav>
-</div></header>
+</div>
+  <div class="ticker" id="tickerBox" style="display:none"><div id="ticker"></div></div>
+</header>
 
 <div class="hero" id="home"><div id="slides"></div><div class="dots" id="dots"></div></div>
 <div class="stats" id="statsBand"><div class="wrap" id="stats"></div></div>
@@ -277,7 +284,7 @@ function systemLogo() {
 fetch('/api/settings/public').then(r => r.json()).then(p => {
   const name = p.name || p.schoolName || 'Our School'; document.title = name;
   ['name', 'fName', 'fName2'].forEach(id => $(id).textContent = name);
-  if (p.motto) { $('motto').textContent = p.motto; $('fMotto').textContent = p.motto; }
+  if (p.motto) { $('motto').textContent = p.motto; $('fMotto').textContent = p.motto; const t = '✦ ' + p.motto + '   ✦ ' + p.motto + '   ✦ ' + p.motto; $('ticker').textContent = t; $('tickerBox').style.display = ''; }
   const logo = p.logoLeft || p.logo; if (logo) setLogo(logo); else systemLogo();   // uploaded logo wins; else the system's built-in logo
   const phone = p.phone || p.phones, email = p.email, addr = p.address || p.postalAddress;
   if (phone) $('tPhone').innerHTML = `<i class="bi bi-telephone-fill"></i>${esc(phone)}`; if (email) $('tEmail').innerHTML = `<i class="bi bi-envelope-fill"></i>${esc(email)}`;
