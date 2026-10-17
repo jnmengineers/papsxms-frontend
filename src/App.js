@@ -42,6 +42,7 @@ import { SidebarProvider } from './context/SidebarContext';
 import { SchoolSettingsProvider } from './context/SchoolSettingsContext';
 import Settings from './pages/Settings';
 import ScrollToTop from './components/ScrollToTop';
+import FormSpotlight from './components/FormSpotlight';
 
 function App() {
     return (
@@ -49,6 +50,7 @@ function App() {
         <SidebarProvider>
         <Router>
              <ScrollToTop />
+            <FormSpotlight />
             <InactivityTimeout />
             <UpdateChecker />
             <Routes>

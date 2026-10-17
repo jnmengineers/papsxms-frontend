@@ -33,7 +33,7 @@ section{padding:64px 0}section.alt{background:var(--bg)}
 .head{text-align:center;max-width:720px;margin:0 auto 34px}.head small{color:var(--red);font-weight:700;letter-spacing:2px;text-transform:uppercase;font-size:12px}.head h2{color:var(--navy2);font-size:clamp(24px,3.5vw,34px);margin:6px 0}.head p{color:var(--muted);margin:0}
 .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,300px));justify-content:center;gap:20px}
 .card .p{text-align:center}.ico{margin-left:auto;margin-right:auto}.fees td:first-child{text-align:left}
-.page-fade{animation:pf .25s ease}@keyframes pf{from{opacity:0}to{opacity:1}}
+.page-fade{animation:pf .35s ease}#home,#statsBand,section,#ctaBand{scroll-margin-top:72px}@keyframes pf{from{opacity:0}to{opacity:1}}
 .card{background:#fff;border-radius:10px;box-shadow:0 4px 18px rgba(20,40,75,.08);overflow:hidden;transition:transform .2s}.card:hover{transform:translateY(-4px)}
 .card .p{padding:20px}.card h3{color:var(--navy2);margin:0 0 6px;font-size:18px}.card p{color:var(--muted);margin:0;font-size:14px}
 .ico{width:52px;height:52px;border-radius:50%;background:var(--grey);color:var(--navy2);display:flex;align-items:center;justify-content:center;font-size:24px;margin-bottom:12px}
@@ -173,15 +173,14 @@ const bg = (img) => img ? `background-image:url('${img}')` : '';
 const SECTIONS = { PRE_SCHOOL: 'Pre-Primary', LOWER_PRIMARY: 'Lower Primary (Grades 1–3)', UPPER_PRIMARY: 'Upper Primary (Grades 4–6)', JUNIOR_SCHOOL: 'Junior School (Grades 7–9)' };
 const kes = (n) => 'KES ' + Number(n || 0).toLocaleString('en-KE');
 $('yr').textContent = new Date().getFullYear();
-// ── One page at a time: each menu link opens its own page (no long scrolling) ──
-const PAGES = { home: ['home', 'statsBand', 'about', 'ctaBand'], about: ['about', 'leaders', 'donate'], academics: ['academics'], fees: ['fees'],
-  news: ['news'], gallery: ['gallery'], leaders: ['leaders'], donate: ['donate'], apply: ['apply'] };
+// ── All sections on one page; a menu click jumps straight to its section (no visible scrolling) ──
+const SECTIONS_ALL = ['home', 'statsBand', 'about', 'academics', 'fees', 'leaders', 'news', 'gallery', 'donate', 'ctaBand', 'apply'];
 function showPage() {
-  const want = (location.hash || '#home').slice(1), page = PAGES[want] ? want : 'home', on = new Set(PAGES[page]);
-  [...new Set(Object.values(PAGES).flat())].forEach(id => { const e = $(id); if (!e) return;
-    const visible = on.has(id) && (id !== 'leaders' || window.hasLeaders); e.style.display = visible ? '' : 'none'; if (visible) { e.classList.remove('page-fade'); void e.offsetWidth; e.classList.add('page-fade'); } });
-  document.querySelectorAll('nav a').forEach(a => a.style.borderColor = a.getAttribute('href') === '#' + page ? 'var(--red)' : '');
-  window.scrollTo(0, 0);
+  SECTIONS_ALL.forEach(id => { const e = $(id); if (e) e.style.display = (id === 'leaders' && !window.hasLeaders) ? 'none' : ''; });
+  const want = (location.hash || '#home').slice(1), t = $(want);
+  if (t && t.style.display !== 'none' && want !== 'home') { t.scrollIntoView({ behavior: 'instant', block: 'start' }); t.classList.remove('page-fade'); void t.offsetWidth; t.classList.add('page-fade'); }
+  else window.scrollTo({ top: 0, behavior: 'instant' });
+  document.querySelectorAll('nav a').forEach(x => x.style.borderColor = x.getAttribute('href') === '#' + want ? 'var(--red)' : '');
 }
 window.addEventListener('hashchange', showPage); $('ann').innerHTML = SITE.announcement; $('aboutLead').textContent = SITE.about;
 $('slides').innerHTML = SITE.slides.map((s, i) => `<div class="slide${i ? '' : ' on'}" style="${bg(s.img)}"><div class="in"><small>${esc(s.small)}</small><h1>${esc(s.title)}</h1><p>${esc(s.text)}</p><div><a class="btn" href="#apply">Apply now</a><a class="btn o" href="#about">Learn more</a></div></div></div>`).join('');
