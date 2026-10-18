@@ -4,7 +4,7 @@ import { useReactToPrint } from 'react-to-print';
 import api from '../services/api';
 import { gradeInfo } from '../utils/grading';
 import { useSchoolSettings } from '../context/SchoolSettingsContext';
-import { classDisplayName, classLabel } from '../utils/classUtils';
+import { classDisplayName, classLabel, compareClasses } from '../utils/classUtils';
 import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
 import Footer from '../components/Footer';
@@ -114,6 +114,59 @@ const isoDay = (d) => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.get
 const inDays = (n) => { const d = new Date(); d.setDate(d.getDate() + n); return isoDay(d); };
 const niceDay = (s) => { const d = new Date(`${s}T00:00:00`); return isNaN(d) ? s : d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }); };
 const coverErr = (err, fb) => { const d = err?.response?.data; return (typeof d === 'string' && d.length < 300) ? d : (d?.message || fb); };
+
+// Invigilation / marking mode: enter marks for papers you marked in another class (that exam, empty marks only)
+const InvigilationPanel = ({ exams, classes, onChanged, setError, setSuccessMsg }) => {
+    const [open, setOpen] = useState(false);
+    const [list, setList] = useState([]);
+    const [form, setForm] = useState({ examId: '', classId: '', subjectId: '' });
+    const [subjects, setSubjects] = useState([]);
+    const [saving, setSaving] = useState(false);
+    const load = () => api.get('/api/invigilation').then(r => setList(r.data || [])).catch(() => {});
+    useEffect(() => { load(); }, []);
+    useEffect(() => {
+        setSubjects([]); setForm(f => ({ ...f, subjectId: '' }));
+        if (form.classId) api.get(`/api/class-subjects/by-class/${form.classId}`).then(r => setSubjects((r.data || []).map(cs => cs.subject).filter(Boolean))).catch(() => {});
+    }, [form.classId]);
+    const err = (e, f) => { const d = e?.response?.data; return (typeof d === 'string' && d.length < 300 ? d : d?.message) || f; };
+    const start = async () => {
+        setSaving(true);
+        try { const r = await api.post('/api/invigilation', { examId: Number(form.examId), classId: Number(form.classId), subjectId: Number(form.subjectId) }); setSuccessMsg(r.data.message); setOpen(false); load(); onChanged(); }
+        catch (e) { setError(err(e, 'Could not start invigilation mode.')); }
+        setSaving(false);
+    };
+    const stop = async (i) => { if (!window.confirm(`Stop invigilation: ${i.teacherName} — ${i.className} ${i.subjectName}?`)) return; try { await api.post(`/api/invigilation/${i.id}/stop`); load(); onChanged(); } catch (e) { setError(err(e, 'Could not stop.')); } };
+    const sorted = [...exams].sort((a, b) => (b.examId || 0) - (a.examId || 0));
+    const ok = form.examId && form.classId && form.subjectId;
+    return (
+        <div style={styles.invigilatorCard}>
+            <div style={styles.invigilatorRow}>
+                <div>
+                    <strong style={styles.invigilatorTitle}><Bi name="clipboard-check" style={{ marginRight: '6px' }} />Invigilation / marking mode</strong>
+                    <p style={styles.invigilatorDesc}>Marked another class's papers? Enter those marks here — that exam, class and subject only, empty marks only (others' marks can't be changed). Lasts 14 days.</p>
+                </div>
+                <button onClick={() => setOpen(o => !o)} style={open ? styles.invigilatorBtnActive : styles.invigilatorBtn}>{open ? 'Close' : 'Start invigilation mode'}</button>
+            </div>
+            {open && (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '10px', marginTop: '12px', alignItems: 'end' }}>
+                    <label style={{ fontSize: '12px', fontWeight: 700, color: '#856404' }}>Exam<select style={styles.select} value={form.examId} onChange={e => setForm(f => ({ ...f, examId: e.target.value }))}><option value="">Choose…</option>{sorted.map(x => <option key={x.examId} value={x.examId}>{x.examName} — T{x.term} {x.academicYear}</option>)}</select></label>
+                    <label style={{ fontSize: '12px', fontWeight: 700, color: '#856404' }}>Class<select style={styles.select} value={form.classId} onChange={e => setForm(f => ({ ...f, classId: e.target.value }))}><option value="">Choose…</option>{[...classes].sort(compareClasses).map(c => <option key={c.classId} value={c.classId}>{classDisplayName(c)}</option>)}</select></label>
+                    <label style={{ fontSize: '12px', fontWeight: 700, color: '#856404' }}>Subject you marked<select style={styles.select} value={form.subjectId} onChange={e => setForm(f => ({ ...f, subjectId: e.target.value }))} disabled={!form.classId}><option value="">Choose…</option>{subjects.map(x => <option key={x.subjectId} value={x.subjectId}>{x.subjectName}</option>)}</select></label>
+                    <button onClick={start} disabled={!ok || saving} style={{ ...styles.invigilatorBtnActive, opacity: ok && !saving ? 1 : 0.6 }}>{saving ? 'Starting…' : 'Start'}</button>
+                </div>
+            )}
+            {list.length > 0 && (
+                <div style={{ marginTop: '10px' }}>
+                    {list.map(i => (
+                        <div key={i.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px', padding: '6px 0', borderTop: '1px solid #ffe08a', fontSize: '13px', color: '#856404' }}>
+                            <span><b>{i.mine ? 'You' : i.teacherName}</b> · {i.className} · {i.subjectName} · {i.examName} · until {new Date(i.validUntil + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</span>
+                            {i.canStop && <button onClick={() => stop(i)} style={{ ...styles.invigilatorBtn, padding: '5px 10px', fontSize: '12px' }}>Stop</button>}
+                        </div>))}
+                </div>
+            )}
+        </div>
+    );
+};
 
 const CoverPanel = ({ role, myClasses, classes, onChanged, setError, setSuccessMsg }) => {
     const isAdmin = role === 'ADMIN';
@@ -810,6 +863,10 @@ function MarkEntry() {
                             ? <>You have no class or subjects assigned yet. Ask the administrator to make you a class teacher, or to give you subjects (Teachers → By Section).</>
                             : <>You can enter marks for <strong>every subject in your own class</strong>, for <strong>the subjects you teach</strong> in other classes, and for any class you are <strong>covering</strong> for a colleague.</>}
                     </div>
+                )}
+
+                {role === 'TEACHER' && (
+                    <InvigilationPanel exams={exams} classes={classes} onChanged={() => fetchMyClasses()} setError={setError} setSuccessMsg={setSuccessMsg} />
                 )}
 
                 {(role === 'TEACHER' || role === 'ADMIN') && (
