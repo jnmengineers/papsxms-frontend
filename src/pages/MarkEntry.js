@@ -119,48 +119,60 @@ const coverErr = (err, fb) => { const d = err?.response?.data; return (typeof d 
 const InvigilationPanel = ({ exams, classes, onChanged, setError, setSuccessMsg }) => {
     const [open, setOpen] = useState(false);
     const [list, setList] = useState([]);
-    const [form, setForm] = useState({ examId: '', classId: '', subjectId: '' });
+    const [form, setForm] = useState({ examId: '', classId: '', subjectIds: [] });
     const [subjects, setSubjects] = useState([]);
     const [saving, setSaving] = useState(false);
     const load = () => api.get('/api/invigilation').then(r => setList(r.data || [])).catch(() => {});
     useEffect(() => { load(); }, []);
     useEffect(() => {
-        setSubjects([]); setForm(f => ({ ...f, subjectId: '' }));
+        setSubjects([]); setForm(f => ({ ...f, subjectIds: [] }));
         if (form.classId) api.get(`/api/class-subjects/by-class/${form.classId}`).then(r => setSubjects((r.data || []).map(cs => cs.subject).filter(Boolean))).catch(() => {});
     }, [form.classId]);
     const err = (e, f) => { const d = e?.response?.data; return (typeof d === 'string' && d.length < 300 ? d : d?.message) || f; };
     const start = async () => {
         setSaving(true);
-        try { const r = await api.post('/api/invigilation', { examId: Number(form.examId), classId: Number(form.classId), subjectId: Number(form.subjectId) }); setSuccessMsg(r.data.message); setOpen(false); load(); onChanged(); }
+        try { const r = await api.post('/api/invigilation', { examId: Number(form.examId), classId: Number(form.classId), subjectIds: form.subjectIds.map(Number) }); setSuccessMsg(r.data.message); setOpen(false); load(); onChanged(); }
         catch (e) { setError(err(e, 'Could not start invigilation mode.')); }
         setSaving(false);
     };
     const stop = async (i) => { if (!window.confirm(`Stop invigilation: ${i.teacherName} — ${i.className} ${i.subjectName}?`)) return; try { await api.post(`/api/invigilation/${i.id}/stop`); load(); onChanged(); } catch (e) { setError(err(e, 'Could not stop.')); } };
     const sorted = [...exams].sort((a, b) => (b.examId || 0) - (a.examId || 0));
-    const ok = form.examId && form.classId && form.subjectId;
+    const ok = form.examId && form.classId && form.subjectIds.length > 0;
+    const toggle = (id) => setForm(f => ({ ...f, subjectIds: f.subjectIds.includes(id) ? f.subjectIds.filter(x => x !== id) : [...f.subjectIds, id] }));
+    const card = { backgroundColor: 'white', borderRadius: '14px', padding: '16px 20px', marginBottom: '20px', boxShadow: '0 2px 10px rgba(0,0,0,0.06)', borderLeft: '5px solid #1F3864' };
+    const lbl = { fontSize: '12px', fontWeight: 700, color: '#1F3864', display: 'flex', flexDirection: 'column', gap: '4px' };
+    const btn = (active) => ({ backgroundColor: active ? '#6c757d' : '#1F3864', color: 'white', border: 'none', padding: '9px 16px', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold', whiteSpace: 'nowrap' });
     return (
-        <div style={styles.invigilatorCard}>
+        <div style={card}>
             <div style={styles.invigilatorRow}>
                 <div>
-                    <strong style={styles.invigilatorTitle}><Bi name="clipboard-check" style={{ marginRight: '6px' }} />Invigilation / marking mode</strong>
-                    <p style={styles.invigilatorDesc}>Marked another class's papers? Enter those marks here — that exam, class and subject only, empty marks only (others' marks can't be changed). Lasts 14 days.</p>
+                    <strong style={{ color: '#1F3864', fontSize: '15px', display: 'block', marginBottom: '4px' }}><Bi name="clipboard-check" style={{ marginRight: '6px' }} />Invigilation / marking mode</strong>
+                    <p style={{ color: '#555', fontSize: '12px', margin: 0 }}>Marked another class's papers? Enter those marks here — that exam, class and those subjects only, empty marks only (others' marks can't be changed). Lasts 14 days.</p>
                 </div>
-                <button onClick={() => setOpen(o => !o)} style={open ? styles.invigilatorBtnActive : styles.invigilatorBtn}>{open ? 'Close' : 'Start invigilation mode'}</button>
+                <button onClick={() => setOpen(o => !o)} style={btn(open)}>{open ? 'Close' : 'Start invigilation mode'}</button>
             </div>
             {open && (
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '10px', marginTop: '12px', alignItems: 'end' }}>
-                    <label style={{ fontSize: '12px', fontWeight: 700, color: '#856404' }}>Exam<select style={styles.select} value={form.examId} onChange={e => setForm(f => ({ ...f, examId: e.target.value }))}><option value="">Choose…</option>{sorted.map(x => <option key={x.examId} value={x.examId}>{x.examName} — T{x.term} {x.academicYear}</option>)}</select></label>
-                    <label style={{ fontSize: '12px', fontWeight: 700, color: '#856404' }}>Class<select style={styles.select} value={form.classId} onChange={e => setForm(f => ({ ...f, classId: e.target.value }))}><option value="">Choose…</option>{[...classes].sort(compareClasses).map(c => <option key={c.classId} value={c.classId}>{classDisplayName(c)}</option>)}</select></label>
-                    <label style={{ fontSize: '12px', fontWeight: 700, color: '#856404' }}>Subject you marked<select style={styles.select} value={form.subjectId} onChange={e => setForm(f => ({ ...f, subjectId: e.target.value }))} disabled={!form.classId}><option value="">Choose…</option>{subjects.map(x => <option key={x.subjectId} value={x.subjectId}>{x.subjectName}</option>)}</select></label>
-                    <button onClick={start} disabled={!ok || saving} style={{ ...styles.invigilatorBtnActive, opacity: ok && !saving ? 1 : 0.6 }}>{saving ? 'Starting…' : 'Start'}</button>
+                    <label style={lbl}>Exam<select style={styles.select} value={form.examId} onChange={e => setForm(f => ({ ...f, examId: e.target.value }))}><option value="">Choose…</option>{sorted.map(x => <option key={x.examId} value={x.examId}>{x.examName} — T{x.term} {x.academicYear}</option>)}</select></label>
+                    <label style={lbl}>Class<select style={styles.select} value={form.classId} onChange={e => setForm(f => ({ ...f, classId: e.target.value }))}><option value="">Choose…</option>{[...classes].sort(compareClasses).map(c => <option key={c.classId} value={c.classId}>{classDisplayName(c)}</option>)}</select></label>
+                    <div style={{ ...lbl, gridColumn: '1 / -1' }}>Subjects you marked {form.subjectIds.length > 0 && <span style={{ fontWeight: 400, color: '#555' }}>({form.subjectIds.length} chosen)</span>}
+                        {!form.classId ? <span style={{ fontWeight: 400, color: '#888' }}>Choose the class first.</span> : (
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                                {subjects.map(x => { const on = form.subjectIds.includes(x.subjectId); return (
+                                    <button type="button" key={x.subjectId} onClick={() => toggle(x.subjectId)}
+                                        style={{ padding: '6px 12px', borderRadius: '20px', border: '2px solid #1F3864', backgroundColor: on ? '#1F3864' : 'white', color: on ? 'white' : '#1F3864', fontWeight: 600, fontSize: '13px', cursor: 'pointer' }}>
+                                        {on ? '✓ ' : ''}{x.subjectName}</button>); })}
+                            </div>)}
+                    </div>
+                    <button onClick={start} disabled={!ok || saving} style={{ ...btn(false), opacity: ok && !saving ? 1 : 0.6, gridColumn: '1 / -1', justifySelf: 'start' }}>{saving ? 'Starting…' : `Start${form.subjectIds.length > 1 ? ` (${form.subjectIds.length} subjects)` : ''}`}</button>
                 </div>
             )}
             {list.length > 0 && (
                 <div style={{ marginTop: '10px' }}>
                     {list.map(i => (
-                        <div key={i.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px', padding: '6px 0', borderTop: '1px solid #ffe08a', fontSize: '13px', color: '#856404' }}>
+                        <div key={i.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px', padding: '6px 0', borderTop: '1px solid #eee', fontSize: '13px', color: '#333' }}>
                             <span><b>{i.mine ? 'You' : i.teacherName}</b> · {i.className} · {i.subjectName} · {i.examName} · until {new Date(i.validUntil + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</span>
-                            {i.canStop && <button onClick={() => stop(i)} style={{ ...styles.invigilatorBtn, padding: '5px 10px', fontSize: '12px' }}>Stop</button>}
+                            {i.canStop && <button onClick={() => stop(i)} style={{ backgroundColor: '#dc3545', color: 'white', border: 'none', borderRadius: '7px', padding: '5px 10px', fontSize: '12px', fontWeight: 700, cursor: 'pointer' }}>Stop</button>}
                         </div>))}
                 </div>
             )}
