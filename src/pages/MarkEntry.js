@@ -115,71 +115,6 @@ const inDays = (n) => { const d = new Date(); d.setDate(d.getDate() + n); return
 const niceDay = (s) => { const d = new Date(`${s}T00:00:00`); return isNaN(d) ? s : d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }); };
 const coverErr = (err, fb) => { const d = err?.response?.data; return (typeof d === 'string' && d.length < 300) ? d : (d?.message || fb); };
 
-// Invigilation / marking mode: enter marks for papers you marked in another class (that exam, empty marks only)
-const InvigilationPanel = ({ exams, classes, onChanged, setError, setSuccessMsg }) => {
-    const [open, setOpen] = useState(false);
-    const [list, setList] = useState([]);
-    const [form, setForm] = useState({ examId: '', classId: '', subjectIds: [] });
-    const [subjects, setSubjects] = useState([]);
-    const [saving, setSaving] = useState(false);
-    const load = () => api.get('/api/invigilation').then(r => setList(r.data || [])).catch(() => {});
-    useEffect(() => { load(); }, []);
-    useEffect(() => {
-        setSubjects([]); setForm(f => ({ ...f, subjectIds: [] }));
-        if (form.classId) api.get(`/api/class-subjects/by-class/${form.classId}`).then(r => setSubjects((r.data || []).map(cs => cs.subject).filter(Boolean))).catch(() => {});
-    }, [form.classId]);
-    const err = (e, f) => { const d = e?.response?.data; return (typeof d === 'string' && d.length < 300 ? d : d?.message) || f; };
-    const start = async () => {
-        setSaving(true);
-        try { const r = await api.post('/api/invigilation', { examId: Number(form.examId), classId: Number(form.classId), subjectIds: form.subjectIds.map(Number) }); setSuccessMsg(r.data.message); setOpen(false); load(); onChanged(); }
-        catch (e) { setError(err(e, 'Could not start invigilation mode.')); }
-        setSaving(false);
-    };
-    const stop = async (i) => { if (!window.confirm(`Stop invigilation: ${i.teacherName} — ${i.className} ${i.subjectName}?`)) return; try { await api.post(`/api/invigilation/${i.id}/stop`); load(); onChanged(); } catch (e) { setError(err(e, 'Could not stop.')); } };
-    const sorted = [...exams].sort((a, b) => (b.examId || 0) - (a.examId || 0));
-    const ok = form.examId && form.classId && form.subjectIds.length > 0;
-    const toggle = (id) => setForm(f => ({ ...f, subjectIds: f.subjectIds.includes(id) ? f.subjectIds.filter(x => x !== id) : [...f.subjectIds, id] }));
-    const card = { backgroundColor: 'white', borderRadius: '14px', padding: '16px 20px', marginBottom: '20px', boxShadow: '0 2px 10px rgba(0,0,0,0.06)', borderLeft: '5px solid #1F3864' };
-    const lbl = { fontSize: '12px', fontWeight: 700, color: '#1F3864', display: 'flex', flexDirection: 'column', gap: '4px' };
-    const btn = (active) => ({ backgroundColor: active ? '#6c757d' : '#1F3864', color: 'white', border: 'none', padding: '9px 16px', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold', whiteSpace: 'nowrap' });
-    return (
-        <div style={card}>
-            <div style={styles.invigilatorRow}>
-                <div>
-                    <strong style={{ color: '#1F3864', fontSize: '15px', display: 'block', marginBottom: '4px' }}><Bi name="clipboard-check" style={{ marginRight: '6px' }} />Invigilation / marking mode</strong>
-                    <p style={{ color: '#555', fontSize: '12px', margin: 0 }}>Marked another class's papers? Enter those marks here — that exam, class and those subjects only, empty marks only (others' marks can't be changed). Lasts 14 days.</p>
-                </div>
-                <button onClick={() => setOpen(o => !o)} style={btn(open)}>{open ? 'Close' : 'Start invigilation mode'}</button>
-            </div>
-            {open && (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '10px', marginTop: '12px', alignItems: 'end' }}>
-                    <label style={lbl}>Exam<select style={styles.select} value={form.examId} onChange={e => setForm(f => ({ ...f, examId: e.target.value }))}><option value="">Choose…</option>{sorted.map(x => <option key={x.examId} value={x.examId}>{x.examName} — T{x.term} {x.academicYear}</option>)}</select></label>
-                    <label style={lbl}>Class<select style={styles.select} value={form.classId} onChange={e => setForm(f => ({ ...f, classId: e.target.value }))}><option value="">Choose…</option>{[...classes].sort(compareClasses).map(c => <option key={c.classId} value={c.classId}>{classDisplayName(c)}</option>)}</select></label>
-                    <div style={{ ...lbl, gridColumn: '1 / -1' }}>Subjects you marked {form.subjectIds.length > 0 && <span style={{ fontWeight: 400, color: '#555' }}>({form.subjectIds.length} chosen)</span>}
-                        {!form.classId ? <span style={{ fontWeight: 400, color: '#888' }}>Choose the class first.</span> : (
-                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                                {subjects.map(x => { const on = form.subjectIds.includes(x.subjectId); return (
-                                    <button type="button" key={x.subjectId} onClick={() => toggle(x.subjectId)}
-                                        style={{ padding: '6px 12px', borderRadius: '20px', border: '2px solid #1F3864', backgroundColor: on ? '#1F3864' : 'white', color: on ? 'white' : '#1F3864', fontWeight: 600, fontSize: '13px', cursor: 'pointer' }}>
-                                        {on ? '✓ ' : ''}{x.subjectName}</button>); })}
-                            </div>)}
-                    </div>
-                    <button onClick={start} disabled={!ok || saving} style={{ ...btn(false), opacity: ok && !saving ? 1 : 0.6, gridColumn: '1 / -1', justifySelf: 'start' }}>{saving ? 'Starting…' : `Start${form.subjectIds.length > 1 ? ` (${form.subjectIds.length} subjects)` : ''}`}</button>
-                </div>
-            )}
-            {list.length > 0 && (
-                <div style={{ marginTop: '10px' }}>
-                    {list.map(i => (
-                        <div key={i.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px', padding: '6px 0', borderTop: '1px solid #eee', fontSize: '13px', color: '#333' }}>
-                            <span><b>{i.mine ? 'You' : i.teacherName}</b> · {i.className} · {i.subjectName} · {i.examName} · until {new Date(i.validUntil + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</span>
-                            {i.canStop && <button onClick={() => stop(i)} style={{ backgroundColor: '#dc3545', color: 'white', border: 'none', borderRadius: '7px', padding: '5px 10px', fontSize: '12px', fontWeight: 700, cursor: 'pointer' }}>Stop</button>}
-                        </div>))}
-                </div>
-            )}
-        </div>
-    );
-};
-
 const CoverPanel = ({ role, myClasses, classes, onChanged, setError, setSuccessMsg }) => {
     const isAdmin = role === 'ADMIN';
     const [open, setOpen] = useState(false);
@@ -322,6 +257,14 @@ const coverStyles = {
 function MarkEntry() {
     useSchoolSettings();   // re-draws when the grading scale (database) has loaded
     const role = localStorage.getItem('role');
+    // Invigilation mode: pick any class and subject as usual and fill in marks (empty marks only — the server checks)
+    const [invigilating, setInvigilatingRaw] = useState(() => sessionStorage.getItem('invigilating') === '1');
+    const setInvigilating = (on) => { sessionStorage.setItem('invigilating', on ? '1' : '0'); setInvigilatingRaw(on); setSelectedClass(''); setSubjects([]); };
+    const ensureInvigilation = async (results) => {   // records the invigilation automatically when saving
+        if (role !== 'TEACHER' || !invigilating || !selectedClass || !selectedExam) return;
+        const subjectIds = [...new Set((results || []).map(r => r.subjectId).filter(Boolean))];
+        if (subjectIds.length) await api.post('/api/invigilation', { examId: Number(selectedExam), classId: Number(selectedClass), subjectIds }).catch(() => {});
+    };
     const windowWidth = useWindowWidth();
     const isMobile = windowWidth <= 768;
     const linkedClassId = localStorage.getItem('linkedClassId');
@@ -466,7 +409,7 @@ function MarkEntry() {
 
     const fetchSubjectsByClass = async (classId) => {
         // A subject teacher only sees the subjects they teach in this class
-        const mine = role === 'TEACHER' ? myClasses.find(c => String(c.classId) === String(classId)) : null;
+        const mine = role === 'TEACHER' && !invigilating ? myClasses.find(c => String(c.classId) === String(classId)) : null;
         const allowed = mine ? [...(mine.subjectIds || []), ...(mine.coverSubjectIds || [])].map(String) : [];
         const limit = (list) => (mine && !mine.classTeacher && !mine.coverAll)
             ? list.filter(s => allowed.includes(String(s.subjectId)))
@@ -581,6 +524,7 @@ function MarkEntry() {
         }
 
         try {
+            await ensureInvigilation(results);
             const response = await api.post('/api/results/bulk-save', {
                 examId: parseInt(selectedExam),
                 results
@@ -641,6 +585,7 @@ function MarkEntry() {
         }
 
         try {
+            await ensureInvigilation(results);
             const response = await api.post('/api/results/bulk-save', {
                 examId: parseInt(selectedExam),
                 results
@@ -693,6 +638,7 @@ function MarkEntry() {
 
         try {
             const payload = { examId, results };
+            await ensureInvigilation(results);
             const response = await api.post('/api/results/bulk-save', payload);
             const data = response.data;
             if (data.failed > 0) {
@@ -887,7 +833,19 @@ function MarkEntry() {
                 )}
 
                 {role === 'TEACHER' && (
-                    <InvigilationPanel exams={exams} classes={classes} onChanged={() => fetchMyClasses()} setError={setError} setSuccessMsg={setSuccessMsg} />
+                    <div style={{ backgroundColor: 'white', borderRadius: '14px', padding: '14px 18px', marginBottom: '16px', boxShadow: '0 2px 10px rgba(0,0,0,0.06)', borderLeft: `5px solid ${invigilating ? '#28a745' : '#1F3864'}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+                        <div>
+                            <strong style={{ color: '#1F3864', fontSize: '15px' }}><Bi name="clipboard-check" style={{ marginRight: '6px' }} />Invigilation mode: <span style={{ color: invigilating ? '#28a745' : '#888' }}>{invigilating ? 'ON' : 'OFF'}</span></strong>
+                            <p style={{ color: '#555', fontSize: '12px', margin: '4px 0 0' }}>{invigilating
+                                ? 'Choose any class and subject below and enter the marks you marked. You can only fill in empty marks — marks already entered by others are kept.'
+                                : 'Marked another class\'s papers? Turn this on, then choose the class and subject as usual.'}</p>
+                        </div>
+                        <button onClick={() => { if (!confirmDiscard()) return; setInvigilating(!invigilating); handleReset(); }}
+                            style={{ backgroundColor: invigilating ? '#6c757d' : '#28a745', color: 'white', border: 'none', padding: '9px 18px', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}>
+                            {invigilating ? 'Turn off' : 'Turn on'}
+                        </button>
+                    </div>
+                )} setError={setError} setSuccessMsg={setSuccessMsg} />
                 )}
 
                 {(role === 'TEACHER' || role === 'ADMIN') && (
@@ -923,7 +881,7 @@ function MarkEntry() {
                     <div style={{ ...styles.grid3, gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)' }}>
                         <div style={styles.formGroup}>
                             <label style={styles.label}><Bi name="building" />Class</label>
-                            {role === 'TEACHER' ? (
+                            {role === 'TEACHER' && !invigilating ? (
                                 myClasses.length === 1 ? (
                                     <div style={styles.classDisplay}>
                                         {classDisplayName(myClasses[0])}
