@@ -230,7 +230,10 @@ const CoverPanel = ({ role, myClasses, classes, onChanged, setError, setSuccessM
                             : 'Away, or need help? Let a colleague enter marks for your class or subject until a date. It switches off by itself.'}
                         {' '}Cover is for <strong>marks only</strong>.
                     </p>
-                    {(isAdmin || handOver.length > 0) && (
+                    {!isAdmin && handOver.length === 0 && (
+                        <p style={{ color: '#b02a37', fontSize: '13px', margin: '8px 0' }}>You have no class or subjects assigned, so there is nothing to hand over yet. Ask the admin to make you a class teacher or to assign your subjects (Teachers page).</p>
+                    )}
+                    {(
                         <form onSubmit={grant} style={coverStyles.form}>
                             <label style={coverStyles.field}>Colleague
                                 <select style={coverStyles.input} value={form.coverUserId} onChange={e => setForm({ ...form, coverUserId: e.target.value })}>
@@ -241,7 +244,13 @@ const CoverPanel = ({ role, myClasses, classes, onChanged, setError, setSuccessM
                             <label style={coverStyles.field}>Class
                                 <select style={coverStyles.input} value={form.classId} onChange={e => setForm({ ...form, classId: e.target.value, subjectId: '' })}>
                                     <option value="">-- Choose --</option>
-                                    {handOver.map(c => <option key={c.classId} value={String(c.classId)}>{classDisplayName(c)}</option>)}
+                                    {handOver.length > 0 && <optgroup label={isAdmin ? 'Classes' : 'Your classes'}>
+                                        {[...handOver].sort(compareClasses).map(c => <option key={c.classId} value={String(c.classId)}>{classDisplayName(c)}{!isAdmin ? (c.classTeacher ? ' — all subjects' : ' — your subjects') : ''}</option>)}
+                                    </optgroup>}
+                                    {!isAdmin && <optgroup label="Other classes (not yours)">
+                                        {[...classes].filter(c => !handOver.some(h => String(h.classId) === String(c.classId))).sort(compareClasses)
+                                            .map(c => <option key={c.classId} value={String(c.classId)} disabled>{classDisplayName(c)} (not yours)</option>)}
+                                    </optgroup>}
                                 </select>
                             </label>
                             <label style={coverStyles.field}>Subject
