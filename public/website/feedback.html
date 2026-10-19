@@ -2,64 +2,172 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#13306B">
 <title>Parents' Feedback</title>
 <link rel="icon" id="favicon" href="/favicon.ico">
-<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700&family=Open+Sans:wght@400;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700&family=Open+Sans:wght@400;600;700&display=swap" rel="stylesheet">
 <style>
-  :root{--navy:#13306B;--red:#C8102E;--grey:#E9ECF1;--ink:#1d2433;--muted:#5b6475;--bg:#F3F4F7}
-  *{box-sizing:border-box}body{margin:0;font-family:"Open Sans",Arial,sans-serif;background:var(--bg);color:var(--ink)}
-  .top{background:#fff;border-top:5px solid var(--red);box-shadow:0 2px 10px rgba(0,0,0,.06)}
-  .top .in{max-width:720px;margin:0 auto;padding:14px 16px;display:flex;align-items:center;gap:12px}
-  .top img{width:50px;height:50px;object-fit:contain;display:none}.top b{font-family:Poppins;color:var(--navy);font-size:16px;display:block}.top span{font-size:12px;color:var(--red);font-style:italic}
-  main{max-width:720px;margin:0 auto;padding:16px}
-  .card{background:#fff;border-radius:12px;padding:18px;margin-bottom:14px;box-shadow:0 2px 10px rgba(0,0,0,.05)}
-  h1{font-family:Poppins;color:var(--navy);font-size:22px;margin:0 0 6px}.lead{color:var(--muted);margin:0}
-  .q{font-weight:600;color:var(--navy);margin:0 0 8px}.hint{font-size:12px;color:var(--muted);font-weight:400}
-  .stars{display:flex;gap:6px;flex-wrap:wrap}.stars button{font-size:30px;line-height:1;background:none;border:0;cursor:pointer;color:#cfd5df;padding:2px}
-  .stars button.on{color:#f5a623}.stars small{align-self:center;color:var(--muted);font-size:13px;margin-left:4px}
-  .opts{display:flex;gap:8px;flex-wrap:wrap}.opts button{padding:9px 18px;border-radius:20px;border:2px solid var(--navy);background:#fff;color:var(--navy);font-weight:600;cursor:pointer;font-size:15px}
-  .opts button.on{background:var(--navy);color:#fff}
-  label{display:block;font-weight:600;color:var(--navy);margin-bottom:10px}input,textarea{width:100%;font:inherit;padding:11px;border:1.5px solid #d6dce6;border-radius:8px;margin-top:4px;font-weight:400}
-  .row{display:grid;grid-template-columns:1fr 1fr;gap:10px}@media(max-width:560px){.row{grid-template-columns:1fr}}
-  .btn{background:var(--red);color:#fff;border:0;padding:13px 26px;border-radius:8px;font-size:16px;font-weight:700;cursor:pointer;width:100%}
-  .msg{padding:14px;border-radius:8px;margin-top:12px;display:none}.ok{background:#d4edda;color:#155724}.err{background:#f8d7da;color:#721c24}
+  :root{--navy:#13306B;--navy-2:#1d4291;--red:#C8102E;--line:#E3E8F0;--soft:#F5F7FB;--ink:#1d2433;--muted:#5d6678;
+        --ex:#1b8a44;--gd:#3fa35a;--fr:#d99a00;--ni:#C8102E;--sans:"Open Sans",Arial,sans-serif;--head:Poppins,"Segoe UI",Arial,sans-serif}
+  *{box-sizing:border-box}html{scroll-behavior:smooth;scroll-padding-top:70px}
+  body{margin:0;font-family:var(--sans);background:var(--soft);color:var(--ink);-webkit-tap-highlight-color:transparent;line-height:1.5}
+  button{font-family:var(--sans)}:focus-visible{outline:3px solid #8fb1ff;outline-offset:2px}
+
+  /* Header */
+  header{background:#fff;border-bottom:4px solid var(--red)}
+  .hd{max-width:760px;margin:0 auto;padding:22px 18px 18px;display:flex;gap:16px;align-items:center}
+  .hd img{width:64px;height:64px;object-fit:contain;display:none;flex-shrink:0}
+  .hd .school{font:600 13px var(--head);color:var(--red);letter-spacing:.3px;text-transform:uppercase}
+  .hd h1{font:700 22px/1.25 var(--head);color:var(--navy);margin:2px 0 4px}
+  .hd p{margin:0;color:var(--muted);font-size:13.5px}
+  .chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}.chip{font-size:12px;font-weight:600;color:var(--navy);background:var(--soft);border:1px solid var(--line);border-radius:20px;padding:3px 10px}
+
+  /* Stepper */
+  .steps{position:sticky;top:0;z-index:20;background:rgba(255,255,255,.96);backdrop-filter:blur(6px);border-bottom:1px solid var(--line)}
+  .steps ol{max-width:760px;margin:0 auto;padding:10px 18px;list-style:none;display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+  .steps a{display:flex;align-items:center;gap:8px;text-decoration:none;color:var(--muted);font-size:12.5px;font-weight:600}
+  .steps b{width:26px;height:26px;border-radius:50%;border:2px solid var(--line);display:flex;align-items:center;justify-content:center;font:700 12px var(--head);color:var(--muted);flex-shrink:0;transition:.2s;background:#fff}
+  .steps em{font-style:normal}
+  .seg .short{display:none}@media(max-width:600px){.seg .short{display:inline}.seg .full{display:none}}
+  .steps li.done b{background:var(--navy);border-color:var(--navy);color:#fff}.steps li.done a{color:var(--navy)}
+  .steps li.part b{border-color:var(--navy);color:var(--navy)}
+
+  main{max-width:760px;margin:0 auto;padding:18px 14px 120px}
+  .card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:20px;margin-bottom:16px;box-shadow:0 2px 10px rgba(19,48,107,.04)}
+  .letter p{margin:0 0 8px;color:var(--muted);font-size:14.5px}.letter p:first-child{color:var(--ink);font-weight:600}
+  .sh{display:flex;align-items:baseline;gap:10px;margin:26px 2px 10px}
+  .sh span{font:700 13px var(--head);color:#fff;background:var(--navy);border-radius:6px;padding:3px 9px;letter-spacing:.5px}
+  .sh h2{font:600 17px var(--head);color:var(--navy);margin:0}.sub{color:var(--muted);font-size:13px;margin:-4px 2px 10px}
+  .q{font-weight:700;color:var(--navy);font-size:14.5px;margin:0 0 10px}
+
+  /* Grade tiles */
+  .bands{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+  .bands button{border:1.5px solid var(--line);background:#fff;border-radius:10px;padding:10px 8px;cursor:pointer;text-align:center;transition:.15s;color:var(--navy)}
+  .bands b{display:block;font:600 13.5px var(--head)}.bands small{color:var(--muted);font-size:11.5px}
+  .bands button[aria-pressed=true]{background:var(--navy);border-color:var(--navy);color:#fff}.bands button[aria-pressed=true] small{color:#cfd8ee}
+
+  /* Anonymous switch */
+  .switch{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 14px;border:1.5px dashed var(--line);border-radius:10px;margin-bottom:14px;cursor:pointer}
+  .switch b{color:var(--navy);font-size:14px}.switch small{display:block;color:var(--muted);font-size:12px}
+  .tog{width:46px;height:26px;border-radius:13px;background:#cdd4df;position:relative;transition:.2s;flex-shrink:0}
+  .tog::after{content:"";position:absolute;left:3px;top:3px;width:20px;height:20px;border-radius:50%;background:#fff;transition:.2s;box-shadow:0 1px 3px rgba(0,0,0,.3)}
+  .switch[aria-checked=true]{border-style:solid;border-color:var(--ex);background:#f1faf4}.switch[aria-checked=true] .tog{background:var(--ex)}.switch[aria-checked=true] .tog::after{left:23px}
+  #who{display:grid;grid-template-rows:1fr;transition:grid-template-rows .3s ease,opacity .3s}#who>div{overflow:hidden}#who.hide{grid-template-rows:0fr;opacity:.3}
+  label{display:block;font-weight:600;color:var(--navy);margin-bottom:12px;font-size:14px}
+  input,textarea{width:100%;font:inherit;font-weight:400;padding:11px 12px;border:1.5px solid var(--line);border-radius:10px;margin-top:6px;background:#fff;transition:border .15s,box-shadow .15s}
+  input:focus,textarea:focus{outline:none;border-color:var(--navy-2);box-shadow:0 0 0 3px rgba(29,66,145,.12)}
+  .row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+
+  /* Section B: rating rows with a segmented bar */
+  .rates{padding:4px 0}
+  .rrow{padding:14px 20px;border-top:1px solid var(--line)}.rrow:first-child{border-top:0}
+  .rrow .q{display:flex;gap:8px;margin-bottom:9px}.rrow .q i{font-style:normal;color:var(--red);min-width:18px}
+  .rrow.missing{background:#fff6f6}.rrow.missing .q::after{content:"Not answered";margin-left:auto;font:600 11px var(--sans);color:var(--red)}
+  .seg{display:grid;grid-template-columns:repeat(4,1fr);border:1.5px solid var(--line);border-radius:10px;overflow:hidden}
+  .seg button{border:0;border-left:1.5px solid var(--line);background:#fff;padding:11px 4px;font-size:13px;font-weight:600;color:var(--muted);cursor:pointer;transition:background .15s,color .15s}
+  .seg button:first-child{border-left:0}.seg button:hover{background:var(--soft)}
+  .seg button[aria-pressed=true]{color:#fff}
+  .seg button[aria-pressed=true][data-v="Excellent"]{background:var(--ex)}.seg button[aria-pressed=true][data-v="Good"]{background:var(--gd)}
+  .seg button[aria-pressed=true][data-v="Fair"]{background:var(--fr)}.seg button[aria-pressed=true][data-v="Needs improvement"]{background:var(--ni)}
+
+  /* Section D: 5-step scale + recommend */
+  .scale{position:relative;display:grid;grid-template-columns:repeat(5,1fr);gap:0;margin:6px 4px 0}
+  .scale::before{content:"";position:absolute;left:10%;right:10%;top:15px;height:4px;border-radius:2px;background:linear-gradient(90deg,var(--ex),var(--gd),#a9b1bf,var(--fr),var(--ni))}
+  .scale button{position:relative;background:none;border:0;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:8px;padding:0 2px;font-size:12px;font-weight:600;color:var(--muted)}
+  .scale button i{width:34px;height:34px;border-radius:50%;background:#fff;border:3px solid #c7cfdb;display:block;transition:.15s}
+  .scale button[aria-pressed=true]{color:var(--navy)}.scale button[aria-pressed=true] i{transform:scale(1.15);border-width:10px}
+  .scale button:nth-child(1)[aria-pressed=true] i{border-color:var(--ex)}.scale button:nth-child(2)[aria-pressed=true] i{border-color:var(--gd)}
+  .scale button:nth-child(3)[aria-pressed=true] i{border-color:#8d96a6}.scale button:nth-child(4)[aria-pressed=true] i{border-color:var(--fr)}.scale button:nth-child(5)[aria-pressed=true] i{border-color:var(--ni)}
+  .rec{display:grid;grid-template-columns:repeat(3,1fr);border:1.5px solid var(--line);border-radius:10px;overflow:hidden}
+  .rec button{border:0;border-left:1.5px solid var(--line);background:#fff;padding:13px 4px;font-size:14px;font-weight:700;color:var(--muted);cursor:pointer}.rec button:first-child{border-left:0}
+  .rec button[aria-pressed=true][data-v="Yes"]{background:var(--ex);color:#fff}.rec button[aria-pressed=true][data-v="Not sure"]{background:var(--fr);color:#fff}.rec button[aria-pressed=true][data-v="No"]{background:var(--ni);color:#fff}
+
+  .closing{text-align:center;color:var(--muted);font-size:14px}.closing i{display:block;margin-top:8px;color:var(--red);font-weight:700}
+  .bar{position:fixed;left:0;right:0;bottom:0;background:#fff;border-top:1px solid var(--line);box-shadow:0 -6px 18px rgba(0,0,0,.06);padding:10px 14px calc(10px + env(safe-area-inset-bottom));z-index:30}
+  .bar .in{max-width:760px;margin:0 auto;display:flex;align-items:center;gap:14px}
+  .prog{flex:1}.prog small{font-size:12px;color:var(--muted);font-weight:600}.track{height:6px;background:var(--line);border-radius:3px;overflow:hidden;margin-top:5px}
+  .fill{height:100%;width:0;background:var(--navy);border-radius:3px;transition:width .3s}
+  .btn{background:var(--red);color:#fff;border:0;padding:12px 26px;border-radius:10px;font:600 15px var(--head);cursor:pointer;white-space:nowrap}.btn:disabled{opacity:.6}
+  .msg{padding:12px 14px;border-radius:10px;margin:0 0 12px;display:none;font-size:14px;background:#fdecee;color:#8a1022}
   .hp{position:absolute;left:-9999px}
-  .sec{font-family:Poppins;color:#fff;background:var(--navy);padding:9px 14px;border-radius:8px;font-size:15px;margin:18px 0 10px}
-  .note{font-size:13px;color:var(--muted);margin:0 0 10px}.chk{display:flex;gap:8px;align-items:center;font-weight:600;color:var(--navy);margin:6px 0 12px}.chk input{width:auto;margin:0}
-  .closing{text-align:center;color:var(--muted);font-size:14px}.closing i{display:block;color:var(--red);margin-top:6px}.done{text-align:center;padding:30px 18px}.done h2{color:var(--navy);font-family:Poppins}
+  .thanks{text-align:center;padding:44px 22px}
+  .ring{width:84px;height:84px;margin:0 auto 18px}.ring circle{fill:none;stroke:var(--ex);stroke-width:5;stroke-dasharray:240;stroke-dashoffset:240;animation:d 0.6s ease forwards}
+  .ring path{fill:none;stroke:var(--ex);stroke-width:6;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:60;stroke-dashoffset:60;animation:d .4s .5s ease forwards}
+  @keyframes d{to{stroke-dashoffset:0}}
+  .thanks h2{font:700 24px var(--head);color:var(--navy);margin:0 0 8px}
+  @media(max-width:600px){.hd{padding:18px 14px 14px}.hd img{width:52px;height:52px}.hd h1{font-size:19px}
+    .steps em{display:none}.steps ol{gap:4px}.bands{grid-template-columns:1fr 1fr}.row{grid-template-columns:1fr}.card{padding:16px}.rrow{padding:13px 16px}
+    .seg button{font-size:12px;padding:10px 2px}.scale button{font-size:10.5px}}
+  @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
 </style>
 </head>
 <body>
-<div class="top"><div class="in"><img id="logo" alt=""><div><b id="name">Our School</b><span id="motto"></span></div></div></div>
+<header><div class="hd">
+  <img id="logo" alt="School logo">
+  <div>
+    <div class="school" id="name">Pipeline Adventist School</div>
+    <h1>Parents' End-of-Year Feedback &amp; Comment Form</h1>
+    <p>Academic Year <span id="yr"></span> · Parent/Guardian Evaluation Form</p>
+    <div class="chips"><span class="chip">About 3 minutes</span><span class="chip">Anonymous option</span><span class="chip">Works on any phone</span></div>
+  </div>
+</div></header>
+
+<nav class="steps" aria-label="Form sections"><ol>
+  <li id="stA"><a href="#A"><b>A</b><em>Learner</em></a></li><li id="stB"><a href="#B"><b>B</b><em>Ratings</em></a></li>
+  <li id="stC"><a href="#C"><b>C</b><em>Comments</em></a></li><li id="stD"><a href="#D"><b>D</b><em>Overall</em></a></li>
+</ol></nav>
+
 <main id="main">
-  <div class="card"><h1>PARENTS' END-OF-YEAR FEEDBACK &amp; COMMENT FORM</h1>
-    <p class="lead"><b>Academic Year <span id="yr"></span> · Parent/Guardian Evaluation Form</b></p>
-    <p class="lead" style="margin-top:10px">Dear Parent/Guardian,</p>
-    <p class="lead" style="margin-top:6px">Thank you for partnering with <span class="sn">Pipeline Adventist School</span> in the education and holistic development of your child. Kindly complete this form to help us evaluate our performance, identify areas for improvement, and plan effectively for the coming year. Your honest feedback is highly valued.</p></div>
-  <form id="f" onsubmit="return send(event)">
-    <div class="sec">SECTION A: LEARNER DETAILS</div>
+  <div class="card letter">
+    <p>Dear Parent/Guardian,</p>
+    <p>Thank you for partnering with <span class="sn">Pipeline Adventist School</span> in the education and holistic development of your child. Kindly complete this form to help us evaluate our performance, identify areas for improvement, and plan effectively for the coming year. Your honest feedback is highly valued.</p>
+  </div>
+
+  <form id="f" onsubmit="return send(event)" novalidate>
+    <div class="sh" id="A"><span>A</span><h2>Learner details</h2></div>
+    <p class="sub">You may leave your name blank if you prefer to provide feedback anonymously.</p>
     <div class="card">
-      <p class="note">You may leave your name blank if you prefer to provide feedback anonymously.</p>
-      <label class="chk"><input type="checkbox" id="anon"> I wish to provide feedback anonymously.</label>
-      <div id="who"><div class="row"><label>Parent/Guardian name<input name="parentName" maxlength="100"></label><label>Phone (optional)<input name="phone" inputmode="tel" maxlength="15"></label></div>
-        <label>Learner's name (optional)<input id="learnerName" maxlength="100"></label></div>
-      <p class="q">Grade/Class</p><div class="opts" data-k="band"></div>
+      <div class="switch" id="anonSw" role="switch" aria-checked="false" tabindex="0"><div><b>I wish to provide feedback anonymously</b><small>Your name and phone will not be sent</small></div><div class="tog"></div></div>
+      <div id="who"><div>
+        <div class="row"><label>Parent/Guardian name<input name="parentName" maxlength="100" autocomplete="name"></label><label>Phone (optional)<input name="phone" inputmode="tel" maxlength="15" autocomplete="tel"></label></div>
+        <label>Learner's name (optional)<input id="learnerName" maxlength="100"></label>
+      </div></div>
+      <p class="q">Grade/Class</p>
+      <div class="bands" data-k="band" role="group" aria-label="Grade/Class"></div>
     </div>
-    <div class="sec">SECTION B: RATE OUR SCHOOL</div>
-    <p class="note">Select one rating for each area.</p>
-    <div id="rateB"></div>
-    <div class="sec">SECTION C: PARENT COMMENTS AND SUGGESTIONS</div>
+
+    <div class="sh" id="B"><span>B</span><h2>Rate our school</h2></div>
+    <p class="sub">Select one rating for each area.</p>
+    <div class="card rates" style="padding:0" id="rateB"></div>
+
+    <div class="sh" id="C"><span>C</span><h2>Parent comments and suggestions</h2></div>
+    <p class="sub">Share as much or as little as you like.</p>
     <div class="card" id="secC"></div>
-    <div class="sec">SECTION D: OVERALL SATISFACTION</div>
-    <div class="card"><p class="q">1. Overall, how satisfied are you with the education and services provided by the school?</p><div class="opts" data-k="overall"></div></div>
-    <div class="card"><p class="q">2. Would you recommend <span class="sn">Pipeline Adventist School</span> to other parents?</p><div class="opts" data-k="recommend"></div></div>
+
+    <div class="sh" id="D"><span>D</span><h2>Overall satisfaction</h2></div>
+    <div class="card">
+      <p class="q">1. Overall, how satisfied are you with the education and services provided by the school?</p>
+      <div class="scale" data-k="overall" role="group" aria-label="Overall satisfaction"></div>
+    </div>
+    <div class="card">
+      <p class="q">2. Would you recommend <span class="sn">Pipeline Adventist School</span> to other parents?</p>
+      <div class="rec" data-k="recommend" role="group" aria-label="Recommend the school"></div>
+    </div>
+
     <input class="hp" name="website" tabindex="-1" autocomplete="off" aria-hidden="true">
-    <button class="btn" id="sendBtn">Submit feedback</button>
-    <div class="msg" id="msg"></div>
+    <div class="msg" id="msg" role="alert"></div>
+    <div class="card closing">Thank you for taking the time to share your views. Your feedback will guide our continuous improvement as we nurture learners who are spiritually grounded, academically competent, disciplined and prepared for service.<i id="mottoQ">“Abreast with the Best in Holistic Education.”</i></div>
   </form>
-  <div class="card closing" style="margin-top:14px">Thank you for taking the time to share your views. Your feedback will guide our continuous improvement as we nurture learners who are spiritually grounded, academically competent, disciplined and prepared for service.<i id="mottoQ">“Abreast with the Best in Holistic Education.”</i></div>
 </main>
+
+<div class="bar" id="bar"><div class="in">
+  <div class="prog"><small id="progText">0 of 11 answered</small><div class="track"><div class="fill" id="fill"></div></div></div>
+  <button class="btn" id="sendBtn" form="f">Submit</button>
+</div></div>
+
 <script>
+  // Local testing (npm start on :3000) talks to the backend on :8080; on the server, the same address
+  const API = (location.port === '3000' || location.protocol === 'file:') ? 'http://localhost:8080' : '';
   const $ = (id) => document.getElementById(id);
   // ── The school's form (edit the wording here) ──
   const RATE = ['Excellent', 'Good', 'Fair', 'Needs improvement'];
@@ -69,39 +177,87 @@
   const C = ['What do you appreciate most about <span class="sn">Pipeline Adventist School</span>?', 'Which areas do you feel the school should improve?',
     'What additional programs, facilities or learner support would you like the school to introduce?', 'How can the school improve communication and partnership with parents?',
     'Any other comments or recommendations for the school management?'];
-  const CHOICES = { band: ['Pre-Primary (PP1/PP2)', 'Lower Primary (Grades 1–3)', 'Upper Primary (Grades 4–6)', 'Junior School (Grades 7–9)'],
-    overall: ['Very satisfied', 'Satisfied', 'Neutral', 'Dissatisfied', 'Very dissatisfied'], recommend: ['Yes', 'Not sure', 'No'] };
-  B.forEach((_, i) => CHOICES['b' + (i + 1)] = RATE);
+  const OVERALL = ['Very satisfied', 'Satisfied', 'Neutral', 'Dissatisfied', 'Very dissatisfied'];
+  const REC = ['Yes', 'Not sure', 'No'];
+  const BANDS = [['Pre-Primary (PP1/PP2)', 'Pre-Primary', 'PP1 / PP2'], ['Lower Primary (Grades 1–3)', 'Lower Primary', 'Grades 1–3'],
+    ['Upper Primary (Grades 4–6)', 'Upper Primary', 'Grades 4–6'], ['Junior School (Grades 7–9)', 'Junior School', 'Grades 7–9']];
+  const BKEYS = B.map((_, i) => 'b' + (i + 1));
+  const TRACKED = ['band', ...BKEYS, 'overall', 'recommend'];
   const answers = {};
   $('yr').textContent = new Date().getFullYear();
-  $('rateB').innerHTML = B.map((q, i) => `<div class="card"><p class="q">${i + 1}. ${q}</p><div class="opts" data-k="b${i + 1}"></div></div>`).join('');
-  $('secC').innerHTML = C.map((q, i) => `<label>${i + 1}. ${q}<textarea data-c="c${i + 1}" rows="3" maxlength="1500"></textarea></label>`).join('');
-  document.querySelectorAll('.opts[data-k]').forEach(box => {
-    box.innerHTML = CHOICES[box.dataset.k].map(v => `<button type="button" data-v="${v}">${v}</button>`).join('');
-    box.addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; answers[box.dataset.k] = b.dataset.v; box.querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b)); });
-  });
-  $('anon').addEventListener('change', () => { $('who').style.display = $('anon').checked ? 'none' : ''; });
-  fetch('/api/settings/public').then(r => r.json()).then(p => {
-    const n = p.name || p.schoolName; if (n) { $('name').textContent = n; document.title = "Parents' Feedback — " + n; document.querySelectorAll('.sn').forEach(x => x.textContent = n); }
-    if (p.motto) { $('motto').textContent = p.motto; $('mottoQ').textContent = '“' + p.motto.replace(/[.“”"]+$/g, '') + '.”'; }
+
+  const btns = (vals, label = v => v) => vals.map(v => `<button type="button" data-v="${v}" aria-pressed="false">${label(v)}</button>`).join('');
+  $('rateB').innerHTML = B.map((q, i) => `<div class="rrow" id="row-b${i + 1}"><p class="q"><i>${i + 1}.</i>${q}</p>
+    <div class="seg" data-k="b${i + 1}" role="group" aria-label="${q}">${btns(RATE, v => v === 'Needs improvement' ? '<span class="full">Needs improvement</span><span class="short">Needs impr.</span>' : v)}</div></div>`).join('');
+  document.querySelectorAll('.seg button[data-v="Needs improvement"]').forEach(b => b.title = 'Needs improvement');
+  $('secC').innerHTML = C.map((q, i) => `<label><span style="color:var(--red)">${i + 1}.</span> ${q}<textarea data-c="c${i + 1}" rows="3" maxlength="1500"></textarea></label>`).join('');
+  document.querySelector('[data-k=overall]').innerHTML = OVERALL.map(v => `<button type="button" data-v="${v}" aria-pressed="false"><i></i>${v}</button>`).join('');
+  document.querySelector('[data-k=recommend]').innerHTML = btns(REC);
+  document.querySelector('[data-k=band]').innerHTML = BANDS.map(([v, t, s]) => `<button type="button" data-v="${v}" aria-pressed="false"><b>${t}</b><small>${s}</small></button>`).join('');
+
+  const hasText = () => [...document.querySelectorAll('[data-c]')].some(t => t.value.trim());
+  const progress = () => {
+    const n = TRACKED.filter(k => answers[k]).length;
+    $('progText').textContent = `${n} of ${TRACKED.length} answered`;
+    $('fill').style.width = `${(n / TRACKED.length) * 100}%`;
+    const st = (id, done, part) => { $(id).classList.toggle('done', done); $(id).classList.toggle('part', !done && part); };
+    st('stA', !!answers.band, false);
+    const nb = BKEYS.filter(k => answers[k]).length; st('stB', nb === BKEYS.length, nb > 0);
+    st('stC', hasText(), false);
+    st('stD', !!(answers.overall && answers.recommend), !!(answers.overall || answers.recommend));
+  };
+  document.querySelectorAll('[data-k]').forEach(box => box.addEventListener('click', e => {
+    const b = e.target.closest('button'); if (!b) return;
+    answers[box.dataset.k] = b.dataset.v;
+    box.querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', x === b));
+    const row = $('row-' + box.dataset.k); if (row) row.classList.remove('missing');
+    progress();
+  }));
+  document.querySelectorAll('[data-c]').forEach(t => t.addEventListener('input', progress));
+  const anon = () => { const on = $('anonSw').getAttribute('aria-checked') !== 'true'; $('anonSw').setAttribute('aria-checked', on); $('who').classList.toggle('hide', on); };
+  $('anonSw').addEventListener('click', anon);
+  $('anonSw').addEventListener('keydown', e => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); anon(); } });
+  progress();
+
+  function setLogo(src) { if (String(src).startsWith('/api')) src = API + src; $('logo').src = src; $('logo').style.display = 'block'; $('favicon').href = src; }
+  function systemLogo() { fetch('/asset-manifest.json').then(r => r.json()).then(m => { const f = m.files || {}, k = Object.keys(f).find(x => /logo1\.[a-z]+$/i.test(x)); if (k) setLogo(f[k]); }).catch(() => {}); }
+  fetch(API + '/api/settings/public').then(r => r.json()).then(p => {
+    const n = p.name || p.schoolName;
+    if (n) { $('name').textContent = n; document.title = "Parents' Feedback — " + n; document.querySelectorAll('.sn').forEach(x => x.textContent = n); }
+    if (p.motto) $('mottoQ').textContent = '“' + p.motto.replace(/[.“”"]+$/g, '') + '.”';
     const logo = p.logoLeft || p.logo; if (logo) setLogo(logo); else systemLogo();
   }).catch(systemLogo);
-  function setLogo(src) { $('logo').src = src; $('logo').style.display = 'block'; $('favicon').href = src; }
-  function systemLogo() { fetch('/asset-manifest.json').then(r => r.json()).then(m => { const f = m.files || {}, k = Object.keys(f).find(x => /logo1\.[a-z]+$/i.test(x)); if (k) setLogo(f[k]); }).catch(() => {}); }
 
+  let confirmedBlanks = false;
   async function send(e) {
     e.preventDefault();
+    const blanks = BKEYS.filter(k => !answers[k]);
+    if (blanks.length && !confirmedBlanks && blanks.length < BKEYS.length) {
+      blanks.forEach(k => $('row-' + k).classList.add('missing'));
+      if (!window.confirm(`You left ${blanks.length} rating${blanks.length > 1 ? 's' : ''} in Section B blank. Submit anyway?\n\nTap Cancel to go back and complete ${blanks.length > 1 ? 'them' : 'it'}.`)) {
+        $('row-' + blanks[0]).scrollIntoView({ block: 'center' }); return false;
+      }
+      confirmedBlanks = true;
+    }
     const d = Object.fromEntries(new FormData($('f')));
-    document.querySelectorAll('[data-c]').forEach(t => { if (t.value.trim()) answers[t.dataset.c] = t.value.trim(); });
-    if ($('anon').checked) { d.parentName = ''; d.phone = ''; delete answers.learnerName; } else if ($('learnerName').value.trim()) answers.learnerName = $('learnerName').value.trim();
+    document.querySelectorAll('[data-c]').forEach(t => { if (t.value.trim()) answers[t.dataset.c] = t.value.trim(); else delete answers[t.dataset.c]; });
+    if ($('anonSw').getAttribute('aria-checked') === 'true') { d.parentName = ''; d.phone = ''; delete answers.learnerName; }
+    else if ($('learnerName').value.trim()) answers.learnerName = $('learnerName').value.trim();
     d.className = answers.band || ''; d.answers = answers;
-    const m = $('msg'); $('sendBtn').disabled = true;
+    const m = $('msg'); m.style.display = 'none'; $('sendBtn').disabled = true; $('sendBtn').textContent = 'Sending…';
     try {
-      const r = await fetch('/api/public/feedback', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(d) });
+      const r = await fetch(API + '/api/public/feedback', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(d) });
       const j = await r.json().catch(() => ({}));
       if (!r.ok) throw new Error(j.message || 'Could not send. Please try again.');
-      $('main').innerHTML = `<div class="card done"><h2>Thank you!</h2><p>${j.message}</p></div>`; window.scrollTo(0, 0);
-    } catch (err) { m.className = 'msg err'; m.textContent = err.message; m.style.display = 'block'; $('sendBtn').disabled = false; }
+      const motto = $('mottoQ').textContent;
+      $('bar').style.display = 'none'; document.querySelector('.steps').style.display = 'none';
+      $('main').innerHTML = `<div class="card thanks"><svg class="ring" viewBox="0 0 84 84"><circle cx="42" cy="42" r="38"/><path d="M27 43 l10 10 l21 -22"/></svg>
+        <h2>Thank you!</h2><p style="color:var(--muted)">${j.message}</p><p style="color:var(--red);font-weight:700;margin-top:14px">${motto}</p></div>`;
+      window.scrollTo(0, 0);
+    } catch (err) {
+      m.textContent = err.message; m.style.display = 'block'; m.scrollIntoView({ block: 'center' });
+      $('sendBtn').disabled = false; $('sendBtn').textContent = 'Submit';
+    }
     return false;
   }
 </script>
