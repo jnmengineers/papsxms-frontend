@@ -55,7 +55,10 @@ export default function SubjectMeansReport() {
             const sec = sectionOfClass(cls);
             const S = (bySection[sec] = bySection[sec] || { subjects: {}, classes: {} });
             S.subjects[sub.subjectId] = sub.subjectName;
-            const C = (S.classes[cls.classId] = S.classes[cls.classId] || { cls, sums: {} });
+            // One row per class AND stream (G1R, G1B…): the stream may be on the class or on the learner
+            const stream = (cls.stream || r.student?.stream || '').trim();
+            const key = `${cls.classId}|${stream.toUpperCase()}`;
+            const C = (S.classes[key] = S.classes[key] || { cls: { ...cls, stream: stream || null }, sums: {} });
             const a = (C.sums[sub.subjectId] = C.sums[sub.subjectId] || [0, 0]); a[0] += m; a[1]++;
         });
         const order = [...SECTION_CODES, ...Object.keys(bySection).filter(k => !SECTION_CODES.includes(k))];
@@ -63,7 +66,7 @@ export default function SubjectMeansReport() {
             const S = bySection[code];
             const subjects = Object.entries(S.subjects).map(([id, name]) => ({ id, name }))
                 .sort((a, b) => rankOf(a.name) - rankOf(b.name) || a.name.localeCompare(b.name));
-            const rows = Object.values(S.classes).sort((a, b) => compareClasses(a.cls, b.cls)).map(C => {
+            const rows = Object.values(S.classes).sort((a, b) => compareClasses(a.cls, b.cls) || String(a.cls.stream || '').localeCompare(String(b.cls.stream || ''))).map(C => {
                 const means = {};
                 subjects.forEach(s => { const a = C.sums[s.id]; means[s.id] = a && a[1] ? a[0] / a[1] : null; });
                 const vals = Object.values(means).filter(v => v !== null);
@@ -117,7 +120,7 @@ export default function SubjectMeansReport() {
                         <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '640px' }}>
                             <thead><tr><th style={{ ...th, textAlign: 'left' }}>CLASS</th>{s.subjects.map(x => <th key={x.id} style={th}>{x.name.toUpperCase()}</th>)}<th style={{ ...th, backgroundColor: '#1F3864', color: 'white' }}>TOTAL MEAN</th></tr></thead>
                             <tbody>{s.rows.map((r, i) => (
-                                <tr key={r.cls.classId} style={{ backgroundColor: i % 2 ? '#fafbfd' : 'white' }}>
+                                <tr key={`${r.cls.classId}|${r.cls.stream || ''}`} style={{ backgroundColor: i % 2 ? '#fafbfd' : 'white' }}>
                                     <td style={{ ...td, textAlign: 'left', fontWeight: 700, whiteSpace: 'nowrap' }}>{classLabel(r.cls.className, r.cls.stream) || classDisplayName(r.cls)}</td>
                                     {s.subjects.map(x => <td key={x.id} style={{ ...td, color: r.means[x.id] === null ? '#aaa' : '#111' }}>{fmt(r.means[x.id])}</td>)}
                                     <td style={{ ...td, fontWeight: 800, color: '#1F3864' }}>{fmt(r.total)}</td>
