@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import api from '../services/api';
+import { orderSubjects } from '../utils/subjectOrder';
 import { gradeOf as scaleGrade, pctColor, gradeColor as scaleColor } from '../utils/grading';
 import { useSchoolSettings } from '../context/SchoolSettingsContext';
 import { classDisplayName } from '../utils/classUtils';
@@ -346,7 +347,8 @@ function Results() {
         const subjectMap = {};
         const notCounted = new Set();
         rows.forEach(r => { if (r.subject) { subjectMap[r.subject.subjectId] = r.subject.subjectName; if (r.subject.countsInTotals === false) notCounted.add(String(r.subject.subjectId)); } });
-        const subjects = Object.entries(subjectMap).map(([id, name]) => ({ id, name: notCounted.has(String(id)) ? name + ' *' : name, counts: !notCounted.has(String(id)) })).sort((a, b) => a.name.localeCompare(b.name));
+        const subjects = Object.entries(subjectMap).map(([id, name]) => ({ id, name, counts: !notCounted.has(String(id)) }));
+        const ordered = orderSubjects(subjects, s => s.name); subjects.splice(0, subjects.length, ...ordered);
         const studentMap = {};
         rows.forEach(r => { if (r.student) studentMap[r.student.studentId] = r.student; });
         const students = Object.values(studentMap);

@@ -8,6 +8,7 @@ import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
 import Footer from '../components/Footer';
 import SubjectMeansReport from '../components/SubjectMeansReport';
+import { orderSubjects } from '../utils/subjectOrder';
 import { schoolName, schoolShortName, schoolMotto, schoolContact, logoLeftUrl, logoRightUrl } from '../utils/school';
 import { GRADE_ORDER_LIVE, SECTION_CODES } from '../utils/schoolData';
 
@@ -57,8 +58,16 @@ const rankCards = (cards, rankField) => {
 };
 
 // Section subjects = every subject any class in the section has, in first-seen order
+// One row per STREAM (G6B, G6Y…): the server groups by grade but also sends each stream's subject means
+const streamRows = (classBreakdown) => (classBreakdown || []).flatMap(cl => {
+    const st = cl.streams || [];
+    if (st.length === 0) return [{ ...cl, gradeLevel: cl.className }];
+    return st.map(x => ({ ...x, gradeLevel: cl.className }));
+}).sort((a, b) => orderIndex(GRADE_ORDER, a.gradeLevel) - orderIndex(GRADE_ORDER, b.gradeLevel) || String(a.className).localeCompare(String(b.className)));
+
+// Subjects in the school's standard order (ENG → KIS → MAT → SCI → … → CIA), not by score
 const unionSubjectNames = (classBreakdown) =>
-    [...new Set((classBreakdown || []).flatMap(cl => (cl.subjectPerformance || []).map(s => s.subjectName)))];
+    orderSubjects([...new Set((classBreakdown || []).flatMap(cl => (cl.subjectPerformance || []).map(s => s.subjectName)))], n => n);
 
 // ─── Orientation Toggle ───────────────────────────────────────────────────────
 const OrientationToggle = ({ value, onChange }) => (
@@ -106,7 +115,7 @@ const PrintableMeritList = React.forwardRef(({ rows, getMark, title, subtitle, l
                             <th key={sub.subjectId} style={pStyles.thSubject}>{String(sub.subjectName).toUpperCase()}</th>
                         ))}
                         <th style={pStyles.thTotal}>TOTAL</th>
-                        <th style={pStyles.thTotal}>AVG %</th>
+                        <th style={pStyles.thTotal}>TOTAL MEAN</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -149,9 +158,7 @@ const PrintableSectionReport = React.forwardRef(({ report, examName, term, year 
         {report && Object.entries(report)
             .sort(([a], [b]) => orderIndex(SECTION_ORDER, a) - orderIndex(SECTION_ORDER, b))
             .map(([key, section]) => {
-                const sortedClasses = [...(section.classBreakdown || [])].sort((a, b) =>
-                    orderIndex(GRADE_ORDER, a.className) - orderIndex(GRADE_ORDER, b.className) ||
-                    String(a.stream || '').localeCompare(String(b.stream || '')));
+                const sortedClasses = streamRows(section.classBreakdown);
                 const sectionSubjects = unionSubjectNames(sortedClasses);
                 return (
                     <div key={key} style={{ marginBottom: '16px', pageBreakInside: 'avoid' }}>
@@ -512,8 +519,9 @@ function SectionReport() {
                         )}
 
                         {sectionEntries.length > 0 ? sectionEntries.map(([key, section]) => {
-                            const subjectNames = unionSubjectNames(section.classBreakdown);
-                            const byAvg = [...(section.classBreakdown || [])].sort((a, b) => num(b.classAverage) - num(a.classAverage));
+                            const rows = streamRows(section.classBreakdown);
+                            const subjectNames = unionSubjectNames(rows);
+                            const byAvg = [...rows].sort((a, b) => num(b.classAverage) - num(a.classAverage));
                             const classPlaces = rankBy(byAvg, c => num(c.classAverage));
                             return (
                                 <div key={key} style={styles.sectionCard}>
@@ -549,7 +557,7 @@ function SectionReport() {
                                                         <tr style={styles.thead}>
                                                             <th style={styles.th}>CLASS</th>
                                                             {subjectNames.map(name => <th key={name} style={styles.thSub}>{name}</th>)}
-                                                            <th style={styles.thTotal}>AVG %</th>
+                                                            <th style={styles.thTotal}>TOTAL MEAN</th>
                                                             <th style={styles.thTotal}>STATUS</th>
                                                         </tr>
                                                     </thead>
@@ -568,7 +576,7 @@ function SectionReport() {
                                                                         </td>
                                                                     );
                                                                 })}
-                                                                <td style={{ ...styles.tdTotal, color: cls.meetingTarget ? '#28a745' : '#dc3545' }}><strong>{cls.classAverage}%</strong></td>
+                                                                <td style={{ ...styles.tdTotal, color: cls.meetingTarget ? '#28a745' : '#dc3545' }}><strong>{cls.classAverage}</strong></td>
                                                                 <td style={styles.tdC}>
                                                                     <span style={{
                                                                         backgroundColor: cls.meetingTarget ? '#d4edda' : '#f8d7da',
@@ -647,7 +655,7 @@ function SectionReport() {
                                                     <th style={styles.th}>NAME</th>
                                                     {streamSubjects.map(sub => <th key={sub.subjectId} style={styles.thSub}>{sub.subjectName}</th>)}
                                                     <th style={styles.thTotal}>TOTAL</th>
-                                                    <th style={styles.thTotal}>AVG %</th>
+                                                    <th style={styles.thTotal}>TOTAL MEAN</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
@@ -729,7 +737,7 @@ function SectionReport() {
                                                     <th style={styles.th}>NAME</th>
                                                     {gradeMeritSubjects.map(sub => <th key={sub.subjectId} style={styles.thSub}>{sub.subjectName}</th>)}
                                                     <th style={styles.thTotal}>TOTAL</th>
-                                                    <th style={styles.thTotal}>AVG %</th>
+                                                    <th style={styles.thTotal}>TOTAL MEAN</th>
                                                 </tr>
                                             </thead>
                                             <tbody>

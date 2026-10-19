@@ -27,8 +27,15 @@ export default function InactivityTimeout() {
         navigate('/');
     }, [navigate]);
 
+    const warningShownRef = useRef(false);
+    const lastReset = useRef(0);
     const resetTimers = useCallback(() => {
         if (isPublic) return;
+        // Scrolling fires this dozens of times a second; restarting the timers every 5 s is plenty
+        const now = Date.now();
+        if (now - lastReset.current < 5000 && !warningShownRef.current) return;
+        lastReset.current = now;
+        warningShownRef.current = false;
 
         setShowWarning(false);
         setSecondsLeft(WARNING_MS / 1000);
@@ -38,6 +45,7 @@ export default function InactivityTimeout() {
 
         // Show warning when WARNING_MS remains
         warningTimer.current = setTimeout(() => {
+            warningShownRef.current = true;
             setShowWarning(true);
             setSecondsLeft(WARNING_MS / 1000);
 

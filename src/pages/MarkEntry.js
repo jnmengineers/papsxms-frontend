@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import useWindowWidth from '../hooks/useWindowWidth';
 import { useReactToPrint } from 'react-to-print';
 import api from '../services/api';
+import { orderSubjects } from '../utils/subjectOrder';
 import { gradeInfo } from '../utils/grading';
 import { useSchoolSettings } from '../context/SchoolSettingsContext';
 import { classDisplayName, classLabel, compareClasses } from '../utils/classUtils';
@@ -244,7 +245,7 @@ const coverStyles = {
     head: { width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'none', border: 'none', cursor: 'pointer', color: '#1F3864', fontSize: '14px', padding: 0, fontFamily: 'inherit' },
     count: { marginLeft: '8px', backgroundColor: '#28a745', color: 'white', fontSize: '11px', padding: '1px 8px', borderRadius: '10px' },
     help: { fontSize: '13px', color: '#555', margin: '0 0 10px' },
-    form: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '10px' },
+    form: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(180px, 100%), 1fr))', gap: '10px' },
     field: { display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '12px', fontWeight: 'bold', color: '#1F3864' },
     input: { padding: '9px', borderRadius: '8px', border: '1.5px solid #ddd', fontSize: '15px', backgroundColor: 'white' },
     btn: { backgroundColor: '#1F3864', color: 'white', border: 'none', padding: '10px 18px', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold', display: 'inline-flex', alignItems: 'center' },
@@ -416,10 +417,10 @@ function MarkEntry() {
             : list;
         try {
             const r = await api.get(`/api/class-subjects/by-class/${classId}`);
-            if (r.data?.length > 0) setSubjects(limit(r.data.map(cs => cs.subject).filter(Boolean)));
-            else { const f = await api.get('/api/subjects'); setSubjects(limit(f.data)); }
+            if (r.data?.length > 0) setSubjects(orderSubjects(limit(r.data.map(cs => cs.subject).filter(Boolean))));
+            else { const f = await api.get('/api/subjects'); setSubjects(orderSubjects(limit(f.data))); }
         } catch (e) {
-            try { const f = await api.get('/api/subjects'); setSubjects(limit(f.data)); } catch (_) {}
+            try { const f = await api.get('/api/subjects'); setSubjects(orderSubjects(limit(f.data))); } catch (_) {}
         }
     };
 
@@ -428,6 +429,13 @@ function MarkEntry() {
         try {
             setLoading(true);
             setStudents([]);
+            // Invigilation mode: the class may not be the teacher's own — names and admission numbers only
+            if (role === 'TEACHER' && invigilating) {
+                const inv = await api.get(`/api/students/for-marking/${classId}`);
+                setStudents(inv.data || []);
+                setLoading(false);
+                return;
+            }
             const r = await api.get('/api/students');
             const filtered = r.data.filter(s =>
                 String(s.schoolClass?.classId) === String(classId)
@@ -797,7 +805,7 @@ function MarkEntry() {
             <Navbar />
             <div style={styles.layoutRow}>
                 <Sidebar />
-                <div style={styles.content}>
+                <div style={{ ...styles.content, padding: isMobile ? '14px 10px' : '30px' }}>
                 <div style={styles.pageHeader}>
                     <div>
                         <h2 style={styles.title}><Bi name="pencil-square" style={{ marginRight: '10px' }} />Mark Entry</h2>
@@ -1122,8 +1130,8 @@ function MarkEntry() {
                                     <table style={styles.table}>
                                         <thead>
                                             <tr style={styles.thead}>
-                                                <th style={{ ...styles.th, position: 'sticky', left: 0, backgroundColor: '#f8f9fa', zIndex: 2 }}>#</th>
-                                                <th style={{ ...styles.th, position: 'sticky', left: '50px', backgroundColor: '#f8f9fa', zIndex: 2, minWidth: '160px' }}>Student Name</th>
+                                                <th style={{ ...styles.th, position: isMobile ? 'static' : 'sticky', left: 0, backgroundColor: '#f8f9fa', zIndex: 2 }}>#</th>
+                                                <th style={{ ...styles.th, position: isMobile ? 'static' : 'sticky', left: '50px', backgroundColor: '#f8f9fa', zIndex: 2, minWidth: '160px' }}>Student Name</th>
                                                 {selectedSubjectsForMulti.map(sub => (
                                                     <th key={sub.subjectId} style={{ ...styles.th, textAlign: 'center', minWidth: '90px', backgroundColor: '#2E75B6', color: 'white', fontSize: '11px' }}>
                                                         {sub.subjectName}
@@ -1138,8 +1146,8 @@ function MarkEntry() {
                                             )}
                                             {filteredStudents.map((student, index) => (
                                                 <tr key={student.studentId} style={index % 2 === 0 ? styles.trEven : styles.trOdd}>
-                                                    <td style={{ ...styles.td, position: 'sticky', left: 0, backgroundColor: index % 2 === 0 ? '#f9f9f9' : 'white', zIndex: 1 }}>{students.indexOf(student) + 1}</td>
-                                                    <td style={{ ...styles.td, position: 'sticky', left: '50px', backgroundColor: index % 2 === 0 ? '#f9f9f9' : 'white', zIndex: 1, borderRight: '2px solid #eee' }}>
+                                                    <td style={{ ...styles.td, position: isMobile ? 'static' : 'sticky', left: 0, backgroundColor: index % 2 === 0 ? '#f9f9f9' : 'white', zIndex: 1 }}>{students.indexOf(student) + 1}</td>
+                                                    <td style={{ ...styles.td, position: isMobile ? 'static' : 'sticky', left: '50px', backgroundColor: index % 2 === 0 ? '#f9f9f9' : 'white', zIndex: 1, borderRight: '2px solid #eee' }}>
                                                         <strong style={{ fontSize: '13px' }}>{student.firstName} {student.lastName}</strong>
                                                         <div style={{ fontSize: '11px', color: '#999' }}>{student.admissionNumber}</div>
                                                     </td>
@@ -1214,9 +1222,9 @@ function MarkEntry() {
 }
 
 const styles = {
-    container: { minHeight: '100vh', backgroundColor: '#f0f2f5' },
-    layoutRow: { display: 'flex' },
-    content: { padding: '30px', flex: 1 },
+    container: { minHeight: '100vh', backgroundColor: '#f0f2f5', overflowX: 'hidden' },
+    layoutRow: { display: 'flex', minWidth: 0, maxWidth: '100vw' },
+    content: { padding: '30px', flex: 1, minWidth: 0, maxWidth: '100%', boxSizing: 'border-box', overflowX: 'hidden' },   // shrinks to a phone's width; wide tables scroll inside
     pageHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '22px', flexWrap: 'wrap', gap: '10px' },
     headerBtns: { display: 'flex', gap: '10px', flexWrap: 'wrap' },
     title: { color: '#1F3864', margin: '0 0 5px 0', fontSize: '24px', fontWeight: 800 },
@@ -1270,7 +1278,7 @@ const styles = {
     tableBadges: { display: 'flex', gap: '8px' },
     badge: { backgroundColor: 'rgba(255,255,255,0.2)', color: 'white', padding: '4px 10px', borderRadius: '20px', fontSize: '12px' },
     centerMsg: { padding: '40px', textAlign: 'center', color: '#666' },
-    tableWrapper: { overflowX: 'auto' },
+    tableWrapper: { overflowX: 'auto', WebkitOverflowScrolling: 'touch', maxWidth: '100%' },
     table: { width: '100%', borderCollapse: 'collapse', minWidth: '500px' },
     thead: { backgroundColor: '#f8f9fa' },
     th: { padding: '11px 12px', textAlign: 'left', fontWeight: 'bold', color: '#1F3864', borderBottom: '2px solid #eee', whiteSpace: 'nowrap', fontSize: '12px' },
@@ -1296,7 +1304,7 @@ const styles = {
     hint: { color: '#888', fontSize: '12px', fontStyle: 'italic', margin: 0 },
 
     searchBar: { display: 'flex', alignItems: 'center', gap: '12px', padding: '14px 20px', borderBottom: '2px solid #f0f2f5', flexWrap: 'wrap' },
-    searchBox: { display: 'flex', alignItems: 'center', flex: 1, minWidth: '240px', maxWidth: '480px', border: '2px solid #ddd', borderRadius: '10px', padding: '0 10px', backgroundColor: 'white' },
+    searchBox: { display: 'flex', alignItems: 'center', flex: 1, minWidth: 0, maxWidth: '480px', border: '2px solid #ddd', borderRadius: '10px', padding: '0 10px', backgroundColor: 'white' },
     searchInput: { flex: 1, border: 'none', outline: 'none', padding: '10px 0', fontSize: '16px', backgroundColor: 'transparent' },
     searchClear: { background: 'none', border: 'none', cursor: 'pointer', color: '#888', padding: '4px', fontSize: '13px' },
     searchCount: { color: '#1F3864', fontSize: '13px', fontWeight: 600 },

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../services/api';
+import { orderSubjects } from '../utils/subjectOrder';
 import { gradeOf as scaleGrade, pctColor } from '../utils/grading';
 import { useSchoolSettings } from '../context/SchoolSettingsContext';
 import { classDisplayName, classLabel, compareClasses, classStream, streamLabel } from '../utils/classUtils';
@@ -57,7 +58,8 @@ const buildReportPage = (card, singleResults, progressiveData) => {
     const studentName = student ? student.firstName + ' ' + student.lastName : '-';
 
     const termExams = progressiveData?.exams || [];
-    const rawSubjects = progressiveData?.subjects || [];
+    const rawSubjects = orderSubjects(progressiveData?.subjects || [], s => s.subjectName);
+    singleResults = orderSubjects(singleResults || [], r => [r.subject?.subjectName, r.subject?.subjectCode]);
     const isProgressive = termExams.length > 1 && rawSubjects.length > 0;
 
     let subjectRows = '';
@@ -95,7 +97,7 @@ const buildReportPage = (card, singleResults, progressiveData) => {
                     + '<td style="padding:6px 4px;border:1px solid #ddd;text-align:center;">' + pBadge(val) + '</td>';
             }).join('');
             return '<tr style="background:' + (i % 2 === 0 ? '#f8f9fa' : 'white') + '">'
-                + '<td style="padding:6px 8px;border:1px solid #ddd;font-weight:bold;font-size:12px;">' + (i + 1) + '. ' + esc(sub.subjectName) + (sub.countsInTotals === false ? ' *' : '') + '</td>'
+                + '<td style="padding:6px 8px;border:1px solid #ddd;font-weight:bold;font-size:12px;">' + (i + 1) + '. ' + esc(sub.subjectName) + '</td>'
                 + cells + '</tr>';
         }).join('');
 
@@ -112,7 +114,7 @@ const buildReportPage = (card, singleResults, progressiveData) => {
         subjectRows = singleResults.map((r, i) => {
             if (r.subject?.countsInTotals !== false && r.marksObtained != null && !isNaN(r.marksObtained)) { termAvgSum += r.marksObtained; termAvgCount++; }
             return '<tr style="background:' + (i % 2 === 0 ? '#f8f9fa' : 'white') + '">'
-                + '<td style="padding:6px 8px;border:1px solid #ddd;font-size:12px;">' + (i + 1) + '. ' + esc(r.subject ? r.subject.subjectName : '') + (r.subject?.countsInTotals === false ? ' *' : '') + '</td>'
+                + '<td style="padding:6px 8px;border:1px solid #ddd;font-size:12px;">' + (i + 1) + '. ' + esc(r.subject ? r.subject.subjectName : '') + '</td>'
                 + '<td style="padding:6px 8px;border:1px solid #ddd;text-align:center;font-weight:bold;">' + (r.marksObtained != null ? (Number.isInteger(Number(r.marksObtained)) ? r.marksObtained : Number(r.marksObtained).toFixed(2)) : '-') + '</td>'
                 + '<td style="padding:6px 8px;border:1px solid #ddd;text-align:center;">' + pBadge(r.marksObtained) + '</td>'
                 + '</tr>';
@@ -149,7 +151,6 @@ const buildReportPage = (card, singleResults, progressiveData) => {
         + '<table style="width:100%;border-collapse:collapse;margin-bottom:10px;table-layout:fixed;"><thead>'
         + '<tr style="background:#1F3864;">' + theadCols + '</tr>'
         + '</thead><tbody>' + subjectRows + avgRowHtml + '</tbody></table>'
-        + ((isProgressive ? rawSubjects.some(x => x.countsInTotals === false) : singleResults.some(x => x.subject?.countsInTotals === false)) ? '<div style="font-size:10px;color:#666;margin-top:3px;">* Recorded only — not counted in totals, means or positions.</div>' : '')
         + '<div style="display:flex;gap:12px;border:1.5px solid #1F3864;padding:10px 12px;border-radius:6px;margin-bottom:10px;">'
         + '<div style="flex:1;text-align:center;"><div style="color:#666;font-size:10px;">Subjects</div><div style="color:#1F3864;font-size:20px;font-weight:bold;">' + subjectCount + '</div></div>'
         + '<div style="flex:1;text-align:center;"><div style="color:#666;font-size:10px;">Average</div><div style="color:#1F3864;font-size:20px;font-weight:bold;">' + pGl(termAvg) + '</div></div>'

@@ -1,8 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import api from '../services/api';
-import { classDisplayName, classLabel, compareClasses } from '../utils/classUtils';
+import { orderSubjects } from '../utils/subjectOrder';
+import { classDisplayName, classLabel, classStream, compareClasses } from '../utils/classUtils';
 import { SECTION_CODES, SECTION_NAMES_LIVE, SECTION_OF_GRADE_LIVE, gradeFromClassName } from '../utils/schoolData';
-import { letterheadHtml } from '../utils/school';
 import { useSchoolSettings } from '../context/SchoolSettingsContext';
 
 /**
@@ -12,9 +12,6 @@ import { useSchoolSettings } from '../context/SchoolSettingsContext';
  */
 const fmt = (n) => (n === null || n === undefined || isNaN(n) ? '—' : Number(n).toFixed(2));
 const esc = (v) => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-// Usual order of learning areas; anything else follows alphabetically
-const ORDER = ['number', 'math', 'english', 'language', 'literacy', 'kiswahili', 'integrated', 'science', 'pre-tech', 'pretech', 'agric', 'social', 'environment', 'religious', 'cre', 'creative'];
-const rankOf = (name) => { const n = String(name).toLowerCase(); const i = ORDER.findIndex(k => n.includes(k)); return i === -1 ? 99 : i; };
 const sectionLabel = (code) => (code === 'JUNIOR_SCHOOL' ? 'JSS' : code === 'PRE_SCHOOL' ? 'PRE-SCHOOL' : (SECTION_NAMES_LIVE[code] || String(code || 'Other').replace(/_/g, ' ')).toUpperCase());
 // Backup when a class has no section set: by its name (PG/PP → pre-school; grades 1–3, 4–6, 7–9)
 const sectionByName = (name) => {
@@ -25,6 +22,11 @@ const sectionByName = (name) => {
 };
 const sectionOfClass = (c) => c?.section || SECTION_OF_GRADE_LIVE[c?.gradeLevel] || SECTION_OF_GRADE_LIVE[gradeFromClassName(c?.className)] || sectionByName(c?.className);
 const FALLBACK_ORDER = ['PRE_SCHOOL', 'LOWER_PRIMARY', 'UPPER_PRIMARY', 'JUNIOR_SCHOOL'];
+// The stream part of a class code: "G1R" → "R", "PP1Y" → "Y", "Grade 6 Blue" → "Blue", "G5" → ""
+const streamCode = (name) => {
+    const m = String(name || '').trim().match(/^(?:PP\s?\d|PG|PLAY\s?GROUP|PRE-?PRIMARY\s?\d|G(?:RADE)?\s?\d{1,2})\s*[-\s]?\s*(.*)$/i);
+    return m ? m[1].trim() : '';
+};
 
 export default function SubjectMeansReport() {
     const settings = useSchoolSettings();   // redraw once the school's sections have loaded
@@ -66,9 +68,15 @@ export default function SubjectMeansReport() {
             const S = (bySection[sec] = bySection[sec] || { subjects: {}, classes: {} });
             S.subjects[sub.subjectId] = sub.subjectName;
             // One row per class AND stream (G1R, G1B…): the stream may be on the class or on the learner
-            const stream = (cls.stream || r.student?.stream || '').trim();
+            // One row per stream: the stream may be on the class, on the learner, or in the learner's class code (G1R)
+            const ownCode = String(r.student?.className || '').trim();
+            const fromCode = streamCode(ownCode);
+            const stream = String(cls.stream || classStream(cls) || r.student?.stream || fromCode || streamCode(cls.className) || '').trim();
             const key = `${cls.classId}|${stream.toUpperCase()}`;
-            const C = (S.classes[key] = S.classes[key] || { cls: { ...cls, stream: stream || null }, sums: {} });
+            const label = cls.stream ? classLabel(cls.className, cls.stream)
+                : (fromCode && ownCode) ? ownCode.toUpperCase()          // as written in the school's report: G1R, G2Y…
+                : classLabel(cls.className, stream || null) || classDisplayName(cls);
+            const C = (S.classes[key] = S.classes[key] || { cls: { ...cls, stream: stream || null }, label, sums: {} });
             const a = (C.sums[sub.subjectId] = C.sums[sub.subjectId] || [0, 0]); a[0] += m; a[1]++;
         });
         const base = SECTION_CODES.length ? SECTION_CODES : FALLBACK_ORDER;
@@ -76,12 +84,13 @@ export default function SubjectMeansReport() {
         return order.filter(code => bySection[code]).map(code => {
             const S = bySection[code];
             const subjects = Object.entries(S.subjects).map(([id, name]) => ({ id, name }))
-                .sort((a, b) => rankOf(a.name) - rankOf(b.name) || a.name.localeCompare(b.name));
+                ;
+            subjects.splice(0, subjects.length, ...orderSubjects(subjects, x => x.name));
             const rows = Object.values(S.classes).sort((a, b) => compareClasses(a.cls, b.cls) || String(a.cls.stream || '').localeCompare(String(b.cls.stream || ''))).map(C => {
                 const means = {};
                 subjects.forEach(s => { const a = C.sums[s.id]; means[s.id] = a && a[1] ? a[0] / a[1] : null; });
                 const vals = Object.values(means).filter(v => v !== null);
-                return { cls: C.cls, means, total: vals.length ? vals.reduce((x, y) => x + y, 0) : null };
+                return { cls: C.cls, label: C.label, means, total: vals.length ? vals.reduce((x, y) => x + y, 0) : null };
             });
             return { code, label: sectionLabel(code), subjects, rows };
         });
@@ -90,22 +99,36 @@ export default function SubjectMeansReport() {
     const title = group ? `ACADEMIC REPORT ${group.name.toUpperCase()} ASSESSMENT ${group.year}` : '';
 
     const print = () => {
-        const pages = sections.map((s, i) => `<section class="pg"${i ? ' style="page-break-before:always"' : ''}>
-            ${letterheadHtml({ logoSize: 50 })}
-            <h2>${esc(title)}</h2><h3>${esc(s.label)}</h3>
+        const examWord = group.name.toUpperCase();
+        // Page 1: the cover (as in the school's document); then one page per section
+        const cover = `<section class="cover">
+            <div class="band"></div><div class="cream"></div><div class="panel"></div>
+            <svg class="loops" viewBox="0 0 220 80" aria-hidden="true"><path d="M0 8 H150 a32 32 0 0 1 0 64 H0" fill="none" stroke="#d6402f" stroke-width="7"/><path d="M0 24 H150 a16 16 0 0 1 0 32 H0" fill="none" stroke="#d6402f" stroke-width="7"/></svg>
+            <div class="title">${esc(group.year)} ${esc(examWord)}<br>ASSESSMENT<br>REPORT</div>
+        </section>`;
+        const pages = sections.map(s => `<section class="pg">
+            <h1>ACADEMIC REPORT ${esc(examWord)} ASSESSMENT ${esc(group.year)}</h1><h2>${esc(s.label)}</h2>
             <table><thead><tr><th class="l">CLASS</th>${s.subjects.map(x => `<th>${esc(x.name.toUpperCase())}</th>`).join('')}<th>TOTAL MEAN</th></tr></thead>
-            <tbody>${s.rows.map(r => `<tr><td class="l"><b>${esc(classLabel(r.cls.className, r.cls.stream) || classDisplayName(r.cls))}</b></td>${s.subjects.map(x => `<td>${fmt(r.means[x.id])}</td>`).join('')}<td><b>${fmt(r.total)}</b></td></tr>`).join('')}</tbody></table>
-            <p class="foot">Class mean per learning area, from marks entered in Results. Term ${esc(group.term)}, ${esc(group.year)}.</p></section>`).join('');
+            <tbody>${s.rows.map(r => `<tr><td class="l"><b>${esc(r.label)}</b></td>${s.subjects.map(x => `<td>${r.means[x.id] === null ? '--' : fmt(r.means[x.id])}</td>`).join('')}<td>${r.total === null ? '--' : fmt(r.total)}</td></tr>`).join('')}</tbody></table>
+        </section>`).join('');
         const w = window.open('', '_blank');
         if (!w) { alert('Allow pop-ups for this site to print.'); return; }
         w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${esc(title)}</title><style>
-            @page{size:A4 landscape;margin:12mm}body{font-family:Arial,Helvetica,sans-serif;color:#111;margin:0}
-            .bar{background:#1F3864;color:#fff;padding:10px 16px;display:flex;justify-content:space-between}.bar button{background:#FFD700;border:0;padding:6px 14px;border-radius:5px;font-weight:700;cursor:pointer}
-            .pg{padding:10px 14px}h2{text-align:center;color:#1F3864;font-size:16px;margin:10px 0 2px;text-decoration:underline}h3{text-align:center;color:#1F3864;font-size:15px;margin:0 0 10px}
-            table{width:100%;border-collapse:collapse;font-size:12px}th,td{border:1px solid #333;padding:6px 5px;text-align:center}th{background:#fff;color:#1F3864;font-size:10.5px}
-            .l{text-align:left;white-space:nowrap}tbody tr:nth-child(even){background:#f5f7fa}.foot{font-size:10px;color:#666;margin-top:6px}
-            @media print{.bar{display:none}.pg{padding:0}}</style></head><body>
-            <div class="bar"><b>${esc(title)}</b><button onclick="window.print()">Print / Save PDF</button></div>${pages}</body></html>`);
+            @page{size:A4 landscape;margin:12mm 14mm}*{box-sizing:border-box}
+            body{font-family:"Times New Roman",Times,serif;color:#000;margin:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+            .bar{background:#1F3864;color:#fff;padding:10px 16px;display:flex;justify-content:space-between;font-family:Arial,sans-serif}.bar button{background:#FFD700;border:0;padding:6px 14px;border-radius:5px;font-weight:700;cursor:pointer}
+            section{page-break-after:always;break-after:page}section:last-child{page-break-after:auto;break-after:auto}
+            .cover{position:relative;height:180mm;overflow:hidden}
+            .cover .band{position:absolute;left:3%;top:4%;width:92%;height:41%;background:#23475a}
+            .cover .cream{position:absolute;left:3%;top:45%;width:92%;height:41%;background:#f7e6d6}
+            .cover .panel{position:absolute;left:10%;top:8%;width:78%;height:73%;background:#fff7ef}
+            .cover .loops{position:absolute;left:3%;top:10%;width:24%}
+            .cover .title{position:absolute;left:16%;top:27.5%;width:73%;height:58.5%;background:#fff;padding:2.2% 1.2%;font-weight:700;font-size:19mm;line-height:1.32;letter-spacing:.3px}
+            .pg{padding:6mm 0}h1{text-align:center;font-size:21px;margin:0 0 12px}h2{text-align:center;font-size:21px;margin:0 0 30px}
+            table{border-collapse:collapse;font-size:14px;margin:0}th,td{border:1px solid #bfbfbf;padding:5px 6px;text-align:center;vertical-align:top}
+            th{font-weight:700;background:#fff}tbody tr:nth-child(odd){background:#f2f2f2}.l{text-align:left;white-space:nowrap}
+            @media print{.bar{display:none}}</style></head><body>
+            <div class="bar"><b>${esc(title)}</b><button onclick="window.print()">Print / Save PDF</button></div>${cover}${pages}</body></html>`);
         w.document.close(); w.focus();
     };
 
@@ -136,7 +159,7 @@ export default function SubjectMeansReport() {
                             <thead><tr><th style={{ ...th, textAlign: 'left' }}>CLASS</th>{s.subjects.map(x => <th key={x.id} style={th}>{x.name.toUpperCase()}</th>)}<th style={{ ...th, backgroundColor: '#1F3864', color: 'white' }}>TOTAL MEAN</th></tr></thead>
                             <tbody>{s.rows.map((r, i) => (
                                 <tr key={`${r.cls.classId}|${r.cls.stream || ''}`} style={{ backgroundColor: i % 2 ? '#fafbfd' : 'white' }}>
-                                    <td style={{ ...td, textAlign: 'left', fontWeight: 700, whiteSpace: 'nowrap' }}>{classLabel(r.cls.className, r.cls.stream) || classDisplayName(r.cls)}</td>
+                                    <td style={{ ...td, textAlign: 'left', fontWeight: 700, whiteSpace: 'nowrap' }}>{r.label}</td>
                                     {s.subjects.map(x => <td key={x.id} style={{ ...td, color: r.means[x.id] === null ? '#aaa' : '#111' }}>{fmt(r.means[x.id])}</td>)}
                                     <td style={{ ...td, fontWeight: 800, color: '#1F3864' }}>{fmt(r.total)}</td>
                                 </tr>))}</tbody>
