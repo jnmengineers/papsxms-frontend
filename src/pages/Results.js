@@ -346,7 +346,7 @@ function Results() {
         const subjectMap = {};
         const notCounted = new Set();
         rows.forEach(r => { if (r.subject) { subjectMap[r.subject.subjectId] = r.subject.subjectName; if (r.subject.countsInTotals === false) notCounted.add(String(r.subject.subjectId)); } });
-        const subjects = Object.entries(subjectMap).map(([id, name]) => ({ id, name, counts: !notCounted.has(String(id)) })).sort((a, b) => a.name.localeCompare(b.name));
+        const subjects = Object.entries(subjectMap).map(([id, name]) => ({ id, name: notCounted.has(String(id)) ? name + ' *' : name, counts: !notCounted.has(String(id)) })).sort((a, b) => a.name.localeCompare(b.name));
         const studentMap = {};
         rows.forEach(r => { if (r.student) studentMap[r.student.studentId] = r.student; });
         const students = Object.values(studentMap);

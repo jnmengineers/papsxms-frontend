@@ -99,7 +99,7 @@ export function buildA5Card(card, singleResults, progressiveData) {
           + `<tr class="sub2">${cols.map(() => '<th>Mks</th><th>Lvl</th>').join('')}</tr>`
         : `<tr><th class="sub">Learning area</th><th>MARKS</th><th>LEVEL</th></tr>`;
     const body = rows.map((r, i) => {
-        return `<tr class="${i % 2 ? '' : 'alt'}"><td class="sub">${esc(r.name)}</td>`
+        return `<tr class="${i % 2 ? '' : 'alt'}"><td class="sub">${esc(r.name)}${r.counts ? '' : ' *'}</td>`
             + (multi
                 ? r.marks.map(m => `<td class="n">${m === null ? '<span class="dim">–</span>' : mark(m)}</td><td class="c">${level(m)}</td>`).join('')
                   + `<td class="n b">${fmt2(r.avg)}${trend(r.marks)}</td><td class="c">${level(r.avg)}</td>`
@@ -134,7 +134,7 @@ export function buildA5Card(card, singleResults, progressiveData) {
     <div class="nm">${esc(name || '—')}</div>
     <div class="facts"><span><b>Adm</b> ${esc(st.admissionNumber || '—')}</span><span><b>Class</b> ${esc(cls || '—')}</span><span><b>Exam</b> ${esc(exam.examName || '')}</span></div>
   </div>
-  <div class="tablewrap"><table class="marks"><thead>${head}</thead><tfoot>${foot}</tfoot><tbody>${body || `<tr><td colspan="${multi ? cols.length * 2 + 3 : 3}" class="c dim">No results recorded</td></tr>`}</tbody></table></div>
+  <div class="tablewrap"><table class="marks"><thead>${head}</thead><tfoot>${foot}${rows.some(r => !r.counts) ? `<tr><td colspan="${multi ? cols.length * 2 + 3 : 3}" style="font-size:7.5px;color:#666;border:0;padding-top:2px">* Recorded only — not counted in totals, means or positions.</td></tr>` : ''}</tfoot><tbody>${body || `<tr><td colspan="${multi ? cols.length * 2 + 3 : 3}" class="c dim">No results recorded</td></tr>`}</tbody></table></div>
   <div class="summary">
     <div class="big" style="border-color:${overall.color}"><div class="k">Overall level</div><div class="v" style="color:${ink(overall.color)}">${esc(overall.label)}</div>${remark ? `<div class="r">${esc(remark)}</div>` : ''}</div>
     <div class="stat"><div class="k">Mean score</div><div class="v">${mean === null ? '–' : fmt2(mean) + '%'}</div><div class="r">${scored.length} learning area${scored.length === 1 ? '' : 's'}</div></div>
