@@ -263,7 +263,11 @@ function MarkEntry() {
     const setInvigilating = (on) => { sessionStorage.setItem('invigilating', on ? '1' : '0'); setInvigilatingRaw(on); setSelectedClass(''); setSubjects([]); };
     const ensureInvigilation = async (results) => {   // records the invigilation automatically when saving
         if (role !== 'TEACHER' || !invigilating || !selectedClass || !selectedExam) return;
-        const subjectIds = [...new Set((results || []).map(r => r.subjectId).filter(Boolean))];
+        // Own class or own subjects need no invigilation record
+        const mine = myClasses.find(c => String(c.classId) === String(selectedClass));
+        if (mine?.classTeacher || mine?.coverAll) return;
+        const ownSubs = new Set([...(mine?.subjectIds || []), ...(mine?.coverSubjectIds || [])].map(String));
+        const subjectIds = [...new Set((results || []).map(r => r.subjectId).filter(id => id && !ownSubs.has(String(id))))];
         if (subjectIds.length) await api.post('/api/invigilation', { examId: Number(selectedExam), classId: Number(selectedClass), subjectIds }).catch(() => {});
     };
     const windowWidth = useWindowWidth();
