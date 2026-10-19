@@ -3,6 +3,7 @@ import api from '../services/api';
 import { classDisplayName, classLabel, compareClasses } from '../utils/classUtils';
 import { SECTION_CODES, SECTION_NAMES_LIVE, SECTION_OF_GRADE_LIVE, gradeFromClassName } from '../utils/schoolData';
 import { letterheadHtml } from '../utils/school';
+import { useSchoolSettings } from '../context/SchoolSettingsContext';
 
 /**
  * Academic report per section, straight from the marks in Results (no report cards needed):
@@ -14,10 +15,19 @@ const esc = (v) => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<'
 // Usual order of learning areas; anything else follows alphabetically
 const ORDER = ['number', 'math', 'english', 'language', 'literacy', 'kiswahili', 'integrated', 'science', 'pre-tech', 'pretech', 'agric', 'social', 'environment', 'religious', 'cre', 'creative'];
 const rankOf = (name) => { const n = String(name).toLowerCase(); const i = ORDER.findIndex(k => n.includes(k)); return i === -1 ? 99 : i; };
-const sectionLabel = (code) => (code === 'JUNIOR_SCHOOL' ? 'JSS' : (SECTION_NAMES_LIVE[code] || String(code || 'Other').replace(/_/g, ' ')).toUpperCase());
-const sectionOfClass = (c) => c?.section || SECTION_OF_GRADE_LIVE[c?.gradeLevel] || SECTION_OF_GRADE_LIVE[gradeFromClassName(c?.className)] || 'OTHER';
+const sectionLabel = (code) => (code === 'JUNIOR_SCHOOL' ? 'JSS' : code === 'PRE_SCHOOL' ? 'PRE-SCHOOL' : (SECTION_NAMES_LIVE[code] || String(code || 'Other').replace(/_/g, ' ')).toUpperCase());
+// Backup when a class has no section set: by its name (PG/PP → pre-school; grades 1–3, 4–6, 7–9)
+const sectionByName = (name) => {
+    const n = String(name || '').toUpperCase().replace(/\s+/g, '');
+    if (/^(PG|PLAY|PP|PRE|BABY|KG)/.test(n)) return 'PRE_SCHOOL';
+    const g = Number((n.match(/^(?:GRADE|GR|G)?(\d{1,2})/) || [])[1]);
+    return g >= 1 && g <= 3 ? 'LOWER_PRIMARY' : g >= 4 && g <= 6 ? 'UPPER_PRIMARY' : g >= 7 && g <= 9 ? 'JUNIOR_SCHOOL' : 'OTHER';
+};
+const sectionOfClass = (c) => c?.section || SECTION_OF_GRADE_LIVE[c?.gradeLevel] || SECTION_OF_GRADE_LIVE[gradeFromClassName(c?.className)] || sectionByName(c?.className);
+const FALLBACK_ORDER = ['PRE_SCHOOL', 'LOWER_PRIMARY', 'UPPER_PRIMARY', 'JUNIOR_SCHOOL'];
 
 export default function SubjectMeansReport() {
+    const settings = useSchoolSettings();   // redraw once the school's sections have loaded
     const [exams, setExams] = useState([]);
     const [pick, setPick] = useState('');
     const [results, setResults] = useState(null);
@@ -61,7 +71,8 @@ export default function SubjectMeansReport() {
             const C = (S.classes[key] = S.classes[key] || { cls: { ...cls, stream: stream || null }, sums: {} });
             const a = (C.sums[sub.subjectId] = C.sums[sub.subjectId] || [0, 0]); a[0] += m; a[1]++;
         });
-        const order = [...SECTION_CODES, ...Object.keys(bySection).filter(k => !SECTION_CODES.includes(k))];
+        const base = SECTION_CODES.length ? SECTION_CODES : FALLBACK_ORDER;
+        const order = [...base, ...Object.keys(bySection).filter(k => !base.includes(k))];
         return order.filter(code => bySection[code]).map(code => {
             const S = bySection[code];
             const subjects = Object.entries(S.subjects).map(([id, name]) => ({ id, name }))
@@ -74,7 +85,7 @@ export default function SubjectMeansReport() {
             });
             return { code, label: sectionLabel(code), subjects, rows };
         });
-    }, [results]);
+    }, [results, settings]);   // eslint-disable-line react-hooks/exhaustive-deps
 
     const title = group ? `ACADEMIC REPORT ${group.name.toUpperCase()} ASSESSMENT ${group.year}` : '';
 
@@ -112,6 +123,10 @@ export default function SubjectMeansReport() {
             </div>
             {error && <p style={{ color: '#dc3545' }}>{error}</p>}
             {loading && <p style={{ color: '#666' }}>Loading marks…</p>}
+            {group && !loading && results && sections.length > 0 && (
+                <p style={{ color: '#555', fontSize: '13px', margin: '10px 0 0' }}>
+                    Found {results.length} marks · {sections.map(s => `${s.label}: ${s.rows.length} class${s.rows.length === 1 ? '' : 'es'}`).join(' · ')}
+                </p>)}
             {group && !loading && results && sections.length === 0 && <p style={{ color: '#777' }}>No marks have been entered for this assessment yet.</p>}
             {sections.map(s => (
                 <div key={s.code} style={{ marginTop: '18px' }}>
