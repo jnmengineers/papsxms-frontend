@@ -11,6 +11,7 @@ import Enquiries from './pages/Enquiries';
 import SitePosts from './pages/SitePosts';
 import DeletedMarks from './pages/DeletedMarks';
 import JobApplications from './pages/JobApplications';
+import ParentFeedback from './pages/ParentFeedback';
 import Teachers from './pages/Teachers';
 import Classes from './pages/Classes';
 import Subjects from './pages/Subjects';
@@ -45,6 +46,9 @@ import Settings from './pages/Settings';
 import ScrollToTop from './components/ScrollToTop';
 import FormSpotlight from './components/FormSpotlight';
 
+// Short links for parents (WhatsApp/SMS): /feedback → the website's feedback form
+const GoTo = ({ to }) => { window.location.replace(to); return null; };
+
 function App() {
     return (
         <SchoolSettingsProvider>
@@ -58,6 +62,8 @@ function App() {
                 {/* Public */}
                 <Route path="/" element={<Login />} />
                 <Route path="/unauthorized" element={<Unauthorized />} />
+                <Route path="/feedback" element={<GoTo to="/website/feedback.html" />} />
+                <Route path="/website" element={<GoTo to="/website/index.html" />} />
 
                 {/* All logged in users */}
                 <Route path="/dashboard" element={
@@ -70,6 +76,11 @@ function App() {
                 <Route path="/students" element={
                     <PrivateRoute allowedRoles={['ADMIN', 'TEACHER', 'CLERK', 'CHAIRPERSON']}>
                         <Students />
+                    </PrivateRoute>
+                } />
+                <Route path="/parent-feedback" element={
+                    <PrivateRoute allowedRoles={['ADMIN', 'HEAD_TEACHER', 'CHAIRPERSON']}>
+                        <ParentFeedback />
                     </PrivateRoute>
                 } />
                 <Route path="/job-applications" element={

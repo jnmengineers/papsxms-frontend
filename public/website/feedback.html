@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Parents' Feedback</title>
+<link rel="icon" id="favicon" href="/favicon.ico">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700&family=Open+Sans:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root{--navy:#13306B;--red:#C8102E;--grey:#E9ECF1;--ink:#1d2433;--muted:#5b6475;--bg:#F3F4F7}
+  *{box-sizing:border-box}body{margin:0;font-family:"Open Sans",Arial,sans-serif;background:var(--bg);color:var(--ink)}
+  .top{background:#fff;border-top:5px solid var(--red);box-shadow:0 2px 10px rgba(0,0,0,.06)}
+  .top .in{max-width:720px;margin:0 auto;padding:14px 16px;display:flex;align-items:center;gap:12px}
+  .top img{width:50px;height:50px;object-fit:contain;display:none}.top b{font-family:Poppins;color:var(--navy);font-size:16px;display:block}.top span{font-size:12px;color:var(--red);font-style:italic}
+  main{max-width:720px;margin:0 auto;padding:16px}
+  .card{background:#fff;border-radius:12px;padding:18px;margin-bottom:14px;box-shadow:0 2px 10px rgba(0,0,0,.05)}
+  h1{font-family:Poppins;color:var(--navy);font-size:22px;margin:0 0 6px}.lead{color:var(--muted);margin:0}
+  .q{font-weight:600;color:var(--navy);margin:0 0 8px}.hint{font-size:12px;color:var(--muted);font-weight:400}
+  .stars{display:flex;gap:6px;flex-wrap:wrap}.stars button{font-size:30px;line-height:1;background:none;border:0;cursor:pointer;color:#cfd5df;padding:2px}
+  .stars button.on{color:#f5a623}.stars small{align-self:center;color:var(--muted);font-size:13px;margin-left:4px}
+  .opts{display:flex;gap:8px;flex-wrap:wrap}.opts button{padding:9px 18px;border-radius:20px;border:2px solid var(--navy);background:#fff;color:var(--navy);font-weight:600;cursor:pointer;font-size:15px}
+  .opts button.on{background:var(--navy);color:#fff}
+  label{display:block;font-weight:600;color:var(--navy);margin-bottom:10px}input,textarea{width:100%;font:inherit;padding:11px;border:1.5px solid #d6dce6;border-radius:8px;margin-top:4px;font-weight:400}
+  .row{display:grid;grid-template-columns:1fr 1fr;gap:10px}@media(max-width:560px){.row{grid-template-columns:1fr}}
+  .btn{background:var(--red);color:#fff;border:0;padding:13px 26px;border-radius:8px;font-size:16px;font-weight:700;cursor:pointer;width:100%}
+  .msg{padding:14px;border-radius:8px;margin-top:12px;display:none}.ok{background:#d4edda;color:#155724}.err{background:#f8d7da;color:#721c24}
+  .hp{position:absolute;left:-9999px}
+  .sec{font-family:Poppins;color:#fff;background:var(--navy);padding:9px 14px;border-radius:8px;font-size:15px;margin:18px 0 10px}
+  .note{font-size:13px;color:var(--muted);margin:0 0 10px}.chk{display:flex;gap:8px;align-items:center;font-weight:600;color:var(--navy);margin:6px 0 12px}.chk input{width:auto;margin:0}
+  .closing{text-align:center;color:var(--muted);font-size:14px}.closing i{display:block;color:var(--red);margin-top:6px}.done{text-align:center;padding:30px 18px}.done h2{color:var(--navy);font-family:Poppins}
+</style>
+</head>
+<body>
+<div class="top"><div class="in"><img id="logo" alt=""><div><b id="name">Our School</b><span id="motto"></span></div></div></div>
+<main id="main">
+  <div class="card"><h1>PARENTS' END-OF-YEAR FEEDBACK &amp; COMMENT FORM</h1>
+    <p class="lead"><b>Academic Year <span id="yr"></span> · Parent/Guardian Evaluation Form</b></p>
+    <p class="lead" style="margin-top:10px">Dear Parent/Guardian,</p>
+    <p class="lead" style="margin-top:6px">Thank you for partnering with <span class="sn">Pipeline Adventist School</span> in the education and holistic development of your child. Kindly complete this form to help us evaluate our performance, identify areas for improvement, and plan effectively for the coming year. Your honest feedback is highly valued.</p></div>
+  <form id="f" onsubmit="return send(event)">
+    <div class="sec">SECTION A: LEARNER DETAILS</div>
+    <div class="card">
+      <p class="note">You may leave your name blank if you prefer to provide feedback anonymously.</p>
+      <label class="chk"><input type="checkbox" id="anon"> I wish to provide feedback anonymously.</label>
+      <div id="who"><div class="row"><label>Parent/Guardian name<input name="parentName" maxlength="100"></label><label>Phone (optional)<input name="phone" inputmode="tel" maxlength="15"></label></div>
+        <label>Learner's name (optional)<input id="learnerName" maxlength="100"></label></div>
+      <p class="q">Grade/Class</p><div class="opts" data-k="band"></div>
+    </div>
+    <div class="sec">SECTION B: RATE OUR SCHOOL</div>
+    <p class="note">Select one rating for each area.</p>
+    <div id="rateB"></div>
+    <div class="sec">SECTION C: PARENT COMMENTS AND SUGGESTIONS</div>
+    <div class="card" id="secC"></div>
+    <div class="sec">SECTION D: OVERALL SATISFACTION</div>
+    <div class="card"><p class="q">1. Overall, how satisfied are you with the education and services provided by the school?</p><div class="opts" data-k="overall"></div></div>
+    <div class="card"><p class="q">2. Would you recommend <span class="sn">Pipeline Adventist School</span> to other parents?</p><div class="opts" data-k="recommend"></div></div>
+    <input class="hp" name="website" tabindex="-1" autocomplete="off" aria-hidden="true">
+    <button class="btn" id="sendBtn">Submit feedback</button>
+    <div class="msg" id="msg"></div>
+  </form>
+  <div class="card closing" style="margin-top:14px">Thank you for taking the time to share your views. Your feedback will guide our continuous improvement as we nurture learners who are spiritually grounded, academically competent, disciplined and prepared for service.<i id="mottoQ">“Abreast with the Best in Holistic Education.”</i></div>
+</main>
+<script>
+  const $ = (id) => document.getElementById(id);
+  // ── The school's form (edit the wording here) ──
+  const RATE = ['Excellent', 'Good', 'Fair', 'Needs improvement'];
+  const B = ['Academic progress and quality of teaching', 'Communication with parents and guardians', 'Learner discipline, safety and welfare',
+    'Spiritual nurture and Christian values', 'Co-curricular activities, clubs and sports', 'Cleanliness and learning environment',
+    'School leadership and administration', 'Fee management and value for money'];
+  const C = ['What do you appreciate most about <span class="sn">Pipeline Adventist School</span>?', 'Which areas do you feel the school should improve?',
+    'What additional programs, facilities or learner support would you like the school to introduce?', 'How can the school improve communication and partnership with parents?',
+    'Any other comments or recommendations for the school management?'];
+  const CHOICES = { band: ['Pre-Primary (PP1/PP2)', 'Lower Primary (Grades 1–3)', 'Upper Primary (Grades 4–6)', 'Junior School (Grades 7–9)'],
+    overall: ['Very satisfied', 'Satisfied', 'Neutral', 'Dissatisfied', 'Very dissatisfied'], recommend: ['Yes', 'Not sure', 'No'] };
+  B.forEach((_, i) => CHOICES['b' + (i + 1)] = RATE);
+  const answers = {};
+  $('yr').textContent = new Date().getFullYear();
+  $('rateB').innerHTML = B.map((q, i) => `<div class="card"><p class="q">${i + 1}. ${q}</p><div class="opts" data-k="b${i + 1}"></div></div>`).join('');
+  $('secC').innerHTML = C.map((q, i) => `<label>${i + 1}. ${q}<textarea data-c="c${i + 1}" rows="3" maxlength="1500"></textarea></label>`).join('');
+  document.querySelectorAll('.opts[data-k]').forEach(box => {
+    box.innerHTML = CHOICES[box.dataset.k].map(v => `<button type="button" data-v="${v}">${v}</button>`).join('');
+    box.addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; answers[box.dataset.k] = b.dataset.v; box.querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b)); });
+  });
+  $('anon').addEventListener('change', () => { $('who').style.display = $('anon').checked ? 'none' : ''; });
+  fetch('/api/settings/public').then(r => r.json()).then(p => {
+    const n = p.name || p.schoolName; if (n) { $('name').textContent = n; document.title = "Parents' Feedback — " + n; document.querySelectorAll('.sn').forEach(x => x.textContent = n); }
+    if (p.motto) { $('motto').textContent = p.motto; $('mottoQ').textContent = '“' + p.motto.replace(/[.“”"]+$/g, '') + '.”'; }
+    const logo = p.logoLeft || p.logo; if (logo) setLogo(logo); else systemLogo();
+  }).catch(systemLogo);
+  function setLogo(src) { $('logo').src = src; $('logo').style.display = 'block'; $('favicon').href = src; }
+  function systemLogo() { fetch('/asset-manifest.json').then(r => r.json()).then(m => { const f = m.files || {}, k = Object.keys(f).find(x => /logo1\.[a-z]+$/i.test(x)); if (k) setLogo(f[k]); }).catch(() => {}); }
+
+  async function send(e) {
+    e.preventDefault();
+    const d = Object.fromEntries(new FormData($('f')));
+    document.querySelectorAll('[data-c]').forEach(t => { if (t.value.trim()) answers[t.dataset.c] = t.value.trim(); });
+    if ($('anon').checked) { d.parentName = ''; d.phone = ''; delete answers.learnerName; } else if ($('learnerName').value.trim()) answers.learnerName = $('learnerName').value.trim();
+    d.className = answers.band || ''; d.answers = answers;
+    const m = $('msg'); $('sendBtn').disabled = true;
+    try {
+      const r = await fetch('/api/public/feedback', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(d) });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(j.message || 'Could not send. Please try again.');
+      $('main').innerHTML = `<div class="card done"><h2>Thank you!</h2><p>${j.message}</p></div>`; window.scrollTo(0, 0);
+    } catch (err) { m.className = 'msg err'; m.textContent = err.message; m.style.display = 'block'; $('sendBtn').disabled = false; }
+    return false;
+  }
+</script>
+</body>
+</html>
