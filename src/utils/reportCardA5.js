@@ -58,7 +58,7 @@ function subjectsOf(singleResults, progressiveData) {
             rows: prog.map(s => {
                 const marks = cols.map(([k]) => num(s[k]));
                 const done = marks.filter(m => m !== null);
-                return { name: s.subjectName, marks, avg: done.length ? done.reduce((a, b) => a + b, 0) / done.length : null };
+                return { name: s.subjectName, counts: s.countsInTotals !== false, marks, avg: done.length ? done.reduce((a, b) => a + b, 0) / done.length : null };
             }),
         };
     }
@@ -66,7 +66,7 @@ function subjectsOf(singleResults, progressiveData) {
         cols: [['mark', 'MARK', 'Mark']],
         rows: (singleResults || []).map(r => {
             const m = num(r.marksObtained);
-            return { name: r.subject?.subjectName || '', marks: [m], avg: m };
+            return { name: r.subject?.subjectName || '', counts: r.subject?.countsInTotals !== false, marks: [m], avg: m };
         }),
     };
 }
@@ -76,9 +76,11 @@ export function buildA5Card(card, singleResults, progressiveData) {
     const st = card.student || {};
     const exam = card.exam || {};
     const { cols, rows } = subjectsOf(singleResults, progressiveData);
-    const scored = rows.filter(r => r.avg !== null);
-    // Mean = average of ALL marks across all exams — the same calculation as the full-page card
-    const allMarks = rows.flatMap(r => r.marks).filter(m => m !== null);
+    // Subjects set not to count (e.g. Computer) are shown but left out of totals, means, levels and best/weakest
+    const counted = rows.filter(r => r.counts);
+    const scored = counted.filter(r => r.avg !== null);
+    // Mean = average of ALL counted marks across all exams — the same calculation as the full-page card
+    const allMarks = counted.flatMap(r => r.marks).filter(m => m !== null);
     const mean = allMarks.length ? allMarks.reduce((a, b) => a + b, 0) / allMarks.length : null;
     const overall = gradeInfo(mean);
     const best = scored.length ? scored.reduce((a, r) => (r.avg > a.avg ? r : a)) : null;
@@ -106,7 +108,7 @@ export function buildA5Card(card, singleResults, progressiveData) {
     }).join('');
     // Per-exam statistics: total and mean (with level) for each exam column
     const colStats = cols.map((_, ci) => {
-        const ms = rows.map(r => r.marks[ci]).filter(m => m !== null);
+        const ms = counted.map(r => r.marks[ci]).filter(m => m !== null);
         return { total: ms.reduce((a, b) => a + b, 0), n: ms.length, mean: ms.length ? ms.reduce((a, b) => a + b, 0) / ms.length : null };
     });
     const foot = rows.length ? (multi

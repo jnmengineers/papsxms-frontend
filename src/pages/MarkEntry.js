@@ -845,7 +845,6 @@ function MarkEntry() {
                             {invigilating ? 'Turn off' : 'Turn on'}
                         </button>
                     </div>
-                )} setError={setError} setSuccessMsg={setSuccessMsg} />
                 )}
 
                 {(role === 'TEACHER' || role === 'ADMIN') && (

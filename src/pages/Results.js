@@ -63,14 +63,14 @@ const computeStats = (students, subjects, pivot) => {
 
     const studentStats = {};
     students.forEach(st => {
-        const marks = subjects.map(sub => markOf(pivot[st.studentId]?.[sub.id])).filter(m => m !== null);
+        const marks = subjects.filter(sub => sub.counts !== false).map(sub => markOf(pivot[st.studentId]?.[sub.id])).filter(m => m !== null);   // * subjects don't count
         const total = marks.reduce((a, b) => a + b, 0);
         const average = marks.length ? total / marks.length : null;
         studentStats[st.studentId] = { total, average, count: marks.length, grade: average === null ? '-' : gradeOf(average) };
     });
     const studentRanks = rankBy(students.map(s => s.studentId), id => studentStats[id].total);
 
-    const means = Object.values(subjectStats).map(s => s.mean).filter(m => m !== null);
+    const means = subjects.filter(sub => sub.counts !== false).map(sub => subjectStats[sub.id].mean).filter(m => m !== null);
     const classMean = means.length ? means.reduce((a, b) => a + b, 0) : null;
 
     return { subjectStats, subjectRanks, studentStats, studentRanks, classMean };
@@ -344,8 +344,9 @@ function Results() {
     // keepOrder: keep rows where they are (so they don't jump while editing).
     const buildPivot = (rows, pending, keepOrder) => {
         const subjectMap = {};
-        rows.forEach(r => { if (r.subject) subjectMap[r.subject.subjectId] = r.subject.subjectName; });
-        const subjects = Object.entries(subjectMap).map(([id, name]) => ({ id, name })).sort((a, b) => a.name.localeCompare(b.name));
+        const notCounted = new Set();
+        rows.forEach(r => { if (r.subject) { subjectMap[r.subject.subjectId] = r.subject.subjectName; if (r.subject.countsInTotals === false) notCounted.add(String(r.subject.subjectId)); } });
+        const subjects = Object.entries(subjectMap).map(([id, name]) => ({ id, name, counts: !notCounted.has(String(id)) })).sort((a, b) => a.name.localeCompare(b.name));
         const studentMap = {};
         rows.forEach(r => { if (r.student) studentMap[r.student.studentId] = r.student; });
         const students = Object.values(studentMap);

@@ -8,7 +8,7 @@ import { useSchoolSettings } from '../context/SchoolSettingsContext';
 
 const Icon = ({ name, style }) => <i className={`bi bi-${name}`} aria-hidden="true" style={{ marginRight: '6px', ...style }} />;
 
-const EMPTY_FORM = { subjectName: '', subjectCode: '', gradeLevel: '' };
+const EMPTY_FORM = { subjectName: '', subjectCode: '', gradeLevel: '', countsInTotals: true };
 
 // Sections and grades come from School Settings
 const SECTIONS = SECTION_CODES;
@@ -58,6 +58,11 @@ const SubjectFormFields = ({ formData, setFormData, onSubmit, onCancel, submitLa
                     </select>
                 </div>
             </div>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', margin: '10px 0', fontSize: '14px', color: '#1F3864', fontWeight: 600 }}>
+                <input type="checkbox" checked={formData.countsInTotals !== false} onChange={e => setFormData({ ...formData, countsInTotals: e.target.checked })} />
+                Counts in totals, means and positions
+                <span style={{ fontWeight: 400, color: '#777', fontSize: '12px' }}>(untick for subjects only recorded, e.g. Computer)</span>
+            </label>
             <div style={styles.btnGroup}>
                 <button type="submit" style={{ ...styles.submitBtn, opacity: saving ? 0.7 : 1 }} disabled={saving}>
                     <Icon name={saving ? 'hourglass-split' : submitIcon} />{saving ? 'Saving...' : submitLabel}
@@ -128,7 +133,7 @@ function Subjects() {
     const handleEdit = (subject) => {
         if (editingSubject?.subjectId === subject.subjectId) { handleCancelEdit(); return; }
         setEditingSubject(subject);
-        setFormData({ subjectName: subject.subjectName || '', subjectCode: subject.subjectCode || '', gradeLevel: subject.gradeLevel || '' });
+        setFormData({ subjectName: subject.subjectName || '', subjectCode: subject.subjectCode || '', gradeLevel: subject.gradeLevel || '', countsInTotals: subject.countsInTotals !== false });
         setShowAddForm(false);
     };
 

@@ -70,6 +70,7 @@ const buildReportPage = (card, singleResults, progressiveData) => {
         const colSums = { OPENING: 0, MID_TERM: 0, END_TERM: 0 };
         const colCounts = { OPENING: 0, MID_TERM: 0, END_TERM: 0 };
         rawSubjects.forEach(sub => {
+            if (sub.countsInTotals === false) return;   // recorded only (e.g. Computer)
             if (sub.opening != null) { colSums.OPENING += sub.opening; colCounts.OPENING++; }
             if (sub.midTerm != null) { colSums.MID_TERM += sub.midTerm; colCounts.MID_TERM++; }
             if (sub.endTerm != null) { colSums.END_TERM += sub.endTerm; colCounts.END_TERM++; }
@@ -109,7 +110,7 @@ const buildReportPage = (card, singleResults, progressiveData) => {
             + '<th style="width:22%;color:white;padding:7px 8px;text-align:center;font-size:12px;">MARKS</th>'
             + '<th style="width:22%;color:#FFD700;padding:7px 8px;text-align:center;font-size:12px;">LEVEL</th>';
         subjectRows = singleResults.map((r, i) => {
-            if (r.marksObtained != null && !isNaN(r.marksObtained)) { termAvgSum += r.marksObtained; termAvgCount++; }
+            if (r.subject?.countsInTotals !== false && r.marksObtained != null && !isNaN(r.marksObtained)) { termAvgSum += r.marksObtained; termAvgCount++; }
             return '<tr style="background:' + (i % 2 === 0 ? '#f8f9fa' : 'white') + '">'
                 + '<td style="padding:6px 8px;border:1px solid #ddd;font-size:12px;">' + (i + 1) + '. ' + esc(r.subject ? r.subject.subjectName : '') + '</td>'
                 + '<td style="padding:6px 8px;border:1px solid #ddd;text-align:center;font-weight:bold;">' + (r.marksObtained != null ? (Number.isInteger(Number(r.marksObtained)) ? r.marksObtained : Number(r.marksObtained).toFixed(2)) : '-') + '</td>'
