@@ -7,6 +7,7 @@ import { classDisplayName, gradeLabel, classLabel } from '../utils/classUtils';
 import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
 import Footer from '../components/Footer';
+import SubjectMeansReport from '../components/SubjectMeansReport';
 import { schoolName, schoolShortName, schoolMotto, schoolContact, logoLeftUrl, logoRightUrl } from '../utils/school';
 import { GRADE_ORDER_LIVE, SECTION_CODES } from '../utils/schoolData';
 
@@ -433,6 +434,9 @@ function SectionReport() {
 
                 {error && <div style={styles.error} role="alert"><Bi name="exclamation-triangle-fill" />{error}</div>}
                 {successMsg && <div style={styles.success}><Bi name="check-circle-fill" />{successMsg}</div>}
+
+                {/* Section report straight from Results: class mean per subject, per section */}
+                <SubjectMeansReport />
 
                 {/* Controls */}
                 <div style={styles.controlCard}>
