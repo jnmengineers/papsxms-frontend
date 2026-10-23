@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, useParams } from 'react-router-dom';
 import PrivateRoute from './components/PrivateRoute';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
@@ -12,6 +12,7 @@ import SitePosts from './pages/SitePosts';
 import DeletedMarks from './pages/DeletedMarks';
 import JobApplications from './pages/JobApplications';
 import ParentFeedback from './pages/ParentFeedback';
+import Forms from './pages/Forms';
 import Teachers from './pages/Teachers';
 import Classes from './pages/Classes';
 import Subjects from './pages/Subjects';
@@ -48,6 +49,8 @@ import FormSpotlight from './components/FormSpotlight';
 
 // Short links for parents (WhatsApp/SMS): /feedback → the website's feedback form
 const GoTo = ({ to }) => { window.location.replace(to); return null; };
+// /f/<code> → a form built in the system (Forms page)
+const FormLink = () => { const { code } = useParams(); window.location.replace('/website/form.html?c=' + encodeURIComponent(code || '')); return null; };
 
 function App() {
     return (
@@ -63,6 +66,7 @@ function App() {
                 <Route path="/" element={<Login />} />
                 <Route path="/unauthorized" element={<Unauthorized />} />
                 <Route path="/feedback" element={<GoTo to="/website/feedback.html" />} />
+                <Route path="/f/:code" element={<FormLink />} />
                 <Route path="/website" element={<GoTo to="/website/index.html" />} />
 
                 {/* All logged in users */}
@@ -76,6 +80,11 @@ function App() {
                 <Route path="/students" element={
                     <PrivateRoute allowedRoles={['ADMIN', 'TEACHER', 'CLERK', 'CHAIRPERSON']}>
                         <Students />
+                    </PrivateRoute>
+                } />
+                <Route path="/forms" element={
+                    <PrivateRoute allowedRoles={['ADMIN', 'CLERK', 'HEAD_TEACHER']}>
+                        <Forms />
                     </PrivateRoute>
                 } />
                 <Route path="/parent-feedback" element={

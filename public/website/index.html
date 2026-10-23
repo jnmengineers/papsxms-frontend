@@ -74,7 +74,7 @@ footer .bottom{background:#fff;border-top:1px solid var(--grey);text-align:cente
 <header><div class="wrap">
   <img id="logo" alt="School logo" style="display:none"><div class="brand"><b id="name">Our School</b><span id="motto"></span></div>
   <button class="burger" onclick="document.querySelector('nav').classList.toggle('open')" aria-label="Menu"><i class="bi bi-list"></i></button>
-  <nav onclick="this.classList.remove('open')"><a href="#home">Home</a><a href="#about">About</a><a href="#academics">Academics</a><a href="#fees">Admissions</a><a href="#leaders">Management</a><a href="#careers">Careers</a><a href="#donate">Support us</a><a href="#news">News</a><a href="#gallery">Gallery</a><a href="#apply">Contact</a></nav>
+  <nav onclick="this.classList.remove('open')"><a href="#home">Home</a><a href="#about">About</a><a href="#academics">Academics</a><a href="#fees">Admissions</a><a href="#leaders">Management</a><a href="#forms" id="formsNav" style="display:none">Forms</a><a href="#careers">Careers</a><a href="#donate">Support us</a><a href="#news">News</a><a href="#gallery">Gallery</a><a href="#apply">Contact</a></nav>
 </div>
   <div class="ticker" id="tickerBox" style="display:none"><div id="ticker"></div></div>
 </header>
@@ -115,6 +115,11 @@ footer .bottom{background:#fff;border-top:1px solid var(--grey);text-align:cente
   <div class="head"><small>Qualified teachers</small><h2>Meet our management</h2><p>A dedicated team committed to the academic, spiritual and personal growth of every learner.</p></div>
   <h3 style="color:var(--navy2);text-align:center;margin:0 0 14px">Board of management</h3><div class="grid people" id="board"></div>
   <h3 style="color:var(--navy2);text-align:center;margin:30px 0 14px">School management</h3><div class="grid people" id="mgmt"></div>
+</div></section>
+
+<section id="forms" style="display:none"><div class="wrap">
+  <div class="head"><small>Have your say</small><h2>Forms &amp; surveys</h2><p>Open forms from the school. It only takes a few minutes — thank you for taking part.</p></div>
+  <div class="grid" id="formList"></div>
 </div></section>
 
 <section id="careers"><div class="wrap">
@@ -175,12 +180,14 @@ footer .bottom{background:#fff;border-top:1px solid var(--grey);text-align:cente
 <footer><div class="wrap cols">
   <div><h4 id="fName">Our School</h4><p id="fMotto" style="margin:0 0 10px"></p><p id="fContact" style="margin:0"></p></div>
   <div><h4>Quick links</h4><a href="#about">About us</a><a href="#academics">Academics</a><a href="#fees">Fees &amp; admissions</a><a href="#news">News &amp; events</a></div>
-  <div><h4>Resources</h4><a href="/login">Staff portal</a><a href="#apply">Apply online</a><a href="#gallery">Gallery</a></div>
+  <div><h4>Resources</h4><a href="/login">Staff portal</a><a href="feedback.html">Parents' feedback</a><a href="#apply">Apply online</a><a href="#gallery">Gallery</a></div>
   <div><h4>Visit us</h4><p id="fVisit" style="margin:0"></p></div>
 </div><div class="bottom">&copy; <span id="yr"></span> <span id="fName2"></span>. All rights reserved.</div></footer>
 <a class="btn float" href="#apply"><i class="bi bi-pencil-square"></i> Apply now</a>
 
 <script>
+  // Local testing (npm start on :3000) talks to the backend on :8080; on the server, the same address
+  const API = (location.port === '3000' || location.protocol === 'file:') ? 'http://localhost:8080' : '';
 /* ══════════ EDIT THE WEBSITE TEXT HERE ══════════
    Photos: put them in public/website/img/ (e.g. hero1.jpg) and write the file name below. */
 const SITE = {
@@ -219,14 +226,14 @@ const SITE = {
 };
 /* ══════════════════════════════════════════════ */
 const $ = (id) => document.getElementById(id), esc = (v) => String(v ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-const bg = (img) => img ? `background-image:url('${img}')` : '';
+const bg = (img) => img ? `background-image:url('${String(img).startsWith('/api') ? API + img : img}')` : '';
 const SECTIONS = { PRE_SCHOOL: 'Pre-Primary', LOWER_PRIMARY: 'Lower Primary (Grades 1–3)', UPPER_PRIMARY: 'Upper Primary (Grades 4–6)', JUNIOR_SCHOOL: 'Junior School (Grades 7–9)' };
 const kes = (n) => 'KES ' + Number(n || 0).toLocaleString('en-KE');
 $('yr').textContent = new Date().getFullYear();
 // ── All sections on one page; a menu click jumps straight to its section (no visible scrolling) ──
-const SECTIONS_ALL = ['home', 'statsBand', 'about', 'academics', 'fees', 'leaders', 'news', 'gallery', 'careers', 'donate', 'ctaBand', 'apply'];
+const SECTIONS_ALL = ['home', 'statsBand', 'about', 'academics', 'fees', 'leaders', 'news', 'gallery', 'forms', 'careers', 'donate', 'ctaBand', 'apply'];
 function showPage() {
-  SECTIONS_ALL.forEach(id => { const e = $(id); if (e) e.style.display = (id === 'leaders' && !window.hasLeaders) ? 'none' : ''; });
+  SECTIONS_ALL.forEach(id => { const e = $(id); if (e) e.style.display = ((id === 'leaders' && !window.hasLeaders) || (id === 'forms' && !window.hasForms)) ? 'none' : ''; });
   const want = (location.hash || '#home').slice(1), t = $(want);
   if (t && t.style.display !== 'none' && want !== 'home') { t.scrollIntoView({ behavior: 'instant', block: 'start' }); t.classList.remove('page-fade'); void t.offsetWidth; t.classList.add('page-fade'); }
   else window.scrollTo({ top: 0, behavior: 'instant' });
@@ -253,35 +260,35 @@ $('gal').innerHTML = SITE.gallery.map(g => `<div style="${bg(g)}"></div>`).join(
 showPage();
 // Posted from the system (Website News & Gallery); the samples above stay until something is posted
 const fmtD = (d) => d ? new Date(d + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '';
-fetch('/api/public/posts?kind=NEWS,EVENT&limit=6').then(r => r.json()).then(list => { if (!list.length) return;
+fetch(API + '/api/public/posts?kind=NEWS,EVENT&limit=6').then(r => r.json()).then(list => { if (!list.length) return;
   $('newsList').innerHTML = list.map(p => `<div class="card"><div class="img" style="${bg(p.image)}"></div><div class="p"><span class="tag">${esc(p.tag || (p.kind === 'EVENT' ? 'Event' : 'News'))}</span>${p.eventDate ? ` <small style="color:var(--muted)">${fmtD(p.eventDate)}</small>` : ''}<h3>${esc(p.title)}</h3><p>${esc(p.body || '')}</p></div></div>`).join('');
 }).catch(() => {});
-fetch('/api/public/posts?kind=SLIDE&limit=6').then(r => r.json()).then(list => { if (!list.length) return;
+fetch(API + '/api/public/posts?kind=SLIDE&limit=6').then(r => r.json()).then(list => { if (!list.length) return;
   SITE.slides = list.map(p => ({ img: p.image, small: p.tag || '', title: p.title || '', text: p.body || '' }));
   $('slides').innerHTML = SITE.slides.map((s, i) => `<div class="slide${i ? '' : ' on'}" style="${bg(s.img)}"><div class="in"><small>${esc(s.small)}</small><h1>${esc(s.title)}</h1><p>${esc(s.text)}</p><div><a class="btn" href="#apply">Apply now</a><a class="btn o" href="#about">Learn more</a></div></div></div>`).join('');
   $('dots').innerHTML = SITE.slides.map((_, i) => `<button class="${i ? '' : 'on'}" onclick="go(${i})" aria-label="Slide ${i + 1}"></button>`).join(''); cur = 0;
 }).catch(() => {});
 // Management and programmes from the database (Website News & Gallery)
-fetch('/api/public/posts?kind=PERSON&limit=30').then(r => r.json()).then(list => { if (!list.length) return;
+fetch(API + '/api/public/posts?kind=PERSON&limit=30').then(r => r.json()).then(list => { if (!list.length) return;
   const rows = list.slice().reverse();   // in the order they were added
   const pick = (g) => rows.filter(p => (p.tag || 'SCHOOL') === g).map(p => [p.image, p.title, p.body || '']);
   const b = pick('BOARD'), m = pick('SCHOOL'); if (b.length || m.length) { window.hasLeaders = true; showPage(); } if (b.length) $('board').innerHTML = b.map(person).join(''); if (m.length) $('mgmt').innerHTML = m.map(person).join('');
 }).catch(() => {});
-fetch('/api/public/posts?kind=PROGRAM&limit=10').then(r => r.json()).then(list => { if (!list.length) return;
+fetch(API + '/api/public/posts?kind=PROGRAM&limit=10').then(r => r.json()).then(list => { if (!list.length) return;
   $('levels').innerHTML = list.slice().reverse().map(p => `<div class="card"><div class="img" style="${bg(p.image)}"></div><div class="p"><h3>${esc(p.title)}</h3><p>${esc(p.body || '')}</p></div></div>`).join('');
 }).catch(() => {});
-fetch('/api/public/posts?kind=GALLERY&limit=12').then(r => r.json()).then(list => { if (!list.length) return;
+fetch(API + '/api/public/posts?kind=GALLERY&limit=12').then(r => r.json()).then(list => { if (!list.length) return;
   $('gal').innerHTML = list.map(p => `<div style="${bg(p.image)}" title="${esc(p.title || '')}"></div>`).join('');
 }).catch(() => {});
 // The school logo, from the system: uploaded in Settings, or the system's own built-in logo (found in its file list)
-function setLogo(src) { $('logo').src = src; $('logo').style.display = ''; $('favicon').href = src; }
+function setLogo(src) { if (String(src).startsWith('/api')) src = API + src; $('logo').src = src; $('logo').style.display = ''; $('favicon').href = src; }
 function systemLogo() {
   fetch('/asset-manifest.json').then(r => r.json()).then(m => {
     const files = m.files || {}, key = Object.keys(files).find(k => /logo1\.[a-z]+$/i.test(k)) || Object.keys(files).find(k => /logo/i.test(k) && /\.(png|jpe?g|svg|webp)$/i.test(k));
     if (key) setLogo(files[key]);
   }).catch(() => {});
 }
-fetch('/api/settings/public').then(r => r.json()).then(p => {
+fetch(API + '/api/settings/public').then(r => r.json()).then(p => {
   const name = p.name || p.schoolName || 'Our School'; document.title = name;
   ['name', 'fName', 'fName2'].forEach(id => $(id).textContent = name);
   if (p.motto) { $('motto').textContent = p.motto; $('fMotto').textContent = p.motto; const t = '✦ ' + p.motto + '   ✦ ' + p.motto + '   ✦ ' + p.motto; $('ticker').textContent = t; $('tickerBox').style.display = ''; }
@@ -292,12 +299,19 @@ fetch('/api/settings/public').then(r => r.json()).then(p => {
   $('contactLine').textContent = [addr, phone, email].filter(Boolean).join(' · ') || 'Fill in the form and we will get back to you.';
 }).catch(() => systemLogo());
 // Fee structure PDFs uploaded in the system (Website News & Gallery → Fee structure)
-fetch('/api/public/posts?kind=DOC&limit=10').then(r => r.json()).then(list => {
-  ['PRIMARY', 'JSS'].forEach(t => { const d = list.find(p => p.tag === t), a = $('doc' + t); if (d) { a.href = d.image; a.target = '_blank'; a.rel = 'noopener'; a.classList.remove('dl'); } });
+fetch(API + '/api/public/posts?kind=DOC&limit=10').then(r => r.json()).then(list => {
+  ['PRIMARY', 'JSS'].forEach(t => { const d = list.find(p => p.tag === t), a = $('doc' + t); if (d) { a.href = (String(d.image).startsWith('/api') ? API : '') + d.image; a.target = '_blank'; a.rel = 'noopener'; a.classList.remove('dl'); } });
+}).catch(() => {});
+// Open forms from the system (Forms page → "Show on the school website")
+fetch(API + '/api/public/surveys').then(r => r.json()).then(list => { if (!Array.isArray(list) || !list.length) return;
+  window.hasForms = true; $('formsNav').style.display = ''; $('forms').style.display = '';
+  $('formList').innerHTML = list.map(f => `<div class="card"><div class="p"><div class="ico"><i class="bi bi-ui-checks" style="color:var(--red)"></i></div><h3>${esc(f.title)}</h3>
+    ${f.summary ? `<p style="text-align:left">${esc(f.summary)}</p>` : ''}${f.closesOn ? `<p style="margin-top:8px"><b>Open until:</b> ${fmtD(f.closesOn)}</p>` : ''}
+    <a class="btn" href="/f/${encodeURIComponent(f.code)}">Fill in the form</a></div></div>`).join('');
 }).catch(() => {});
 // Job vacancies (posted in the system); hidden after their closing date
 let jobId = null;
-fetch('/api/public/posts?kind=JOB&limit=20').then(r => r.json()).then(list => {
+fetch(API + '/api/public/posts?kind=JOB&limit=20').then(r => r.json()).then(list => {
   const today = new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10);
   const open = list.filter(j => !j.eventDate || j.eventDate >= today); if (!open.length) return;
   window.JOBS = {}; open.forEach(j => window.JOBS[j.postId] = j);
@@ -347,7 +361,7 @@ async function sendJob(e) {
     if (docs.some(d => d.type !== 'application/pdf')) throw new Error('Documents must be PDF files.');
     if ([f, ...docs].filter(Boolean).reduce((t, x) => t + x.size, 0) > 6000000) throw new Error('The CV and documents together are too large (max 6 MB).');
     data.docs = await Promise.all(docs.map(async d => ({ name: d.name, base64: await readPdf(d) })));
-    const r = await fetch('/api/public/job-apply', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }); const j = await r.json().catch(() => ({}));
+    const r = await fetch(API + '/api/public/job-apply', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }); const j = await r.json().catch(() => ({}));
     if (!r.ok) throw new Error(j.message || 'Could not send. Please try again.'); m.className = 'msg ok'; m.textContent = j.message; $('jf').reset();
   } catch (err) { m.className = 'msg err'; m.textContent = err.message; }
   m.style.display = 'block'; $('jobBtn').disabled = false; return false;
@@ -357,7 +371,7 @@ let kind = 'ADMISSION';
 function mode(k) { kind = k; $('tA').classList.toggle('on', k === 'ADMISSION'); $('tC').classList.toggle('on', k === 'CONTACT'); document.querySelectorAll('.adm').forEach(e => e.style.display = k === 'ADMISSION' ? '' : 'none'); }
 async function send(e) {
   e.preventDefault(); const data = Object.fromEntries(new FormData($('f'))); data.kind = kind; if (!data.preferredInterviewDate || kind !== 'ADMISSION') delete data.preferredInterviewDate; const m = $('msg'); $('sendBtn').disabled = true;
-  try { const r = await fetch('/api/public/enquiry', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }); const j = await r.json().catch(() => ({}));
+  try { const r = await fetch(API + '/api/public/enquiry', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }); const j = await r.json().catch(() => ({}));
     if (!r.ok) throw new Error(j.message || 'Could not send. Please try again or call the school.'); m.className = 'msg ok'; m.textContent = j.message; $('f').reset();
   } catch (err) { m.className = 'msg err'; m.textContent = err.message; }
   m.style.display = 'block'; $('sendBtn').disabled = false; return false;

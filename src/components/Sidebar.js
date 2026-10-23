@@ -16,6 +16,7 @@ export const GROUPS = [
             { icon: 'newspaper', label: 'Website News & Gallery', path: '/site-posts', roles: ['ADMIN', 'CLERK'] },
             { icon: 'briefcase-fill', label: 'Job Applications', path: '/job-applications', roles: ['ADMIN', 'HEAD_TEACHER'] },
             { icon: 'chat-heart-fill', label: "Parents' Feedback", path: '/parent-feedback', roles: ['ADMIN', 'HEAD_TEACHER', 'CHAIRPERSON'] },
+            { icon: 'ui-checks', label: 'Forms', path: '/forms', roles: ['ADMIN', 'CLERK', 'HEAD_TEACHER'] },
             { icon: 'calendar-week-fill', label: 'Timetable', path: '/timetable', roles: ['ADMIN', 'TEACHER', 'CLERK', 'ACCOUNTANT', 'CHAIRPERSON'] },
             { icon: 'megaphone-fill', label: 'Notices', path: '/announcements', roles: ['ADMIN', 'TEACHER', 'CLERK', 'ACCOUNTANT', 'CHAIRPERSON'] },
             { icon: 'calendar2-heart-fill', label: 'My Leave & Duty', path: '/my-leave', roles: ['ADMIN', 'TEACHER', 'CLERK', 'ACCOUNTANT'] },

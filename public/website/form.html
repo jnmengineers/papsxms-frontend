@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#13306B">
+<title>Form</title>
+<link rel="icon" id="favicon" href="/favicon.ico">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700&family=Open+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{--navy:#13306B;--navy-2:#1d4291;--red:#C8102E;--line:#E3E8F0;--soft:#F5F7FB;--ink:#1d2433;--muted:#5d6678;--ok:#1b8a44;
+        --sans:"Open Sans",Arial,sans-serif;--head:Poppins,"Segoe UI",Arial,sans-serif}
+  *{box-sizing:border-box}html{scroll-behavior:smooth}
+  body{margin:0;font-family:var(--sans);background:var(--soft);color:var(--ink);line-height:1.5;-webkit-tap-highlight-color:transparent}
+  button{font-family:var(--sans)}:focus-visible{outline:3px solid #8fb1ff;outline-offset:2px}
+  header{background:#fff;border-bottom:4px solid var(--red)}
+  .hd{max-width:760px;margin:0 auto;padding:22px 18px 18px;display:flex;gap:16px;align-items:center}
+  .hd img{width:60px;height:60px;object-fit:contain;display:none;flex-shrink:0}
+  .school{font:600 13px var(--head);color:var(--red);letter-spacing:.3px;text-transform:uppercase}
+  .hd h1{font:700 22px/1.25 var(--head);color:var(--navy);margin:2px 0 0}
+  main{max-width:760px;margin:0 auto;padding:18px 14px 120px}
+  .card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:18px 20px;margin-bottom:14px;box-shadow:0 2px 10px rgba(19,48,107,.04)}
+  .intro{white-space:pre-line;color:var(--muted);font-size:14.5px}
+  .sec{display:flex;align-items:center;gap:10px;margin:24px 2px 10px}.sec span{width:6px;height:22px;border-radius:3px;background:var(--red)}
+  .sec h2{font:600 17px var(--head);color:var(--navy);margin:0}.sec small{display:block;color:var(--muted);font:400 13px var(--sans)}
+  .q{font-weight:700;color:var(--navy);font-size:14.5px;margin:0 0 4px}.q .req{color:var(--red);margin-left:3px}
+  .help{color:var(--muted);font-size:13px;margin:0 0 10px}.qbody{margin-top:8px}
+  .card.missing{border-color:var(--red);background:#fffafa}.card.missing .q::after{content:"  This question is required";color:var(--red);font:600 12px var(--sans)}
+  .seg{display:grid;grid-template-columns:repeat(var(--n),1fr);border:1.5px solid var(--line);border-radius:10px;overflow:hidden}
+  .seg button{border:0;border-left:1.5px solid var(--line);background:#fff;padding:11px 4px;font-size:13px;font-weight:600;color:var(--muted);cursor:pointer}.seg button:first-child{border-left:0}
+  .seg button[aria-pressed=true]{background:var(--navy);color:#fff}
+  .seg button[aria-pressed=true][data-v="Excellent"],.seg button[aria-pressed=true][data-v="Yes"]{background:var(--ok)}.seg button[aria-pressed=true][data-v="Good"]{background:#3fa35a}
+  .seg button[aria-pressed=true][data-v="Fair"]{background:#d99a00}.seg button[aria-pressed=true][data-v="Needs improvement"],.seg button[aria-pressed=true][data-v="No"]{background:var(--red)}
+  .list{display:flex;flex-direction:column;gap:8px}
+  .list button{display:flex;align-items:center;gap:10px;text-align:left;border:1.5px solid var(--line);background:#fff;border-radius:10px;padding:11px 12px;font-size:14.5px;color:var(--ink);cursor:pointer}
+  .list button i{width:18px;height:18px;border:2px solid #b9c2d0;border-radius:50%;flex-shrink:0;transition:.15s}.list.multi button i{border-radius:4px}
+  .list button[aria-pressed=true]{border-color:var(--navy);background:#f1f5ff}.list button[aria-pressed=true] i{border:6px solid var(--navy)}.list.multi button[aria-pressed=true] i{border:0;background:var(--navy) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M3 8l3 3 7-7' stroke='white' stroke-width='2.5' fill='none'/%3E%3C/svg%3E") center/12px no-repeat}
+  .scale{display:grid;grid-template-columns:repeat(5,1fr);border:1.5px solid var(--line);border-radius:10px;overflow:hidden}
+  .scale button{border:0;border-left:1.5px solid var(--line);background:#fff;padding:12px 0;font:700 16px var(--head);color:var(--muted);cursor:pointer}.scale button:first-child{border-left:0}
+  .scale button[aria-pressed=true]{background:var(--navy);color:#fff}.ends{display:flex;justify-content:space-between;font-size:12px;color:var(--muted);margin-top:5px}
+  input,textarea,select{width:100%;font:inherit;padding:11px 12px;border:1.5px solid var(--line);border-radius:10px;background:#fff}
+  input:focus,textarea:focus,select:focus{outline:none;border-color:var(--navy-2);box-shadow:0 0 0 3px rgba(29,66,145,.12)}
+  label.f{display:block;font-weight:600;color:var(--navy);margin-bottom:12px;font-size:14px}label.f input{margin-top:6px}
+  .row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .switch{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 14px;border:1.5px dashed var(--line);border-radius:10px;margin-bottom:12px;cursor:pointer}
+  .switch b{color:var(--navy);font-size:14px}.tog{width:46px;height:26px;border-radius:13px;background:#cdd4df;position:relative;transition:.2s;flex-shrink:0}
+  .tog::after{content:"";position:absolute;left:3px;top:3px;width:20px;height:20px;border-radius:50%;background:#fff;transition:.2s}
+  .switch[aria-checked=true]{border-style:solid;border-color:var(--ok);background:#f1faf4}.switch[aria-checked=true] .tog{background:var(--ok)}.switch[aria-checked=true] .tog::after{left:23px}
+  .hide{display:none}
+  .bar{position:fixed;left:0;right:0;bottom:0;background:#fff;border-top:1px solid var(--line);box-shadow:0 -6px 18px rgba(0,0,0,.06);padding:10px 14px calc(10px + env(safe-area-inset-bottom));z-index:30}
+  .bar .in{max-width:760px;margin:0 auto;display:flex;align-items:center;gap:14px}
+  .prog{flex:1}.prog small{font-size:12px;color:var(--muted);font-weight:600}.track{height:6px;background:var(--line);border-radius:3px;overflow:hidden;margin-top:5px}
+  .fill{height:100%;width:0;background:var(--navy);transition:width .3s}
+  .btn{background:var(--red);color:#fff;border:0;padding:12px 26px;border-radius:10px;font:600 15px var(--head);cursor:pointer}.btn:disabled{opacity:.6}
+  .msg{padding:12px 14px;border-radius:10px;margin-bottom:12px;display:none;background:#fdecee;color:#8a1022}
+  .hp{position:absolute;left:-9999px}
+  .center{text-align:center;padding:44px 22px}.center h2{font:700 24px var(--head);color:var(--navy);margin:0 0 8px}
+  .ring{width:84px;height:84px;margin:0 auto 18px}.ring circle{fill:none;stroke:var(--ok);stroke-width:5;stroke-dasharray:240;stroke-dashoffset:240;animation:d .6s ease forwards}
+  .ring path{fill:none;stroke:var(--ok);stroke-width:6;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:60;stroke-dashoffset:60;animation:d .4s .5s ease forwards}@keyframes d{to{stroke-dashoffset:0}}
+  @media(max-width:600px){.hd h1{font-size:19px}.row{grid-template-columns:1fr}.card{padding:16px}.seg button{font-size:12px;padding:10px 2px}}
+  @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<header><div class="hd"><img id="logo" alt="School logo"><div><div class="school" id="name">School</div><h1 id="title">Loading…</h1></div></div></header>
+<main id="main"><div class="card center" id="loading"><p>Loading the form…</p></div></main>
+<div class="bar hide" id="bar"><div class="in">
+  <div class="prog"><small id="progText"></small><div class="track"><div class="fill" id="fill"></div></div></div>
+  <button class="btn" id="sendBtn" form="f">Submit</button>
+</div></div>
+<script>
+  // Local testing (npm start on :3000) talks to the backend on :8080; on the server, the same address
+  const API = (location.port === '3000' || location.protocol === 'file:') ? 'http://localhost:8080' : '';
+  const $ = (id) => document.getElementById(id);
+  const esc = (v) => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const code = new URLSearchParams(location.search).get('c') || (location.pathname.match(/\/f\/([a-z0-9]+)/i) || [])[1] || '';
+  const answers = {};
+  let FORM = null;
+
+  function setLogo(src) { if (String(src).startsWith('/api')) src = API + src; $('logo').src = src; $('logo').style.display = 'block'; $('favicon').href = src; }
+  function systemLogo() { fetch('/asset-manifest.json').then(r => r.json()).then(m => { const f = m.files || {}, k = Object.keys(f).find(x => /logo1\.[a-z]+$/i.test(x)); if (k) setLogo(f[k]); }).catch(() => {}); }
+  fetch(API + '/api/settings/public').then(r => r.json()).then(p => { const n = p.name || p.schoolName; if (n) $('name').textContent = n; const l = p.logoLeft || p.logo; if (l) setLogo(l); else systemLogo(); }).catch(systemLogo);
+
+  const center = (title, text, tick) => { $('bar').classList.add('hide'); $('main').innerHTML = `<div class="card center">${tick ? '<svg class="ring" viewBox="0 0 84 84"><circle cx="42" cy="42" r="38"/><path d="M27 43 l10 10 l21 -22"/></svg>' : ''}<h2>${esc(title)}</h2><p style="color:var(--muted)">${esc(text)}</p></div>`; window.scrollTo(0, 0); };
+
+  if (!code) center('Form not found', 'This link is incomplete. Please check the link you received.');
+  else fetch(API + '/api/public/surveys/' + encodeURIComponent(code)).then(async r => { const j = await r.json().catch(() => ({})); if (!r.ok) throw new Error(j.message || 'This form could not be loaded.'); return j; })
+    .then(f => { FORM = f; document.title = f.title; $('title').textContent = f.title; if (f.closed) center(f.title, f.closed); else render(f); })
+    .catch(err => center('Form not available', err.message));
+
+  const answerable = () => (FORM.questions || []).filter(q => q.type !== 'heading');
+  function render(f) {
+    const parts = [];
+    if (f.description) parts.push(`<div class="card intro">${esc(f.description)}</div>`);
+    parts.push('<form id="f" novalidate>');
+    if (f.collectContact || f.allowAnonymous) {
+      parts.push(`<div class="card">${f.allowAnonymous ? '<div class="switch" id="anonSw" role="switch" aria-checked="false" tabindex="0"><div><b>I wish to stay anonymous</b><div class="help" style="margin:0">Your name and phone will not be sent</div></div><div class="tog"></div></div>' : ''}
+        <div id="who" class="${f.collectContact || f.onePerPhone ? '' : 'hide'}"><div class="row"><label class="f">Your name${f.onePerPhone ? '' : ' (optional)'}<input id="rName" maxlength="100" autocomplete="name"></label>
+        <label class="f">Phone${f.onePerPhone ? '<span style="color:var(--red)"> *</span>' : ' (optional)'}<input id="rPhone" inputmode="tel" maxlength="15" autocomplete="tel"></label></div></div></div>`);
+    }
+    let n = 0;
+    (f.questions || []).forEach(q => {
+      if (q.type === 'heading') { parts.push(`<div class="sec"><span></span><h2>${esc(q.label)}${q.help ? `<small>${esc(q.help)}</small>` : ''}</h2></div>`); return; }
+      n++;
+      const head = `<p class="q">${n}. ${esc(q.label)}${q.required ? '<span class="req">*</span>' : ''}</p>${q.help ? `<p class="help">${esc(q.help)}</p>` : ''}`;
+      let body = '';
+      const opts = q.type === 'yesno' ? ['Yes', 'No'] : (q.options || []);
+      if (q.type === 'rating' || q.type === 'yesno') body = `<div class="seg" style="--n:${opts.length}" data-k="${q.id}" data-mode="one">${opts.map(o => `<button type="button" data-v="${esc(o)}" aria-pressed="false">${esc(o)}</button>`).join('')}</div>`;
+      else if (q.type === 'single' || q.type === 'multi') body = `<div class="list${q.type === 'multi' ? ' multi' : ''}" data-k="${q.id}" data-mode="${q.type === 'multi' ? 'many' : 'one'}">${opts.map(o => `<button type="button" data-v="${esc(o)}" aria-pressed="false"><i></i>${esc(o)}</button>`).join('')}</div>`;
+      else if (q.type === 'scale') body = `<div class="scale" data-k="${q.id}" data-mode="one">${[1, 2, 3, 4, 5].map(k => `<button type="button" data-v="${k}" aria-pressed="false">${k}</button>`).join('')}</div><div class="ends"><span>1 = lowest</span><span>5 = highest</span></div>`;
+      else if (q.type === 'dropdown') body = `<select data-in="${q.id}"><option value="">Choose…</option>${opts.map(o => `<option>${esc(o)}</option>`).join('')}</select>`;
+      else if (q.type === 'paragraph') body = `<textarea data-in="${q.id}" rows="4" maxlength="3000"></textarea>`;
+      else if (q.type === 'number') body = `<input data-in="${q.id}" type="number" inputmode="decimal">`;
+      else if (q.type === 'date') body = `<input data-in="${q.id}" type="date">`;
+      else body = `<input data-in="${q.id}" maxlength="300">`;
+      parts.push(`<div class="card" id="card-${q.id}">${head}<div class="qbody">${body}</div></div>`);
+    });
+    parts.push('<input class="hp" id="hp" tabindex="-1" autocomplete="off" aria-hidden="true"><div class="msg" id="msg" role="alert"></div></form>');
+    $('main').innerHTML = parts.join('');
+    $('bar').classList.remove('hide');
+
+    document.querySelectorAll('[data-k]').forEach(box => box.addEventListener('click', e => {
+      const b = e.target.closest('button'); if (!b) return;
+      const k = box.dataset.k, v = b.dataset.v;
+      if (box.dataset.mode === 'many') {
+        const cur = new Set(answers[k] || []); cur.has(v) ? cur.delete(v) : cur.add(v); answers[k] = [...cur];
+        b.setAttribute('aria-pressed', cur.has(v));
+      } else { answers[k] = v; box.querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', x === b)); }
+      $('card-' + k).classList.remove('missing'); progress();
+    }));
+    document.querySelectorAll('[data-in]').forEach(el => el.addEventListener('input', () => { const v = el.value.trim(); if (v) answers[el.dataset.in] = v; else delete answers[el.dataset.in]; $('card-' + el.dataset.in).classList.remove('missing'); progress(); }));
+    const sw = $('anonSw');
+    if (sw) { const t = () => { const on = sw.getAttribute('aria-checked') !== 'true'; sw.setAttribute('aria-checked', on); $('who').classList.toggle('hide', on || !(FORM.collectContact || FORM.onePerPhone)); };
+      sw.addEventListener('click', t); sw.addEventListener('keydown', e => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); t(); } }); }
+    $('f').addEventListener('submit', send);
+    progress();
+  }
+  const filled = (q) => { const v = answers[q.id]; return Array.isArray(v) ? v.length > 0 : v !== undefined && v !== ''; };
+  function progress() { const qs = answerable(), n = qs.filter(filled).length; $('progText').textContent = `${n} of ${qs.length} answered`; $('fill').style.width = `${qs.length ? (n / qs.length) * 100 : 0}%`; }
+
+  async function send(e) {
+    e.preventDefault();
+    const missing = answerable().filter(q => q.required && !filled(q));
+    if (missing.length) { missing.forEach(q => $('card-' + q.id).classList.add('missing')); $('card-' + missing[0].id).scrollIntoView({ block: 'center', behavior: 'smooth' }); return; }
+    const anonymous = $('anonSw') ? $('anonSw').getAttribute('aria-checked') === 'true' : false;
+    const body = { answers, anonymous, website: $('hp').value, respondentName: !anonymous && $('rName') ? $('rName').value : '', phone: !anonymous && $('rPhone') ? $('rPhone').value : '' };
+    const m = $('msg'); m.style.display = 'none'; $('sendBtn').disabled = true; $('sendBtn').textContent = 'Sending…';
+    try {
+      const r = await fetch(API + '/api/public/surveys/' + encodeURIComponent(code) + '/responses', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(j.message || 'Could not send. Please try again.');
+      center('Thank you!', j.message, true);
+    } catch (err) { m.textContent = err.message; m.style.display = 'block'; m.scrollIntoView({ block: 'center' }); $('sendBtn').disabled = false; $('sendBtn').textContent = 'Submit'; }
+  }
+</script>
+</body>
+</html>
