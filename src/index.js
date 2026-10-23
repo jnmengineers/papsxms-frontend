@@ -1,6 +1,7 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import './index.css';
+import './theme.css';   // system-wide look (loaded after the page styles)
 import App from './App';
 import reportWebVitals from './reportWebVitals';
 

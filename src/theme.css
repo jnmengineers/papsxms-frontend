@@ -1,0 +1,182 @@
+/* ════════════════════════════════════════════════════════════════════════════
+   PAPSXMS theme — soft neumorphism, one calm palette for every page.
+   Loaded last (src/index.js), so it re-styles the colours written inside pages:
+     navy   = actions            neutral = secondary actions
+     red    = delete / danger    green/amber only where they MEAN something
+   ════════════════════════════════════════════════════════════════════════════ */
+:root {
+  --nm-bg: #e8ecf1;
+  --nm-hi: #ffffff;
+  --nm-lo: #c3cad5;
+  --nm-raise: 7px 7px 16px var(--nm-lo), -7px -7px 16px var(--nm-hi);
+  --nm-raise-sm: 3px 3px 8px var(--nm-lo), -3px -3px 8px var(--nm-hi);
+  --nm-inset: inset 3px 3px 7px var(--nm-lo), inset -3px -3px 7px var(--nm-hi);
+  --nm-ink: #1e2738;
+  --nm-muted: #5b667a;
+  --nm-primary: #1f3864;
+  --nm-primary-hi: #2a4a82;
+  --nm-danger: #b3261e;
+  --nm-ok: #2f7d4f;
+  --nm-warn: #8a6100;
+  --nm-radius: 16px;
+}
+
+/* ── Base ─────────────────────────────────────────────────────────────────── */
+html, body { background: var(--nm-bg) !important; }
+body { color: var(--nm-ink); font-family: "Segoe UI", "Inter", Roboto, "Helvetica Neue", Arial, sans-serif; -webkit-font-smoothing: antialiased; }
+::selection { background: #c9d6ee; }
+:focus-visible { outline: 2px solid var(--nm-primary-hi) !important; outline-offset: 2px; }
+
+/* Page backgrounds (#f0f2f5 and friends) become the one surface colour */
+[style*="background-color: rgb(240, 242, 245)"], [style*="background: rgb(240, 242, 245)"],
+[style*="background-color: rgba(240, 242, 245"] { background: var(--nm-bg) !important; }
+
+/* ── Cards: white boxes with a shadow become raised neumorphic surfaces ───── */
+[style*="background-color: white"][style*="box-shadow"],
+[style*="background-color: rgb(255, 255, 255)"][style*="box-shadow"],
+[style*="background: white"][style*="box-shadow"] {
+  background: var(--nm-bg) !important;
+  box-shadow: var(--nm-raise) !important;
+  border-color: transparent !important;
+  border-radius: var(--nm-radius) !important;
+}
+/* White cards with only a border (no shadow) get a lighter version */
+div[style*="background-color: white"][style*="border: 1px solid"],
+div[style*="background-color: rgb(255, 255, 255)"][style*="border: 1px solid"] {
+  background: var(--nm-bg) !important; box-shadow: var(--nm-raise-sm) !important; border-color: transparent !important;
+}
+
+/* ── Buttons: every coloured button maps to one of three roles ────────────── */
+button { transition: box-shadow .15s ease, transform .1s ease, background-color .15s ease; }
+
+/* 1. Actions → navy (was navy, blues, greens, purple, teal, orange, gold) */
+button[style*="background-color: rgb(31, 56, 100)"], button[style*="background-color: rgb(19, 48, 107)"],
+button[style*="background-color: rgb(46, 117, 182)"], button[style*="background-color: rgb(43, 79, 140)"],
+button[style*="background-color: rgb(40, 167, 69)"], button[style*="background-color: rgb(30, 126, 52)"],
+button[style*="background-color: rgb(111, 66, 193)"], button[style*="background-color: rgb(15, 118, 110)"],
+button[style*="background-color: rgb(253, 126, 20)"], button[style*="background-color: rgb(23, 162, 184)"],
+button[style*="background-color: rgb(255, 193, 7)"], button[style*="background-color: rgb(255, 215, 0)"],
+button[style*="background-color: rgb(184, 134, 11)"], button[style*="background-color: rgb(30, 158, 74)"],
+button[style*="background: rgb(31, 56, 100)"], button[style*="background: rgb(19, 48, 107)"],
+a[style*="background-color: rgb(43, 79, 140)"], a[style*="background-color: rgb(19, 48, 107)"] {
+  background: var(--nm-primary) !important;
+  color: #fff !important;
+  border: 0 !important;
+  border-radius: 12px !important;
+  box-shadow: var(--nm-raise-sm) !important;
+}
+button[style*="background-color: rgb(31, 56, 100)"]:hover:not(:disabled), button[style*="background-color: rgb(46, 117, 182)"]:hover:not(:disabled),
+button[style*="background-color: rgb(40, 167, 69)"]:hover:not(:disabled), button[style*="background-color: rgb(30, 126, 52)"]:hover:not(:disabled),
+button[style*="background-color: rgb(19, 48, 107)"]:hover:not(:disabled), button[style*="background-color: rgb(43, 79, 140)"]:hover:not(:disabled) {
+  background: var(--nm-primary-hi) !important;
+}
+
+/* 2. Secondary → neutral raised (was grey) */
+button[style*="background-color: rgb(108, 117, 125)"], button[style*="background-color: rgb(108,117,125)"] {
+  background: var(--nm-bg) !important;
+  color: var(--nm-ink) !important;
+  border: 0 !important;
+  border-radius: 12px !important;
+  box-shadow: var(--nm-raise-sm) !important;
+}
+
+/* 3. Danger → one red (was three reds) */
+button[style*="background-color: rgb(220, 53, 69)"], button[style*="background-color: rgb(200, 16, 46)"],
+button[style*="background-color: rgb(176, 42, 55)"] {
+  background: var(--nm-danger) !important;
+  color: #fff !important;
+  border: 0 !important;
+  border-radius: 12px !important;
+  box-shadow: var(--nm-raise-sm) !important;
+}
+
+/* White / outlined buttons (tabs, toggles, choices): soft raised; pressed looks pressed */
+button[style*="background-color: white"], button[style*="background: white"], button[style*="background-color: rgb(255, 255, 255)"] {
+  background: var(--nm-bg) !important;
+  border-color: transparent !important;
+  box-shadow: var(--nm-raise-sm) !important;
+  border-radius: 12px !important;
+}
+button:active:not(:disabled) { box-shadow: var(--nm-inset) !important; transform: translateY(1px); }
+button:disabled { opacity: .55; box-shadow: none !important; }
+
+/* ── Inputs: inset wells ──────────────────────────────────────────────────── */
+input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=file]), select, textarea {
+  background: var(--nm-bg) !important;
+  border: 0 !important;
+  border-radius: 12px !important;
+  box-shadow: var(--nm-inset) !important;
+  color: var(--nm-ink);
+}
+input:focus, select:focus, textarea:focus { box-shadow: var(--nm-inset), 0 0 0 2px #9fb4dc !important; outline: none !important; }
+input[type=checkbox], input[type=radio] { accent-color: var(--nm-primary); }
+
+/* ── Tables: no heavy coloured bars; quiet header, airy rows ──────────────── */
+thead tr[style*="background-color"], thead[style*="background-color"], tr[style*="background-color: rgb(31, 56, 100)"] {
+  background: transparent !important;
+}
+th[style*="color: white"], th[style*="color: rgb(255, 255, 255)"], th[style*="color: rgb(255, 215, 0)"],
+thead[style*="background-color"] th, tr[style*="background-color: rgb(31, 56, 100)"] th {
+  color: var(--nm-primary) !important;
+  background: transparent !important;
+  border-bottom: 2px solid var(--nm-lo) !important;
+  font-weight: 700;
+}
+th[style*="background-color: rgb(46, 117, 182)"], th[style*="background-color: rgb(40, 167, 69)"],
+th[style*="background-color: rgb(31, 56, 100)"] { background: transparent !important; color: var(--nm-primary) !important; }
+tr[style*="background-color: rgb(249, 249, 249)"], tr[style*="background-color: rgb(250, 250, 250)"],
+tr[style*="background-color: rgb(248, 249, 250)"] { background: rgba(255, 255, 255, .35) !important; }
+tr[style*="background-color: white"], tr[style*="background-color: rgb(255, 255, 255)"] { background: transparent !important; }
+td { border-color: #d6dce5 !important; }
+td[style*="background-color: rgb(240, 244, 255)"] { background: rgba(255, 255, 255, .45) !important; }
+
+/* Coloured title bars inside cards (navy strips) become quiet headings */
+div[style*="background-color: rgb(31, 56, 100)"][style*="padding"]:not([style*="position: fixed"]):not([style*="border-radius: 50%"]) {
+  background: transparent !important;
+  color: var(--nm-primary) !important;
+  border-bottom: 2px solid var(--nm-lo);
+}
+div[style*="background-color: rgb(31, 56, 100)"][style*="padding"] h1, div[style*="background-color: rgb(31, 56, 100)"][style*="padding"] h2,
+div[style*="background-color: rgb(31, 56, 100)"][style*="padding"] h3, div[style*="background-color: rgb(31, 56, 100)"][style*="padding"] h4,
+div[style*="background-color: rgb(31, 56, 100)"][style*="padding"] p, div[style*="background-color: rgb(31, 56, 100)"][style*="padding"] span {
+  color: var(--nm-primary) !important;
+}
+
+/* ── Status colours: kept only where they mean something, and softer ──────── */
+[style*="color: rgb(40, 167, 69)"], [style*="color: rgb(30, 126, 52)"], [style*="color: rgb(21, 87, 36)"] { color: var(--nm-ok) !important; }
+[style*="color: rgb(220, 53, 69)"], [style*="color: rgb(176, 42, 55)"], [style*="color: rgb(114, 28, 36)"] { color: var(--nm-danger) !important; }
+[style*="color: rgb(253, 126, 20)"], [style*="color: rgb(133, 100, 4)"], [style*="color: rgb(184, 134, 11)"] { color: var(--nm-warn) !important; }
+[style*="color: rgb(46, 117, 182)"], [style*="color: rgb(111, 66, 193)"] { color: var(--nm-primary-hi) !important; }
+
+/* Message boxes: success / error / notice as soft tinted panels */
+[style*="background-color: rgb(212, 237, 218)"] { background: #e3efe7 !important; border-color: transparent !important; box-shadow: var(--nm-inset) !important; }
+[style*="background-color: rgb(255, 243, 243)"], [style*="background-color: rgb(248, 215, 218)"] { background: #f3e4e4 !important; border-color: transparent !important; box-shadow: var(--nm-inset) !important; }
+[style*="background-color: rgb(255, 248, 225)"], [style*="background-color: rgb(255, 243, 205)"] { background: #efe9da !important; border-color: transparent !important; box-shadow: var(--nm-inset) !important; }
+[style*="background-color: rgb(227, 242, 253)"], [style*="background-color: rgb(238, 245, 252)"], [style*="background-color: rgb(238, 243, 251)"] {
+  background: var(--nm-bg) !important; border-color: transparent !important; box-shadow: var(--nm-inset) !important;
+}
+
+/* Small pills / badges: calm, consistent */
+span[style*="border-radius"][style*="background-color: rgb(232, 62, 140)"],
+span[style*="border-radius"][style*="background-color: rgb(46, 117, 182)"] { background: #d7deea !important; color: var(--nm-primary) !important; }
+
+/* ── Modals keep their own surface ────────────────────────────────────────── */
+[style*="position: fixed"][style*="background-color: rgba(0, 0, 0, 0.5)"] { background: rgba(30, 39, 56, .38) !important; backdrop-filter: blur(3px); }
+[style*="position: fixed"] [style*="background-color: white"] { background: var(--nm-bg) !important; box-shadow: 0 20px 50px rgba(30, 39, 56, .25) !important; border-radius: 18px !important; }
+
+/* ── Respect people who prefer less motion ───────────────────────────────── */
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+
+/* ── Printouts stay plain black-on-white ──────────────────────────────────── */
+@media print {
+  html, body { background: #fff !important; }
+  [style*="box-shadow"] { box-shadow: none !important; }
+}
+
+/* ── Search boxes & framed fields: one inset well, not a frame around a well ── */
+div[style*="border: 2px solid rgb(221, 221, 221)"], div[style*="border: 1.5px solid rgb(221, 221, 221)"],
+div[style*="border: 2px solid rgb(238, 238, 238)"] {
+  background: var(--nm-bg) !important; border-color: transparent !important; box-shadow: var(--nm-inset) !important; border-radius: 12px !important;
+}
+div[style*="border: 2px solid rgb(221, 221, 221)"] input, div[style*="border: 1.5px solid rgb(221, 221, 221)"] input,
+div[style*="border: 2px solid rgb(238, 238, 238)"] input { box-shadow: none !important; background: transparent !important; }
