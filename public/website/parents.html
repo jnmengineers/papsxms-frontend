@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#13306B">
+<title>Parent Portal</title>
+<link rel="icon" id="favicon" href="/favicon.ico">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700&family=Open+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{--bg:#e8ecf1;--hi:#fff;--lo:#c3cad5;--ink:#1e2738;--muted:#5b667a;--navy:#1f3864;--red:#b3261e;--ok:#2f7d4f;--warn:#8a6100;
+        --raise:7px 7px 16px var(--lo),-7px -7px 16px var(--hi);--raise-sm:3px 3px 8px var(--lo),-3px -3px 8px var(--hi);--inset:inset 3px 3px 7px var(--lo),inset -3px -3px 7px var(--hi);
+        --sans:"Open Sans","Segoe UI",Arial,sans-serif;--head:Poppins,"Segoe UI",Arial,sans-serif}
+  *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1.5;-webkit-tap-highlight-color:transparent}
+  button{font-family:var(--sans)}:focus-visible{outline:2px solid #2a4a82;outline-offset:2px}
+  header{max-width:900px;margin:0 auto;padding:18px 16px 6px;display:flex;align-items:center;gap:12px}
+  header img{width:46px;height:46px;object-fit:contain;display:none}
+  header .s{font:600 12px var(--head);color:var(--red);letter-spacing:.3px;text-transform:uppercase}header h1{font:700 19px var(--head);color:var(--navy);margin:0}
+  header .out{margin-left:auto}
+  main{max-width:900px;margin:0 auto;padding:10px 16px 40px}
+  .card{background:var(--bg);border-radius:18px;padding:20px;margin-bottom:18px;box-shadow:var(--raise)}
+  .login{max-width:420px;margin:30px auto}.login h2{font:700 20px var(--head);color:var(--navy);margin:0 0 6px}.login p{color:var(--muted);margin:0 0 16px;font-size:14px}
+  label{display:block;font-weight:600;color:var(--navy);font-size:14px;margin-bottom:14px}
+  input{width:100%;font:inherit;padding:12px 14px;border:0;border-radius:12px;background:var(--bg);box-shadow:var(--inset);margin-top:6px;font-size:17px}
+  input:focus{outline:none;box-shadow:var(--inset),0 0 0 2px #9fb4dc}
+  .code{letter-spacing:8px;text-align:center;font:700 24px var(--head)}
+  .btn{background:var(--navy);color:#fff;border:0;border-radius:12px;padding:12px 20px;font:600 15px var(--head);cursor:pointer;box-shadow:var(--raise-sm);width:100%}
+  .btn.ghost{background:var(--bg);color:var(--ink);width:auto;padding:8px 14px;font-size:13px}.btn:active{box-shadow:var(--inset)}.btn:disabled{opacity:.6}
+  .link{background:none;border:0;color:var(--navy);font-weight:600;cursor:pointer;padding:6px 0;text-decoration:underline}
+  .msg{padding:10px 12px;border-radius:12px;font-size:14px;margin-bottom:12px;display:none;box-shadow:var(--inset)}.msg.err{color:var(--red)}.msg.ok{color:var(--ok)}
+  .hello{font:600 16px var(--head);color:var(--navy);margin:4px 2px 14px}
+  .kids{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px}
+  .kids button{border:0;background:var(--bg);box-shadow:var(--raise-sm);border-radius:14px;padding:10px 16px;cursor:pointer;text-align:left;color:var(--ink)}
+  .kids button b{display:block;font:600 14px var(--head);color:var(--navy)}.kids button small{color:var(--muted)}
+  .kids button[aria-pressed=true]{box-shadow:var(--inset)}
+  .tabs{display:flex;gap:8px;margin-bottom:14px}.tabs button{flex:1;border:0;background:var(--bg);box-shadow:var(--raise-sm);border-radius:12px;padding:10px;font-weight:700;color:var(--muted);cursor:pointer}
+  .tabs button[aria-pressed=true]{box-shadow:var(--inset);color:var(--navy)}
+  .big{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:16px}
+  .stat{border-radius:16px;padding:14px;box-shadow:var(--inset);text-align:center}.stat b{display:block;font:700 20px var(--head);color:var(--navy)}.stat span{font-size:12px;color:var(--muted)}
+  h3{font:600 15px var(--head);color:var(--navy);margin:16px 0 8px}
+  table{width:100%;border-collapse:collapse;font-size:14px}th{text-align:left;color:var(--navy);font-size:12px;padding:8px 6px;border-bottom:2px solid var(--lo)}
+  td{padding:8px 6px;border-bottom:1px solid #d6dce5}td.n,th.n{text-align:right;white-space:nowrap}.wrap{overflow-x:auto}
+  .lvl{display:inline-block;min-width:34px;text-align:center;border-radius:8px;padding:1px 6px;font-weight:700;font-size:12px;box-shadow:var(--raise-sm)}
+  .exam{margin-bottom:16px}.exam h4{margin:0 0 6px;font:600 14px var(--head);color:var(--navy);display:flex;justify-content:space-between;gap:8px}
+  .muted{color:var(--muted);font-size:13px}
+  footer{text-align:center;color:var(--muted);font-size:12px;padding:10px 16px 30px}
+  @media(max-width:560px){.big{grid-template-columns:1fr}.stat b{font-size:18px}}
+</style>
+</head>
+<body>
+<header><img id="logo" alt=""><div><div class="s" id="sname">School</div><h1>Parent Portal</h1></div><button class="btn ghost out" id="outBtn" style="display:none" onclick="signOut()">Sign out</button></header>
+<main id="main"></main>
+<footer>Your child's information is private. Never share your sign-in code.</footer>
+<script>
+  // Local testing (npm start on :3000) talks to the backend on :8080; on the server, the same address
+  const API = (location.port === '3000' || location.protocol === 'file:') ? 'http://localhost:8080' : '';
+  const $ = (id) => document.getElementById(id);
+  const esc = (v) => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const kes = (n) => 'KES ' + Number(n || 0).toLocaleString('en-KE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const day = (d) => d ? new Date(String(d).slice(0, 10) + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '';
+  let token = localStorage.getItem('parentToken') || '', phone = '', ME = null, child = null, tab = 'fees', BANDS = [];
+
+  async function call(path, opts = {}) {
+    const r = await fetch(API + '/api/public/parent' + path, { ...opts, headers: { 'Content-Type': 'application/json', ...(token ? { 'X-Parent-Token': token } : {}), ...(opts.headers || {}) } });
+    const j = await r.json().catch(() => ({}));
+    if (r.status === 401) { token = ''; localStorage.removeItem('parentToken'); showLogin('Your session has ended. Please sign in again.'); throw new Error('signed out'); }
+    if (!r.ok) throw new Error(j.message || 'Something went wrong. Please try again.');
+    return j;
+  }
+  const say = (t, ok) => { const m = $('msg'); if (!m) return; m.textContent = t; m.className = 'msg ' + (ok ? 'ok' : 'err'); m.style.display = 'block'; };
+
+  // ── Sign in ──
+  function showLogin(note) {
+    $('outBtn').style.display = 'none';
+    $('main').innerHTML = `<div class="card login"><h2>Sign in</h2><p>Enter the phone number you gave the school. We will send you a 6-digit code by SMS.</p>
+      <div class="msg" id="msg"></div>
+      <form onsubmit="return askCode(event)"><label>Phone number<input id="ph" inputmode="tel" autocomplete="tel" placeholder="0712 345678" required></label>
+      <button class="btn" id="b1">Send me a code</button></form></div>`;
+    if (note) say(note);
+  }
+  async function askCode(e) {
+    e.preventDefault(); phone = $('ph').value; $('b1').disabled = true;
+    try { const j = await call('/request-code', { method: 'POST', body: JSON.stringify({ phone }) }); showCode(j.message); }
+    catch (err) { say(err.message); $('b1').disabled = false; }
+    return false;
+  }
+  function showCode(note) {
+    $('main').innerHTML = `<div class="card login"><h2>Enter the code</h2><p>${esc(note)}</p><div class="msg" id="msg"></div>
+      <form onsubmit="return verify(event)"><label>6-digit code<input id="cd" class="code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" required></label>
+      <button class="btn" id="b2">Sign in</button></form><p style="margin-top:12px"><button class="link" onclick="showLogin()">Use a different number</button> · <button class="link" onclick="resend()">Send a new code</button></p></div>`;
+    $('cd').focus();
+  }
+  async function resend() { try { const j = await call('/request-code', { method: 'POST', body: JSON.stringify({ phone }) }); say(j.message, true); } catch (err) { say(err.message); } }
+  async function verify(e) {
+    e.preventDefault(); $('b2').disabled = true;
+    try { const j = await call('/verify', { method: 'POST', body: JSON.stringify({ phone, code: $('cd').value }) }); token = j.token; localStorage.setItem('parentToken', token); load(); }
+    catch (err) { say(err.message); $('b2').disabled = false; }
+    return false;
+  }
+  async function signOut() { try { await call('/logout', { method: 'POST' }); } catch (e) {} token = ''; localStorage.removeItem('parentToken'); showLogin('You have signed out.'); }
+
+  // ── Portal ──
+  async function load() {
+    try { ME = await call('/me'); } catch (e) { return; }
+    $('outBtn').style.display = '';
+    if (!ME.children.length) { $('main').innerHTML = `<div class="card"><p>No learners are linked to your number at the moment. Please contact the school office.</p></div>`; return; }
+    child = child && ME.children.find(c => c.studentId === child.studentId) || ME.children[0];
+    draw();
+  }
+  function draw() {
+    const kids = ME.children.length > 1 ? `<div class="kids">${ME.children.map(c => `<button aria-pressed="${c.studentId === child.studentId}" onclick="pick(${c.studentId})"><b>${esc(c.name)}</b><small>${esc([c.className, c.stream].filter(Boolean).join(' '))} · ${esc(c.admissionNumber || '')}</small></button>`).join('')}</div>` : '';
+    $('main').innerHTML = `<div class="hello">Welcome${ME.name ? ', ' + esc(ME.name) : ''}</div>${kids}
+      <div class="card"><div style="margin-bottom:12px"><b style="font:600 17px var(--head);color:var(--navy)">${esc(child.name)}</b><div class="muted">${esc([child.className, child.stream].filter(Boolean).join(' '))} · Adm ${esc(child.admissionNumber || '—')}</div></div>
+      <div class="tabs"><button aria-pressed="${tab === 'fees'}" onclick="setTab('fees')">Fees</button><button aria-pressed="${tab === 'results'}" onclick="setTab('results')">Results</button></div>
+      <div id="pane"><p class="muted">Loading…</p></div></div>`;
+    tab === 'fees' ? fees() : results();
+  }
+  function pick(id) { child = ME.children.find(c => c.studentId === id); draw(); }
+  function setTab(t) { tab = t; draw(); }
+
+  async function fees() {
+    let d; try { d = await call(`/child/${child.studentId}/fees`); } catch (e) { $('pane').innerHTML = `<p class="muted">${esc(e.message)}</p>`; return; }
+    const entries = d.entries || [], live = entries.filter(e => !e.cancelled);
+    const billed = live.reduce((a, e) => a + Number(e.debit || 0), 0), paid = live.reduce((a, e) => a + Number(e.credit || 0), 0), bal = Number(d.balance || 0);
+    const inv = entries.filter(e => e.type === 'INVOICE'), latest = inv[inv.length - 1];
+    const pays = entries.filter(e => e.type === 'PAYMENT').slice().reverse();
+    $('pane').innerHTML = `<div class="big"><div class="stat"><b>${kes(billed)}</b><span>Total billed</span></div><div class="stat"><b>${kes(paid)}</b><span>Total paid</span></div>
+      <div class="stat"><b style="color:${bal > 0 ? 'var(--red)' : 'var(--ok)'}">${kes(Math.abs(bal))}</b><span>${bal > 0 ? 'Balance to pay' : bal < 0 ? 'In credit' : 'Fully paid'}</span></div></div>
+      ${latest ? `<h3>Fees — ${esc(String(latest.description || '').replace(/^Fees — /, ''))}</h3><div class="wrap"><table>${(latest.lines || []).map(l => `<tr><td>${esc(l.name)}</td><td class="n">${kes(l.amount)}</td></tr>`).join('')}<tr><td><b>Term total</b></td><td class="n"><b>${kes(latest.debit)}</b></td></tr></table></div>` : ''}
+      <h3>Payments (${pays.length})</h3>${pays.length ? `<div class="wrap"><table><tr><th>Date</th><th>Details</th><th>Receipt</th><th class="n">Amount</th></tr>${pays.map(p => `<tr${/REVERSED/.test(p.description || '') ? ' style="opacity:.5;text-decoration:line-through"' : ''}><td>${day(p.date)}</td><td>${esc(p.description)}</td><td>${esc(p.receiptNumber || '—')}</td><td class="n">${kes(p.credit)}</td></tr>`).join('')}</table></div>` : '<p class="muted">No payments recorded yet.</p>'}
+      <p class="muted" style="margin-top:12px">For any fee question, please contact the school bursar. Always quote the admission number when paying.</p>`;
+  }
+  const levelOf = (m) => BANDS.find(b => m >= b.min && m <= b.max) || null;
+  async function results() {
+    let d; try { d = await call(`/child/${child.studentId}/results`); } catch (e) { $('pane').innerHTML = `<p class="muted">${esc(e.message)}</p>`; return; }
+    BANDS = d.bands || [];
+    if (!d.exams.length) { $('pane').innerHTML = '<p class="muted">No results have been recorded yet.</p>'; return; }
+    $('pane').innerHTML = d.exams.map(ex => {
+      const counted = ex.subjects.filter(s => s.counts !== false && s.marks != null), avg = counted.length ? counted.reduce((a, s) => a + Number(s.marks), 0) / counted.length : null;
+      const lv = avg == null ? null : levelOf(avg);
+      return `<div class="exam"><h4><span>${esc(ex.examName)} — Term ${esc(ex.term)} ${esc(ex.year)}</span><span>${avg == null ? '' : `Average ${avg.toFixed(1)}${lv ? ` · <span class="lvl">${esc(lv.label)}</span>` : ''}`}</span></h4>
+        <div class="wrap"><table><tr><th>Learning area</th><th class="n">Marks</th><th class="n">Level</th></tr>${ex.subjects.map(s => { const l = s.marks == null ? null : levelOf(Number(s.marks));
+          return `<tr><td>${esc(s.subjectName)}</td><td class="n">${s.marks == null ? '—' : Number(s.marks).toFixed(0)}</td><td class="n">${l ? `<span class="lvl" title="${esc(l.remarks)}">${esc(l.label)}</span>` : '—'}</td></tr>`; }).join('')}</table></div></div>`;
+    }).join('') + (BANDS.length ? `<p class="muted">Levels: ${BANDS.map(b => `${esc(b.label)} ${b.min}–${b.max}${b.remarks ? ' (' + esc(b.remarks) + ')' : ''}`).join(' · ')}</p>` : '');
+  }
+
+  // School name and logo
+  function setLogo(src) { if (String(src).startsWith('/api')) src = API + src; $('logo').src = src; $('logo').style.display = 'block'; $('favicon').href = src; }
+  function systemLogo() { fetch('/asset-manifest.json').then(r => r.json()).then(m => { const f = m.files || {}, k = Object.keys(f).find(x => /logo1\.[a-z]+$/i.test(x)); if (k) setLogo(f[k]); }).catch(() => {}); }
+  fetch(API + '/api/settings/public').then(r => r.json()).then(p => { const n = p.name || p.schoolName; if (n) { $('sname').textContent = n; document.title = 'Parent Portal — ' + n; } const l = p.logoLeft || p.logo; if (l) setLogo(l); else systemLogo(); }).catch(systemLogo);
+
+  token ? load() : showLogin();
+</script>
+</body>
+</html>

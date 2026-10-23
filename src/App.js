@@ -64,9 +64,11 @@ function App() {
             <Routes>
                 {/* Public */}
                 <Route path="/" element={<Login />} />
+                <Route path="/login" element={<Login />} />
                 <Route path="/unauthorized" element={<Unauthorized />} />
                 <Route path="/feedback" element={<GoTo to="/website/feedback.html" />} />
                 <Route path="/f/:code" element={<FormLink />} />
+                <Route path="/parents" element={<GoTo to="/website/parents.html" />} />
                 <Route path="/website" element={<GoTo to="/website/index.html" />} />
 
                 {/* All logged in users */}
