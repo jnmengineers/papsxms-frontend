@@ -70,6 +70,8 @@
 <script>
   // Local testing (npm start on :3000) talks to the backend on :8080; on the server, the same address
   const API = (location.port === '3000' || location.protocol === 'file:') ? 'http://localhost:8080' : '';
+  // The server explains refusals as {"error": "400 BAD_REQUEST \"Reason…\""} (or {"message": …}) — show the reason
+  const errText = (j, fallback) => { const raw = (j && (j.message || j.error)) || ''; const m = String(raw).match(/"([^"]+)"\s*$/); return (m ? m[1] : raw.replace(/^\d{3}\s+[A-Z_]+\s*/, '')) || fallback; };
   const $ = (id) => document.getElementById(id);
   const esc = (v) => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const code = new URLSearchParams(location.search).get('c') || (location.pathname.match(/\/f\/([a-z0-9]+)/i) || [])[1] || '';
@@ -83,7 +85,7 @@
   const center = (title, text, tick) => { $('bar').classList.add('hide'); $('main').innerHTML = `<div class="card center">${tick ? '<svg class="ring" viewBox="0 0 84 84"><circle cx="42" cy="42" r="38"/><path d="M27 43 l10 10 l21 -22"/></svg>' : ''}<h2>${esc(title)}</h2><p style="color:var(--muted)">${esc(text)}</p></div>`; window.scrollTo(0, 0); };
 
   if (!code) center('Form not found', 'This link is incomplete. Please check the link you received.');
-  else fetch(API + '/api/public/surveys/' + encodeURIComponent(code)).then(async r => { const j = await r.json().catch(() => ({})); if (!r.ok) throw new Error(j.message || 'This form could not be loaded.'); return j; })
+  else fetch(API + '/api/public/surveys/' + encodeURIComponent(code)).then(async r => { const j = await r.json().catch(() => ({})); if (!r.ok) throw new Error(errText(j, 'This form could not be loaded.')); return j; })
     .then(f => { FORM = f; document.title = f.title; $('title').textContent = f.title; if (f.closed) center(f.title, f.closed); else render(f); })
     .catch(err => center('Form not available', err.message));
 
@@ -147,7 +149,7 @@
     try {
       const r = await fetch(API + '/api/public/surveys/' + encodeURIComponent(code) + '/responses', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
       const j = await r.json().catch(() => ({}));
-      if (!r.ok) throw new Error(j.message || 'Could not send. Please try again.');
+      if (!r.ok) throw new Error(errText(j, 'Could not send. Please try again.'));
       center('Thank you!', j.message, true);
     } catch (err) { m.textContent = err.message; m.style.display = 'block'; m.scrollIntoView({ block: 'center' }); $('sendBtn').disabled = false; $('sendBtn').textContent = 'Submit'; }
   }

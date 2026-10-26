@@ -168,6 +168,8 @@
 <script>
   // Local testing (npm start on :3000) talks to the backend on :8080; on the server, the same address
   const API = (location.port === '3000' || location.protocol === 'file:') ? 'http://localhost:8080' : '';
+  // The server explains refusals as {"error": "400 BAD_REQUEST \"Reason…\""} (or {"message": …}) — show the reason
+  const errText = (j, fallback) => { const raw = (j && (j.message || j.error)) || ''; const m = String(raw).match(/"([^"]+)"\s*$/); return (m ? m[1] : raw.replace(/^\d{3}\s+[A-Z_]+\s*/, '')) || fallback; };
   const $ = (id) => document.getElementById(id);
   // ── The school's form (edit the wording here) ──
   const RATE = ['Excellent', 'Good', 'Fair', 'Needs improvement'];
@@ -248,7 +250,7 @@
     try {
       const r = await fetch(API + '/api/public/feedback', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(d) });
       const j = await r.json().catch(() => ({}));
-      if (!r.ok) throw new Error(j.message || 'Could not send. Please try again.');
+      if (!r.ok) throw new Error(errText(j, 'Could not send. Please try again.'));
       const motto = $('mottoQ').textContent;
       $('bar').style.display = 'none'; document.querySelector('.steps').style.display = 'none';
       $('main').innerHTML = `<div class="card thanks"><svg class="ring" viewBox="0 0 84 84"><circle cx="42" cy="42" r="38"/><path d="M27 43 l10 10 l21 -22"/></svg>

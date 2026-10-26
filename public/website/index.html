@@ -190,6 +190,8 @@ footer .bottom{background:#fff;border-top:1px solid var(--grey);text-align:cente
 <script>
   // Local testing (npm start on :3000) talks to the backend on :8080; on the server, the same address
   const API = (location.port === '3000' || location.protocol === 'file:') ? 'http://localhost:8080' : '';
+  // The server explains refusals as {"error": "400 BAD_REQUEST \"Reason…\""} (or {"message": …}) — show the reason
+  const errText = (j, fallback) => { const raw = (j && (j.message || j.error)) || ''; const m = String(raw).match(/"([^"]+)"\s*$/); return (m ? m[1] : raw.replace(/^\d{3}\s+[A-Z_]+\s*/, '')) || fallback; };
 /* ══════════ EDIT THE WEBSITE TEXT HERE ══════════
    Photos: put them in public/website/img/ (e.g. hero1.jpg) and write the file name below. */
 const SITE = {
@@ -364,7 +366,7 @@ async function sendJob(e) {
     if ([f, ...docs].filter(Boolean).reduce((t, x) => t + x.size, 0) > 6000000) throw new Error('The CV and documents together are too large (max 6 MB).');
     data.docs = await Promise.all(docs.map(async d => ({ name: d.name, base64: await readPdf(d) })));
     const r = await fetch(API + '/api/public/job-apply', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }); const j = await r.json().catch(() => ({}));
-    if (!r.ok) throw new Error(j.message || 'Could not send. Please try again.'); m.className = 'msg ok'; m.textContent = j.message; $('jf').reset();
+    if (!r.ok) throw new Error(errText(j, 'Could not send. Please try again.')); m.className = 'msg ok'; m.textContent = j.message; $('jf').reset();
   } catch (err) { m.className = 'msg err'; m.textContent = err.message; }
   m.style.display = 'block'; $('jobBtn').disabled = false; return false;
 }
@@ -374,7 +376,7 @@ function mode(k) { kind = k; $('tA').classList.toggle('on', k === 'ADMISSION'); 
 async function send(e) {
   e.preventDefault(); const data = Object.fromEntries(new FormData($('f'))); data.kind = kind; if (!data.preferredInterviewDate || kind !== 'ADMISSION') delete data.preferredInterviewDate; const m = $('msg'); $('sendBtn').disabled = true;
   try { const r = await fetch(API + '/api/public/enquiry', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }); const j = await r.json().catch(() => ({}));
-    if (!r.ok) throw new Error(j.message || 'Could not send. Please try again or call the school.'); m.className = 'msg ok'; m.textContent = j.message; $('f').reset();
+    if (!r.ok) throw new Error(errText(j, 'Could not send. Please try again or call the school.')); m.className = 'msg ok'; m.textContent = j.message; $('f').reset();
   } catch (err) { m.className = 'msg err'; m.textContent = err.message; }
   m.style.display = 'block'; $('sendBtn').disabled = false; return false;
 }
